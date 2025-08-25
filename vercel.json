@@ -1,1 +1,10 @@
-{}
+{
+  "functions": {
+    "api/*.js": {
+      "runtime": "@vercel/node"
+    },
+    "pages/api/*.js": {
+      "runtime": "@vercel/node"
+    }
+  }
+}
