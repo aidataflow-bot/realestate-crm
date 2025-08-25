@@ -2,10 +2,11 @@
   "name": "realestate-crm",
   "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && next build",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "preview": "vite preview",
-    "vercel-build": "vite build"
+    "vercel-build": "next build"
   },
   "dependencies": {
     "react": "^18.2.0",

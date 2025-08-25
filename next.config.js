@@ -1,12 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Only build API routes, not pages
-  experimental: {
-    outputFileTracing: false,
-  },
-  // Disable static optimization for API routes
-  target: 'serverless',
-  // Configure for Vercel deployment
+  // Configure for Vercel deployment with hybrid setup
+  output: 'standalone',
+  
+  // Configure CORS headers for API routes
   async headers() {
     return [
       {
@@ -16,6 +13,16 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
         ],
+      },
+    ]
+  },
+
+  // Rewrites to serve Vite-built frontend from /dist
+  async rewrites() {
+    return [
+      {
+        source: '/app/:path*',
+        destination: '/dist/:path*',
       },
     ]
   },
