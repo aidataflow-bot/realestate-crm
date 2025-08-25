@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate CRM - Loading</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
+        <h1 class="text-2xl font-bold mb-4 text-center">Real Estate CRM</h1>
+        <p class="text-center text-gray-600 mb-4">System Loading...</p>
+        <div class="animate-pulse bg-gray-200 h-4 rounded mb-2"></div>
+        <div class="animate-pulse bg-gray-200 h-4 rounded mb-2 w-3/4"></div>
+        <div class="animate-pulse bg-gray-200 h-4 rounded w-1/2"></div>
+        <p class="text-xs text-gray-500 mt-4 text-center">
+            Deployment Status: <span id="status">Checking...</span><br>
+            Time: <span id="time"></span>
+        </p>
+    </div>
+    <script>
+        document.getElementById('time').textContent = new Date().toISOString()
+        document.getElementById('status').textContent = 'Static files working!'
+        
+        // Try to redirect to the React app after 2 seconds
+        setTimeout(() => {
+            if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+                // Check if React app exists
+                fetch('/assets/index.js').then(response => {
+                    if (response.ok) {
+                        window.location.href = '/dist/index.html'
+                    }
+                }).catch(() => {
+                    document.getElementById('status').textContent = 'React app not found, using fallback'
+                })
+            }
+        }, 2000)
+    </script>
+</body>
+</html>
