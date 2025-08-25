@@ -1,35 +1,13 @@
-# Dependencies
-node_modules/
-*/node_modules/
-
-# Logs
-*.log
-logs/
-
-# Environment variables (except production)
-.env
+# Ignore unnecessary files for Vercel deployment
+node_modules
+.git
 .env.local
 .env.development.local
 .env.test.local
-
-# Build cache
-.next/
-.nuxt/
-.cache/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
+.env.production.local
 .DS_Store
-Thumbs.db
-
-# PM2
-.pm2/
-
-# Backend specific (since we're using separate API)
+*.log
 backend/
-
-# Prisma
-prisma/migrations/
+frontend/
+.next/
+out/
