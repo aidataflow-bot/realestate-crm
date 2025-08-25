@@ -1,7 +1,6 @@
-import { VercelRequest, VercelResponse } from '@vercel/node'
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
 // Handle different database URL formats from Vercel/Supabase
 const getDatabaseUrl = () => {
@@ -20,7 +19,7 @@ const prisma = new PrismaClient({
   }
 })
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')

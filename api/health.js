@@ -1,5 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node'
-import { PrismaClient } from '@prisma/client'
+const { PrismaClient } = require('@prisma/client')
 
 // Handle different database URL formats from Vercel/Supabase
 const getDatabaseUrl = () => {
@@ -18,7 +17,7 @@ const prisma = new PrismaClient({
   }
 })
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }

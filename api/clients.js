@@ -1,7 +1,6 @@
-import { VercelRequest, VercelResponse } from '@vercel/node'
-import { PrismaClient } from '@prisma/client'
-import jwt from 'jsonwebtoken'
-import { z } from 'zod'
+const { PrismaClient } = require('@prisma/client')
+const jwt = require('jsonwebtoken')
+const { z } = require('zod')
 
 // Handle different database URL formats from Vercel/Supabase
 const getDatabaseUrl = () => {
@@ -21,7 +20,7 @@ const prisma = new PrismaClient({
 })
 
 // Auth middleware
-const authenticateToken = async (req: VercelRequest) => {
+const authenticateToken = async (req) => {
   const authHeader = req.headers['authorization'] as string
   const token = authHeader && authHeader.split(' ')[1]
 
@@ -57,7 +56,7 @@ const clientCreateSchema = z.object({
   notes: z.string().optional()
 })
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
