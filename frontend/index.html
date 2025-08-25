@@ -473,4 +473,446 @@
         </form>
         
         <div class="demo-box">
-            <div class="demo-title">Demo Ac
+            <div class="demo-title">Demo Account</div>
+            <div class="demo-text">
+                <div>Email: rodrigo@realtor.com</div>
+                <div>Password: admin123</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <header class="header">
+            <div class="header-content">
+                <h1>Real Estate CRM</h1>
+                <div>
+                    <span id="welcomeText" style="margin-right: 1rem; color: #d1d5db;">Welcome!</span>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <h2 style="margin: 0;">Your Clients (<span id="clientCount">4</span>)</h2>
+                <button class="add-client-btn" onclick="showAddClientModal()">+ Add New Contact</button>
+            </div>
+            
+            <div class="clients-grid" id="clientsGrid">
+                <!-- Dynamic client cards will be inserted here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Add New Contact Modal -->
+    <div class="modal" id="addClientModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Add New Contact</h2>
+                <button class="close-btn" onclick="closeAddClientModal()">Close</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="success-message" id="successMessage">
+                    Contact added successfully!
+                </div>
+                
+                <form onsubmit="handleAddClient(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">First Name *</label>
+                            <input type="text" id="firstName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name *</label>
+                            <input type="text" id="lastName" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="clientEmail" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" id="clientPhone" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Client Type *</label>
+                            <select id="clientRole" class="form-control" required>
+                                <option value="">Select type...</option>
+                                <option value="Buyer">Buyer</option>
+                                <option value="Seller">Seller</option>
+                                <option value="Investor">Investor</option>
+                                <option value="Renter">Renter</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Stage</label>
+                            <select id="clientStage" class="form-control">
+                                <option value="New">New</option>
+                                <option value="Nurture">Nurture</option>
+                                <option value="Showing">Showing</option>
+                                <option value="Active">Active</option>
+                                <option value="Closed">Closed</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">City</label>
+                            <input type="text" id="clientCity" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">State</label>
+                            <input type="text" id="clientState" class="form-control" placeholder="FL">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea id="clientNotes" class="form-control" rows="3" style="resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <button type="button" class="btn btn-secondary" onclick="closeAddClientModal()">Cancel</button>
+                        <button type="submit" class="btn">Add Contact</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client 360 View Modal -->
+    <div class="modal" id="client360Modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal360ClientName">Client 360 View</h2>
+                <button class="close-btn" onclick="closeClient360()">Close</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Client Header -->
+                <div class="client-360-header" id="client360Header">
+                    <!-- Dynamic header content -->
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('overview')">Overview</button>
+                    <button class="tab" onclick="switchTab('properties')">Properties</button>
+                    <button class="tab" onclick="switchTab('activity')">Activity</button>
+                    <button class="tab" onclick="switchTab('todos')">To-Do Items</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div id="overviewTab" class="tab-content active">
+                    <div class="info-grid" id="overviewGrid">
+                        <!-- Dynamic overview content -->
+                    </div>
+                </div>
+
+                <div id="propertiesTab" class="tab-content">
+                    <div class="info-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3>Properties of Interest</h3>
+                            <button class="btn btn-sm" onclick="addProperty()">Add Property</button>
+                        </div>
+                        <div id="propertiesContent">
+                            <!-- Dynamic properties content -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="activityTab" class="tab-content">
+                    <div class="info-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3>Activity Timeline</h3>
+                            <button class="btn btn-sm" onclick="logActivity()">Log Activity</button>
+                        </div>
+                        <div id="activityContent">
+                            <!-- Dynamic activity content -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="todosTab" class="tab-content">
+                    <div class="info-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3>To-Do Items</h3>
+                            <button class="btn btn-sm" onclick="addTodo()">Add To-Do</button>
+                        </div>
+                        <div id="todosContent">
+                            <!-- Dynamic todos content -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced client data with 360 view information
+        let clients = {
+            'john-smith': {
+                name: 'John Smith',
+                firstName: 'John',
+                lastName: 'Smith',
+                role: 'Buyer',
+                email: 'john.smith@email.com',
+                phone: '(555) 123-4567',
+                location: 'Orlando, FL',
+                status: 'Showing',
+                lastCall: '2025-08-20',
+                nextFollowUp: '2025-08-27',
+                transactions: [{
+                    address: '1234 Dream Home Lane, Orlando, FL',
+                    type: 'Purchase',
+                    status: 'Active',
+                    price: '$425,000',
+                    commission: '$8,500'
+                }],
+                properties: [
+                    {
+                        address: '1234 Dream Home Lane',
+                        city: 'Orlando, FL',
+                        price: 425000,
+                        bedrooms: 4,
+                        bathrooms: 3,
+                        sqft: 2200,
+                        status: 'Interested',
+                        notes: 'Perfect for family, loves the neighborhood'
+                    },
+                    {
+                        address: '5678 Oak Street',
+                        city: 'Orlando, FL',
+                        price: 395000,
+                        bedrooms: 3,
+                        bathrooms: 2.5,
+                        sqft: 1850,
+                        status: 'Viewed',
+                        notes: 'Too small, looking for larger'
+                    }
+                ],
+                activities: [
+                    {
+                        date: '2025-08-20',
+                        type: 'Phone Call',
+                        description: 'Discussed Dream Home Lane property, scheduling showing',
+                        duration: '15 min'
+                    },
+                    {
+                        date: '2025-08-18',
+                        type: 'Property Showing',
+                        description: 'Showed Oak Street property, client interested but wants bigger',
+                        duration: '45 min'
+                    },
+                    {
+                        date: '2025-08-15',
+                        type: 'Email',
+                        description: 'Sent market update and new listings',
+                        duration: '5 min'
+                    }
+                ],
+                todos: [
+                    {
+                        task: 'Schedule showing for Dream Home Lane',
+                        priority: 'High',
+                        dueDate: '2025-08-25',
+                        completed: false
+                    },
+                    {
+                        task: 'Send pre-approval letter requirement',
+                        priority: 'Medium',
+                        dueDate: '2025-08-26',
+                        completed: false
+                    },
+                    {
+                        task: 'Follow up on financing options',
+                        priority: 'Medium',
+                        dueDate: '2025-08-28',
+                        completed: false
+                    }
+                ]
+            },
+            'sarah-johnson': {
+                name: 'Sarah Johnson',
+                firstName: 'Sarah',
+                lastName: 'Johnson',
+                role: 'Seller',
+                email: 'sarah.johnson@email.com',
+                phone: '(555) 234-5678',
+                location: 'Tampa, FL',
+                status: 'Active',
+                lastCall: '2025-08-19',
+                nextFollowUp: '2025-08-26',
+                transactions: [{
+                    address: '5678 Luxury Ave, Tampa, FL',
+                    type: 'Sale',
+                    status: 'Under Contract',
+                    price: '$550,000',
+                    commission: '$12,750'
+                }],
+                properties: [
+                    {
+                        address: '5678 Luxury Ave',
+                        city: 'Tampa, FL',
+                        price: 550000,
+                        bedrooms: 5,
+                        bathrooms: 3.5,
+                        sqft: 3200,
+                        status: 'Listed',
+                        notes: 'Luxury home, motivated seller'
+                    }
+                ],
+                activities: [
+                    {
+                        date: '2025-08-19',
+                        type: 'Phone Call',
+                        description: 'Buyer inspection scheduled, discussed repairs',
+                        duration: '20 min'
+                    },
+                    {
+                        date: '2025-08-17',
+                        type: 'Contract Review',
+                        description: 'Reviewed purchase contract with client',
+                        duration: '60 min'
+                    }
+                ],
+                todos: [
+                    {
+                        task: 'Coordinate home inspection',
+                        priority: 'High',
+                        dueDate: '2025-08-24',
+                        completed: false
+                    },
+                    {
+                        task: 'Get repair estimates',
+                        priority: 'High',
+                        dueDate: '2025-08-25',
+                        completed: false
+                    }
+                ]
+            },
+            'mike-davis': {
+                name: 'Mike Davis',
+                firstName: 'Mike',
+                lastName: 'Davis',
+                role: 'Investor',
+                email: 'mike.davis@email.com',
+                phone: '(555) 345-6789',
+                location: 'Miami, FL',
+                status: 'Closed',
+                lastCall: '2025-07-15',
+                nextFollowUp: '2025-08-22',
+                transactions: [{
+                    address: '9012 Investment Blvd, Miami, FL',
+                    type: 'Purchase',
+                    status: 'Closed',
+                    price: '$380,000',
+                    commission: '$15,200'
+                }],
+                properties: [
+                    {
+                        address: '9012 Investment Blvd',
+                        city: 'Miami, FL',
+                        price: 380000,
+                        bedrooms: 3,
+                        bathrooms: 2,
+                        sqft: 1600,
+                        status: 'Purchased',
+                        notes: 'Investment property, rental income $2800/month'
+                    }
+                ],
+                activities: [
+                    {
+                        date: '2025-07-15',
+                        type: 'Closing',
+                        description: 'Completed purchase of investment property',
+                        duration: '90 min'
+                    },
+                    {
+                        date: '2025-07-10',
+                        type: 'Final Walkthrough',
+                        description: 'Property inspection before closing',
+                        duration: '30 min'
+                    }
+                ],
+                todos: [
+                    {
+                        task: 'Follow up on next investment opportunity',
+                        priority: 'Medium',
+                        dueDate: '2025-08-30',
+                        completed: false
+                    }
+                ]
+            },
+            'lisa-chen': {
+                name: 'Lisa Chen',
+                firstName: 'Lisa',
+                lastName: 'Chen',
+                role: 'First-Time Buyer',
+                email: 'lisa.chen@email.com',
+                phone: '(555) 456-7890',
+                location: 'Jacksonville, FL',
+                status: 'Showing',
+                lastCall: '2025-08-21',
+                nextFollowUp: '2025-08-28',
+                transactions: [{
+                    address: '3456 Starter Home St, Jacksonville, FL',
+                    type: 'Purchase',
+                    status: 'Showing',
+                    price: '$285,000',
+                    commission: '$7,200'
+                }],
+                properties: [
+                    {
+                        address: '3456 Starter Home St',
+                        city: 'Jacksonville, FL',
+                        price: 285000,
+                        bedrooms: 3,
+                        bathrooms: 2,
+                        sqft: 1400,
+                        status: 'Interested',
+                        notes: 'Perfect starter home, needs financing guidance'
+                    }
+                ],
+                activities: [
+                    {
+                        date: '2025-08-21',
+                        type: 'Phone Call',
+                        description: 'Explained first-time buyer programs',
+                        duration: '25 min'
+                    },
+                    {
+                        date: '2025-08-19',
+                        type: 'Property Showing',
+                        description: 'First showing of starter home, very interested',
+                        duration: '60 min'
+                    }
+                ],
+                todos: [
+                    {
+                        task: 'Send first-time buyer program info',
+                        priority: 'High',
+                        dueDate: '2025-08-24',
+                        completed: false
+                    },
+                    {
+                        task: 'Connect with preferred lender',
+                        priority: 'High',
+                        dueDate: '2025-08-25',
+                        completed: false
+                    }
+                ]
+            }
+        };
+
+        // Utility functions
+        function formatDate(dateString)
