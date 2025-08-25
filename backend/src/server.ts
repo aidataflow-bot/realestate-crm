@@ -1,19 +1,39 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
+import morgan from 'morgan'
+import rateLimit from 'express-rate-limit'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { PrismaClient } from '@prisma/client'
+import { z } from 'zod'
 
 const app = express()
 const prisma = new PrismaClient()
 const PORT = process.env.PORT || 3001
 
-// Middleware
+// Security middleware
+app.use(helmet())
+app.use(morgan('combined'))
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+})
+app.use(limiter)
+
+// CORS middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'https://5173-isb1z1ujd4x5imgop7xj8-6532622b.e2b.dev'
+  ],
   credentials: true
 }))
-app.use(express.json())
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // Auth middleware
 const authenticateToken = async (req: any, res: any, next: any) => {
@@ -178,77 +198,304 @@ app.get('/api/clients/:id', authenticateToken, async (req: any, res) => {
   }
 })
 
-// Create sample data
-app.post('/api/seed', async (req, res) => {
+// Validation schemas
+const clientCreateSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  role: z.enum(['BUYER', 'SELLER', 'INVESTOR', 'RENTER']).default('BUYER'),
+  stage: z.enum(['NEW', 'NURTURE', 'SHOWING', 'ACTIVE', 'CLOSED']).default('NEW'),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  birthday: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  notes: z.string().optional()
+})
+
+const clientUpdateSchema = clientCreateSchema.partial()
+
+const transactionCreateSchema = z.object({
+  clientId: z.string(),
+  type: z.enum(['BUY', 'SELL']).default('BUY'),
+  propertyAddress: z.string().min(1, 'Property address is required'),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  status: z.enum(['ACTIVE', 'UNDER_CONTRACT', 'CLOSED', 'CANCELLED']).default('ACTIVE'),
+  closeDate: z.string().optional(),
+  price: z.number().optional(),
+  commissionRatePct: z.number().default(3.0),
+  mySplitPct: z.number().default(80.0),
+  grossCommission: z.number().optional(),
+  netCommissionToMe: z.number().optional()
+})
+
+// Create client
+app.post('/api/clients', authenticateToken, async (req: any, res) => {
   try {
-    // Create admin user
-    const hashedPassword = await bcrypt.hash('admin123', 10)
-    await prisma.user.create({
-      data: {
-        email: 'rodrigo@realtor.com',
-        password: hashedPassword,
-        firstName: 'Rodrigo',
-        lastName: 'Martinez',
-        role: 'admin'
+    const validatedData = clientCreateSchema.parse(req.body)
+    
+    // Convert birthday string to Date if provided
+    const clientData = {
+      ...validatedData,
+      birthday: validatedData.birthday ? new Date(validatedData.birthday) : undefined
+    }
+    
+    const client = await prisma.client.create({ data: clientData })
+    res.status(201).json({ client })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.errors })
+    }
+    console.error('Create client error:', error)
+    res.status(500).json({ error: 'Failed to create client' })
+  }
+})
+
+// Update client
+app.put('/api/clients/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params
+    const validatedData = clientUpdateSchema.parse(req.body)
+    
+    // Convert birthday string to Date if provided
+    const updateData = {
+      ...validatedData,
+      birthday: validatedData.birthday ? new Date(validatedData.birthday) : undefined
+    }
+    
+    const client = await prisma.client.update({
+      where: { id },
+      data: updateData,
+      include: {
+        transactions: {
+          orderBy: { createdAt: 'desc' }
+        }
       }
     })
-
-    // Create sample clients
-    const clients = [
-      {
-        firstName: 'John',
-        lastName: 'Smith',
-        email: 'john.smith@email.com',
-        phone: '555-0123',
-        role: 'BUYER',
-        stage: 'SHOWING',
-        city: 'Orlando',
-        state: 'FL',
-        tags: ['First Time Buyer']
-      },
-      {
-        firstName: 'Sarah',
-        lastName: 'Johnson',
-        email: 'sarah.johnson@email.com',
-        phone: '555-0124',
-        role: 'SELLER',
-        stage: 'ACTIVE',
-        city: 'Tampa',
-        state: 'FL',
-        tags: ['Luxury', 'Repeat Client']
-      }
-    ]
-
-    for (const clientData of clients) {
-      const client = await prisma.client.create({ data: clientData })
-
-      // Add sample transaction
-      await prisma.transaction.create({
-        data: {
-          clientId: client.id,
-          type: clientData.role === 'BUYER' ? 'BUY' : 'SELL',
-          propertyAddress: '123 Sample Street',
-          city: clientData.city,
-          state: clientData.state,
-          status: 'CLOSED',
-          price: 425000.00,
-          commissionRatePct: 3.0,
-          mySplitPct: 80.0,
-          grossCommission: 12750.00,
-          netCommissionToMe: 10200.00,
-          closeDate: new Date('2024-06-01')
-        }
-      })
-    }
-
-    res.json({ message: 'Sample data created successfully!' })
+    
+    res.json({ client })
   } catch (error) {
-    console.error('Seed error:', error)
-    res.status(500).json({ error: 'Failed to create sample data' })
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.errors })
+    }
+    console.error('Update client error:', error)
+    res.status(500).json({ error: 'Failed to update client' })
   }
+})
+
+// Delete client
+app.delete('/api/clients/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params
+    
+    await prisma.client.delete({ where: { id } })
+    res.json({ message: 'Client deleted successfully' })
+  } catch (error) {
+    console.error('Delete client error:', error)
+    res.status(500).json({ error: 'Failed to delete client' })
+  }
+})
+
+// Transaction routes
+app.get('/api/transactions', authenticateToken, async (req: any, res) => {
+  try {
+    const { page = '1', limit = '50', status, clientId } = req.query
+    const pageNum = parseInt(page)
+    const limitNum = parseInt(limit)
+    const offset = (pageNum - 1) * limitNum
+    
+    let where: any = {}
+    if (status) where.status = status
+    if (clientId) where.clientId = clientId
+    
+    const [transactions, total] = await Promise.all([
+      prisma.transaction.findMany({
+        where,
+        include: {
+          client: {
+            select: { firstName: true, lastName: true, email: true }
+          }
+        },
+        skip: offset,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.transaction.count({ where })
+    ])
+    
+    res.json({
+      transactions,
+      pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) }
+    })
+  } catch (error) {
+    console.error('Get transactions error:', error)
+    res.status(500).json({ error: 'Failed to fetch transactions' })
+  }
+})
+
+// Create transaction
+app.post('/api/transactions', authenticateToken, async (req: any, res) => {
+  try {
+    const validatedData = transactionCreateSchema.parse(req.body)
+    
+    const transactionData = {
+      ...validatedData,
+      closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : null
+    }
+    
+    // Calculate commissions if price is provided
+    if (transactionData.price) {
+      transactionData.grossCommission = (transactionData.price * transactionData.commissionRatePct) / 100
+      transactionData.netCommissionToMe = (transactionData.grossCommission * transactionData.mySplitPct) / 100
+    }
+    
+    const transaction = await prisma.transaction.create({
+      data: transactionData,
+      include: {
+        client: {
+          select: { firstName: true, lastName: true, email: true }
+        }
+      }
+    })
+    
+    res.status(201).json({ transaction })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.errors })
+    }
+    console.error('Create transaction error:', error)
+    res.status(500).json({ error: 'Failed to create transaction' })
+  }
+})
+
+// Update transaction
+app.put('/api/transactions/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params
+    const validatedData = transactionCreateSchema.partial().parse(req.body)
+    
+    const updateData = {
+      ...validatedData,
+      closeDate: validatedData.closeDate ? new Date(validatedData.closeDate) : undefined
+    }
+    
+    // Recalculate commissions if price or rates changed
+    if (updateData.price || updateData.commissionRatePct || updateData.mySplitPct) {
+      const currentTransaction = await prisma.transaction.findUnique({ where: { id } })
+      if (currentTransaction) {
+        const price = updateData.price ?? currentTransaction.price
+        const commissionRate = updateData.commissionRatePct ?? currentTransaction.commissionRatePct
+        const splitRate = updateData.mySplitPct ?? currentTransaction.mySplitPct
+        
+        if (price) {
+          updateData.grossCommission = (Number(price) * Number(commissionRate)) / 100
+          updateData.netCommissionToMe = (updateData.grossCommission * Number(splitRate)) / 100
+        }
+      }
+    }
+    
+    const transaction = await prisma.transaction.update({
+      where: { id },
+      data: updateData,
+      include: {
+        client: {
+          select: { firstName: true, lastName: true, email: true }
+        }
+      }
+    })
+    
+    res.json({ transaction })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.errors })
+    }
+    console.error('Update transaction error:', error)
+    res.status(500).json({ error: 'Failed to update transaction' })
+  }
+})
+
+// Delete transaction
+app.delete('/api/transactions/:id', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params
+    
+    await prisma.transaction.delete({ where: { id } })
+    res.json({ message: 'Transaction deleted successfully' })
+  } catch (error) {
+    console.error('Delete transaction error:', error)
+    res.status(500).json({ error: 'Failed to delete transaction' })
+  }
+})
+
+// Dashboard analytics
+app.get('/api/dashboard/stats', authenticateToken, async (req: any, res) => {
+  try {
+    const [clientStats, transactionStats, revenueStats] = await Promise.all([
+      // Client statistics
+      prisma.client.groupBy({
+        by: ['stage'],
+        _count: { stage: true }
+      }),
+      
+      // Transaction statistics
+      prisma.transaction.groupBy({
+        by: ['status'],
+        _count: { status: true }
+      }),
+      
+      // Revenue statistics
+      prisma.transaction.aggregate({
+        where: { status: 'CLOSED' },
+        _sum: {
+          grossCommission: true,
+          netCommissionToMe: true
+        },
+        _count: true
+      })
+    ])
+    
+    // Monthly revenue trend
+    const monthlyRevenue = await prisma.transaction.findMany({
+      where: {
+        status: 'CLOSED',
+        closeDate: {
+          gte: new Date(new Date().getFullYear(), 0, 1) // This year
+        }
+      },
+      select: {
+        closeDate: true,
+        netCommissionToMe: true
+      },
+      orderBy: { closeDate: 'asc' }
+    })
+    
+    res.json({
+      clientStats,
+      transactionStats,
+      revenueStats,
+      monthlyRevenue
+    })
+  } catch (error) {
+    console.error('Dashboard stats error:', error)
+    res.status(500).json({ error: 'Failed to fetch dashboard statistics' })
+  }
+})
+
+// Global error handler
+app.use((error: any, req: any, res: any, next: any) => {
+  console.error('Global error handler:', error)
+  res.status(500).json({ error: 'Internal server error' })
+})
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ error: 'Route not found' })
 })
 
 app.listen(PORT, () => {
   console.log(`🚀 Real Estate CRM Backend running on port ${PORT}`)
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`📊 Database: Connected to PostgreSQL`)
+  console.log(`🔐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`)
 })
