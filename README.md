@@ -2,6 +2,10 @@
 
 A comprehensive, full-stack Customer Relationship Management system designed specifically for real estate professionals. Built with modern technologies including React, TypeScript, Node.js, and PostgreSQL.
 
+## 🚀 Deployment Status
+- API Framework: Next.js (Configured for Vercel)
+- Current Deployment: Testing API Routes
+
 ## 🌟 Features
 
 - **Client Management**: Complete client profiles with contact information, preferences, and lifecycle tracking
