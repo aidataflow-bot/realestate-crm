@@ -1,0 +1,29 @@
+{
+  "name": "realestate-crm",
+  "version": "1.0.0",
+  "description": "Complete Real Estate CRM System",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd frontend && npm run preview",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\""
+  },
+  "workspaces": [
+    "frontend",
+    "backend",
+    "api"
+  ],
+  "keywords": [
+    "real-estate",
+    "crm",
+    "react",
+    "typescript",
+    "prisma",
+    "postgresql"
+  ],
+  "author": "Real Estate CRM Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
