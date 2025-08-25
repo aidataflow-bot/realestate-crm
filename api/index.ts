@@ -8,7 +8,31 @@ import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 
 const app = express()
-const prisma = new PrismaClient()
+
+// Handle different database URL formats from Vercel/Supabase
+const getDatabaseUrl = () => {
+  // Check for various environment variable names that Vercel might use
+  const dbUrl = process.env.DATABASE_URL || 
+                process.env.POSTGRES_URL || 
+                process.env.SUPABASE_DB_URL ||
+                process.env.DATABASE_DIRECT_URL
+
+  if (!dbUrl) {
+    console.error('❌ No database URL found. Available env vars:', Object.keys(process.env).filter(key => key.includes('DATABASE') || key.includes('POSTGRES') || key.includes('SUPABASE')))
+  } else {
+    console.log('✅ Database URL found:', dbUrl.substring(0, 30) + '...')
+  }
+  
+  return dbUrl
+}
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: getDatabaseUrl()
+    }
+  }
+})
 
 // Security middleware
 app.use(helmet())
@@ -57,8 +81,35 @@ const authenticateToken = async (req: any, res: any, next: any) => {
 }
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Real Estate CRM API Running on Vercel' })
+app.get('/health', async (req, res) => {
+  try {
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`
+    res.json({ 
+      status: 'OK', 
+      message: 'Real Estate CRM API Running on Vercel',
+      database: 'Connected',
+      env: {
+        hasDbUrl: !!getDatabaseUrl(),
+        hasJwtSecret: !!process.env.JWT_SECRET,
+        nodeEnv: process.env.NODE_ENV
+      }
+    })
+  } catch (error) {
+    console.error('Health check failed:', error)
+    res.status(500).json({ 
+      status: 'ERROR', 
+      message: 'Database connection failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      env: {
+        hasDbUrl: !!getDatabaseUrl(),
+        hasJwtSecret: !!process.env.JWT_SECRET,
+        availableEnvVars: Object.keys(process.env).filter(key => 
+          key.includes('DATABASE') || key.includes('POSTGRES') || key.includes('SUPABASE')
+        )
+      }
+    })
+  }
 })
 
 // Validation schemas
@@ -81,22 +132,39 @@ const clientUpdateSchema = clientCreateSchema.partial()
 // Auth routes
 app.post('/auth/login', async (req, res) => {
   try {
+    console.log('🔐 Login attempt for:', req.body.email)
     const { email, password } = req.body
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' })
+    }
+
+    // Check if database is connected
+    try {
+      await prisma.$queryRaw`SELECT 1`
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError)
+      return res.status(500).json({ error: 'Database connection failed' })
+    }
 
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() }
     })
 
+    console.log('👤 User found:', user ? 'Yes' : 'No')
+
     if (!user || !await bcrypt.compare(password, user.password)) {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
 
+    const jwtSecret = process.env.JWT_SECRET || 'fallback-secret'
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || 'fallback-secret',
+      jwtSecret,
       { expiresIn: '24h' }
     )
 
+    console.log('✅ Login successful for:', email)
     res.json({
       token,
       user: {
@@ -108,8 +176,11 @@ app.post('/auth/login', async (req, res) => {
       }
     })
   } catch (error) {
-    console.error('Login error:', error)
-    res.status(500).json({ error: 'Login failed' })
+    console.error('❌ Login error:', error)
+    res.status(500).json({ 
+      error: 'Login failed', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    })
   }
 })
 
