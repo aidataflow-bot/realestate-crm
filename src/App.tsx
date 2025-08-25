@@ -3,6 +3,9 @@ import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
+console.log('Environment variables:', import.meta.env)
+console.log('API URL being used:', API_URL)
+
 const api = axios.create({
   baseURL: API_URL,
   timeout: 10000,
@@ -72,7 +75,9 @@ function App() {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login with API URL:', API_URL)
       const response = await api.post('/auth/login', { email, password })
+      console.log('Login response:', response.data)
       const { token, user: userData } = response.data
       
       localStorage.setItem('auth_token', token)
@@ -81,7 +86,8 @@ function App() {
       fetchClients()
       setError('')
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed')
+      console.error('Login error:', err)
+      setError(err.response?.data?.error || 'Login failed - please check console for details')
     }
   }
 
