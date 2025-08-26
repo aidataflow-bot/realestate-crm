@@ -309,6 +309,15 @@ app.get('/api/health', (req, res) => {
 })
 
 // Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Client Flow 360 API Server',
+    status: 'Running',
+    version: '1.0.0',
+    apiBase: '/api'
+  })
+})
+
 app.get('/api', (req, res) => {
   res.json({ 
     message: 'Welcome to Client Flow 360 API',
