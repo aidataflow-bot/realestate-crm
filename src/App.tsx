@@ -38,6 +38,7 @@ interface Client {
   stage: string
   city?: string
   state?: string
+  propertyAddress?: string
   tags: string[]
   lifetimeGrossCommission?: number
   lifetimeNetCommission?: number
@@ -112,6 +113,7 @@ function App() {
   const [error, setError] = useState('')
   const [showAddClient, setShowAddClient] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [autoCallData, setAutoCallData] = useState<{clientId: string, propertyAddress?: string} | null>(null)
 
   // Check for existing auth
   useEffect(() => {
@@ -178,6 +180,7 @@ function App() {
             createdAt: '2024-01-15',
             lastContact: '2024-08-20',
             notes: 'Looking for a family home in Miami. Budget around $400K.',
+            propertyAddress: '123 Ocean Drive, Miami, FL',
             properties: [
               {
                 id: 'p1',
@@ -249,6 +252,7 @@ function App() {
             createdAt: '2024-02-10',
             lastContact: '2024-08-18',
             notes: 'Selling luxury condo. Wants quick sale.',
+            propertyAddress: '456 Biscayne Blvd, Miami, FL',
             properties: [
               {
                 id: 'p2',
@@ -667,6 +671,7 @@ const ClientList: React.FC<{
                     {client.email && <div>📧 {client.email}</div>}
                     {client.phone && <div>📞 {client.phone}</div>}
                     {client.city && client.state && <div>📍 {client.city}, {client.state}</div>}
+                    {client.propertyAddress && <div>🏠 {client.propertyAddress}</div>}
                   </div>
 
                   {/* Commission */}
@@ -733,6 +738,7 @@ const AddClientForm: React.FC<{
     stage: 'NEW',
     city: '',
     state: '',
+    propertyAddress: '',
     notes: '',
     tags: [] as string[]
   })
@@ -748,7 +754,13 @@ const AddClientForm: React.FC<{
       ...formData,
       lifetimeGrossCommission: 0,
       lifetimeNetCommission: 0,
-      properties: [],
+      properties: formData.propertyAddress ? [{
+        id: Date.now().toString(),
+        address: formData.propertyAddress,
+        type: 'Unknown',
+        status: 'INTERESTED',
+        dateAdded: new Date().toISOString().split('T')[0]
+      }] : [],
       calls: [],
       activities: [],
       todos: []
@@ -887,6 +899,17 @@ const AddClientForm: React.FC<{
             </div>
 
             <div>
+              <label className="block text-gray-300 text-sm font-medium mb-2">Property Address (If Known)</label>
+              <input
+                type="text"
+                value={formData.propertyAddress}
+                onChange={(e) => setFormData(prev => ({ ...prev, propertyAddress: e.target.value }))}
+                className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
+                placeholder="123 Main Street, City, State"
+              />
+            </div>
+
+            <div>
               <label className="block text-gray-300 text-sm font-medium mb-2">Notes</label>
               <textarea
                 value={formData.notes}
@@ -964,7 +987,7 @@ const ClientDetail: React.FC<{
   onToggleTodo: (todoId: string) => void
   onAddProperty: (property: Omit<Property, 'id' | 'dateAdded'>) => void
 }> = ({ client, onBack, onAddCall, onAddTodo, onToggleTodo, onAddProperty }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'calls' | 'activities' | 'todos'>('overview')
+  const [activeView, setActiveView] = useState<'overview' | 'properties' | 'calls' | 'activities' | 'todos'>('overview')
   const [showAddCall, setShowAddCall] = useState(false)
   const [showAddTodo, setShowAddTodo] = useState(false)
   const [showAddProperty, setShowAddProperty] = useState(false)
@@ -1009,12 +1032,55 @@ const ClientDetail: React.FC<{
 
   const followUpStatus = getFollowUpStatus()
 
-  const tabs = [
-    { id: 'overview', label: 'Overview', count: null },
-    { id: 'properties', label: 'Properties', count: client.properties?.length || 0 },
-    { id: 'calls', label: 'Call Log', count: client.calls?.length || 0 },
-    { id: 'activities', label: 'Activities', count: client.activities?.length || 0 },
-    { id: 'todos', label: 'To-dos', count: client.todos?.filter(t => !t.completed).length || 0 }
+  const handleQuickCall = () => {
+    const now = new Date()
+    const autoCallData: Omit<Call, 'id'> = {
+      date: now.toISOString(),
+      type: 'OUTBOUND',
+      outcome: 'Quick call initiated',
+      notes: `Quick call initiated from client profile${client.propertyAddress ? ` regarding ${client.propertyAddress}` : ''}`,
+      followUpDate: new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
+    }
+    onAddCall(autoCallData)
+    setShowAddCall(true) // Show the call form to complete details
+  }
+
+  const sections = [
+    { 
+      id: 'overview', 
+      label: 'Overview', 
+      icon: '👤', 
+      count: null,
+      description: 'Client Info'
+    },
+    { 
+      id: 'properties', 
+      label: 'Properties', 
+      icon: '🏠', 
+      count: client.properties?.length || 0,
+      description: 'Property Interests'
+    },
+    { 
+      id: 'calls', 
+      label: 'Call Log', 
+      icon: '📞', 
+      count: client.calls?.length || 0,
+      description: 'Communication History'
+    },
+    { 
+      id: 'activities', 
+      label: 'Activities', 
+      icon: '📋', 
+      count: client.activities?.length || 0,
+      description: 'Activity Timeline'
+    },
+    { 
+      id: 'todos', 
+      label: 'To-dos', 
+      icon: '✅', 
+      count: client.todos?.filter(t => !t.completed).length || 0,
+      description: 'Tasks & Follow-ups'
+    }
   ] as const
 
   return (
@@ -1048,26 +1114,57 @@ const ClientDetail: React.FC<{
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex space-x-1 mt-6">
-          {tabs.map((tab) => (
+        {/* Quick Actions Bar */}
+        <div className="flex justify-between items-center mt-6">
+          <div className="flex space-x-3">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 ${
-                activeTab === tab.id 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+              onClick={handleQuickCall}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <span>📞</span>
+              <span>Call Now</span>
+            </button>
+            <button
+              onClick={() => setShowAddProperty(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <span>🏠</span>
+              <span>Add Property</span>
+            </button>
+            <button
+              onClick={() => setShowAddTodo(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <span>✅</span>
+              <span>Add Task</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Section Navigation - Square Icons */}
+        <div className="grid grid-cols-5 gap-4 mt-8">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => setActiveView(section.id)}
+              className={`p-6 rounded-xl border-2 transition-all duration-200 ${
+                activeView === section.id 
+                  ? 'bg-blue-600 border-blue-500 text-white transform scale-105' 
+                  : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-750 hover:border-gray-600'
               }`}
             >
-              <span>{tab.label}</span>
-              {tab.count !== null && (
-                <span className={`px-2 py-0.5 rounded-full text-xs ${
-                  activeTab === tab.id ? 'bg-blue-500' : 'bg-gray-600'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
+              <div className="text-center">
+                <div className="text-4xl mb-2">{section.icon}</div>
+                <div className="font-medium text-sm mb-1">{section.label}</div>
+                <div className="text-xs opacity-75 mb-2">{section.description}</div>
+                {section.count !== null && (
+                  <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                    activeView === section.id ? 'bg-blue-500' : 'bg-gray-600'
+                  }`}>
+                    {section.count}
+                  </div>
+                )}
+              </div>
             </button>
           ))}
         </div>
@@ -1075,7 +1172,7 @@ const ClientDetail: React.FC<{
 
       {/* Content */}
       <main className="p-6">
-        {activeTab === 'overview' && (
+        {activeView === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Info */}
             <div className="lg:col-span-2 space-y-6">
@@ -1089,6 +1186,9 @@ const ClientDetail: React.FC<{
                   <div><span className="text-gray-400">Stage:</span> <span className="text-white">{client.stage}</span></div>
                   <div><span className="text-gray-400">Location:</span> <span className="text-white">{client.city && client.state ? `${client.city}, ${client.state}` : 'Not provided'}</span></div>
                   <div><span className="text-gray-400">Client Since:</span> <span className="text-white">{formatDate(client.createdAt)}</span></div>
+                  {client.propertyAddress && (
+                    <div className="md:col-span-2"><span className="text-gray-400">Primary Property Interest:</span> <span className="text-white">{client.propertyAddress}</span></div>
+                  )}
                 </div>
                 {client.notes && (
                   <div className="mt-4">
@@ -1224,19 +1324,19 @@ const ClientDetail: React.FC<{
           </div>
         )}
 
-        {activeTab === 'properties' && (
+        {activeView === 'properties' && (
           <PropertiesTab client={client} onAddProperty={onAddProperty} showAddProperty={showAddProperty} setShowAddProperty={setShowAddProperty} />
         )}
 
-        {activeTab === 'calls' && (
+        {activeView === 'calls' && (
           <CallsTab client={client} onAddCall={onAddCall} showAddCall={showAddCall} setShowAddCall={setShowAddCall} />
         )}
 
-        {activeTab === 'activities' && (
+        {activeView === 'activities' && (
           <ActivitiesTab client={client} />
         )}
 
-        {activeTab === 'todos' && (
+        {activeView === 'todos' && (
           <TodosTab client={client} onAddTodo={onAddTodo} onToggleTodo={onToggleTodo} showAddTodo={showAddTodo} setShowAddTodo={setShowAddTodo} />
         )}
       </main>
