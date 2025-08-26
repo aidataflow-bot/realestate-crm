@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node build-static.js",
+    "build": "mkdir -p production-deployment && cp index.html production-deployment/ && echo 'Build complete - copied index.html to production-deployment'",
     "preview": "vite preview",
     "server": "node api/index.js"
   },
