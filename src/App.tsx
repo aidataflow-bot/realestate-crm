@@ -157,18 +157,42 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState('')
 
-  // Check for existing auth
+  // Check for existing auth with multiple attempts
   useEffect(() => {
     console.log('App: useEffect - checking for existing auth')
-    const token = localStorage.getItem('auth_token')
-    console.log('App: Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null')
     
-    if (token) {
-      console.log('App: Token found, calling loadUserData')
-      loadUserData()
-    } else {
-      console.log('App: No token found, setting loading to false')
-      setLoading(false)
+    const checkAuth = () => {
+      const token = localStorage.getItem('auth_token')
+      console.log('App: Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null')
+      
+      if (token) {
+        console.log('App: Token found, calling loadUserData')
+        loadUserData()
+        return true
+      } else {
+        console.log('App: No token found')
+        return false
+      }
+    }
+    
+    // Initial check
+    if (!checkAuth()) {
+      // If no token initially, check again in intervals (for HTML login handoff)
+      const interval = setInterval(() => {
+        console.log('App: Rechecking for token...')
+        if (checkAuth()) {
+          clearInterval(interval)
+        }
+      }, 1000)
+      
+      // Stop checking after 10 seconds and show login form
+      setTimeout(() => {
+        clearInterval(interval)
+        if (!localStorage.getItem('auth_token')) {
+          console.log('App: No token after 10 seconds, showing login')
+          setLoading(false)
+        }
+      }, 10000)
     }
   }, [])
 
@@ -321,7 +345,13 @@ function App() {
     const hasValidToken = localStorage.getItem('auth_token')
     if (hasValidToken && !loading) {
       console.log('App: Found token but no user, forcing loadUserData...')
+      setLoading(true)
       loadUserData()
+      return (
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="text-white text-xl">🔄 Authenticating with token...</div>
+        </div>
+      )
     }
     
     // Force visible login form with aggressive styling
