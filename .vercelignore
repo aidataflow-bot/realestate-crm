@@ -11,3 +11,8 @@ backend/
 frontend/
 .next/
 out/
+dist/
+dist-fresh/
+production-build/
+production-deployment/
+build/
