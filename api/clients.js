@@ -58,13 +58,19 @@ export default async function handler(req, res) {
         
         if (error) {
           console.error('Supabase error:', error);
-          return res.json(FALLBACK_CLIENTS);
+          console.log('Returning fallback clients due to Supabase error');
+          return res.json(Array.isArray(FALLBACK_CLIENTS) ? FALLBACK_CLIENTS : []);
         }
         
-        return res.json(data || []);
+        console.log('Supabase query successful, data:', data);
+        const result = Array.isArray(data) ? data : (data ? [data] : []);
+        console.log('Returning clients array:', result.length, 'items');
+        return res.json(result);
       } else {
         console.log('Using fallback clients (Supabase not connected)');
-        return res.json(FALLBACK_CLIENTS);
+        const fallback = Array.isArray(FALLBACK_CLIENTS) ? FALLBACK_CLIENTS : [];
+        console.log('Returning fallback clients array:', fallback.length, 'items');
+        return res.json(fallback);
       }
     }
     

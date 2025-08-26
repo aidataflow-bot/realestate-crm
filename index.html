@@ -79,12 +79,26 @@
             try {
               const response = await axios.get(`${API.baseURL}/clients`);
               console.log('✅ API response received:', response.data);
-              return response.data;
+              console.log('✅ Response type:', typeof response.data);
+              console.log('✅ Is array:', Array.isArray(response.data));
+              
+              // Ensure we always return an array
+              const data = response.data;
+              if (Array.isArray(data)) {
+                return data;
+              } else if (data && typeof data === 'object') {
+                console.log('⚠️ API returned object instead of array, wrapping in array');
+                return [data];
+              } else {
+                console.log('⚠️ API returned unexpected format, using empty array');
+                return [];
+              }
             } catch (error) {
               console.error('❌ API call failed:', error);
               console.error('❌ Error response:', error.response?.data);
               console.error('❌ Error status:', error.response?.status);
-              throw error;
+              console.log('🔄 Returning empty array as fallback');
+              return [];
             }
           },
           
