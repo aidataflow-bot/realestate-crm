@@ -15,7 +15,28 @@
         background: #111 !important; 
         color: white !important; 
       }
-      #root { min-height: 100vh; }
+      #root { 
+        min-height: 100vh !important; 
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 999999 !important;
+      }
+      
+      /* Aggressive reset for any hidden elements */
+      * {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: initial !important;
+      }
+      
+      /* Override any potential hiding classes */
+      .hidden, [hidden] { 
+        display: block !important; 
+        visibility: visible !important; 
+        opacity: 1 !important; 
+      }
       
       /* Login form styles with !important to override any conflicts */
       .login-container { 
@@ -76,11 +97,205 @@
         margin-bottom: 1rem !important;
       }
     </style>
-    <!-- Load Tailwind after our custom styles so we can override it -->
+    <!-- Load Tailwind first -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Critical CSS overrides loaded AFTER Tailwind -->
+    <style id="critical-overrides">
+      /* Ultra-aggressive overrides that load after Tailwind */
+      html, body, #root, #root *, 
+      .login-container, .login-container *,
+      div[class*="login"], div[class*="Login"],
+      form, form *, input, button {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: initial !important;
+        position: static !important;
+      }
+      
+      /* Force flex layouts to work */
+      .login-container,
+      div[class*="flex"],
+      div[style*="display: flex"],
+      div[style*="display:flex"] {
+        display: flex !important;
+      }
+      
+      /* Remove any transforms that might hide elements */
+      #root *, .login-container * {
+        transform: none !important;
+        left: auto !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+      }
+      
+      /* Force minimum dimensions */
+      #root {
+        min-height: 100vh !important;
+        min-width: 100vw !important;
+      }
+      
+      /* Override Tailwind's sr-only and hidden classes */
+      .sr-only, .sr-only-focusable:not(:focus), 
+      .hidden, [hidden], .invisible {
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        padding: initial !important;
+        margin: initial !important;
+        overflow: visible !important;
+        clip: auto !important;
+        white-space: normal !important;
+        border: 0 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+    </style>
   </head>
   <body>
+    <!-- Fallback visible content for debugging -->
+    <div id="fallback" style="
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      background: red !important;
+      color: white !important;
+      padding: 10px !important;
+      border-radius: 5px !important;
+      z-index: 999999 !important;
+      font-family: Arial !important;
+      font-size: 12px !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    ">
+      DEBUG: If you see this, HTML is loading
+    </div>
+    
     <div id="root"></div>
+    
+    <!-- Inline test to see if React is the issue -->
+    <div id="inline-test" style="
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      background: #ef4444 !important;
+      color: white !important;
+      padding: 40px !important;
+      border-radius: 10px !important;
+      z-index: 999998 !important;
+      font-family: Arial !important;
+      text-align: center !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      max-width: 400px !important;
+    ">
+      <h2 style="margin: 0 0 15px 0 !important; color: white !important;">🎬 CLIENT FLOW 360</h2>
+      <p style="margin: 0 0 15px 0 !important; color: white !important;">If you see this but no login form,<br>the issue is with React rendering.</p>
+      <button onclick="window.location.href='/debug.html'" style="
+        background: white !important;
+        color: #ef4444 !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 5px !important;
+        cursor: pointer !important;
+        font-weight: bold !important;
+      ">Go to Debug Page</button>
+    </div>
+    
+    <!-- Emergency CSS fix via JavaScript -->
+    <script>
+      // Aggressive CSS fix that runs after everything loads
+      function forceVisibility() {
+        console.log('🚨 Emergency CSS fix running...');
+        
+        const emergencyCSS = `
+          /* EMERGENCY CSS OVERRIDES - MAXIMUM PRIORITY */
+          * { 
+            visibility: visible !important; 
+            opacity: 1 !important; 
+          }
+          
+          #root, #root * {
+            display: initial !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: static !important;
+            transform: none !important;
+            left: auto !important;
+            top: auto !important;
+            z-index: auto !important;
+          }
+          
+          /* Force containers to be visible */
+          div[class*="login"], 
+          div[class*="Login"],
+          div[class*="container"],
+          div[class*="flex"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+          
+          /* Override any Tailwind utilities */
+          .sr-only, .hidden, .invisible, [hidden] {
+            position: static !important;
+            width: auto !important;
+            height: auto !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+        `;
+        
+        const style = document.createElement('style');
+        style.id = 'emergency-fix';
+        style.textContent = emergencyCSS;
+        document.head.appendChild(style);
+        
+        console.log('✅ Emergency CSS fix applied');
+        
+        // Also log all elements for debugging
+        const root = document.getElementById('root');
+        if (root) {
+          console.log('Root element found:', root);
+          console.log('Root children:', root.children.length);
+          console.log('Root innerHTML length:', root.innerHTML.length);
+          
+          // Check for hidden elements
+          const allElements = root.querySelectorAll('*');
+          let hiddenCount = 0;
+          allElements.forEach((el, index) => {
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+              console.log(`Hidden element ${index}:`, el, {
+                display: style.display,
+                visibility: style.visibility,
+                opacity: style.opacity
+              });
+              hiddenCount++;
+            }
+          });
+          console.log(`Found ${hiddenCount} hidden elements out of ${allElements.length} total`);
+        }
+      }
+      
+      // Run the fix when DOM is ready and after a delay
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', forceVisibility);
+      } else {
+        forceVisibility();
+      }
+      
+      // Also run after React has had time to render
+      setTimeout(forceVisibility, 1000);
+      setTimeout(forceVisibility, 3000);
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

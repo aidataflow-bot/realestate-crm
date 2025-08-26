@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 
-const API_URL = 'https://3001-isb1z1ujd4x5imgop7xj8.e2b.dev/api'
+// Get API URL from environment variables
+const BASE_API_URL = import.meta.env.VITE_API_URL || '/api'
+const API_URL = BASE_API_URL.startsWith('http') 
+  ? BASE_API_URL 
+  : `https://3000-isb1z1ujd4x5imgop7xj8.e2b.dev${BASE_API_URL}`
 
 console.log('Environment variables:', import.meta.env)
 console.log('API URL being used:', API_URL)
@@ -28,81 +32,119 @@ interface User {
   role: string
 }
 
-interface Client {
+interface Transaction {
   id: string
-  firstName: string
-  lastName: string
-  email?: string
-  phone?: string
-  role: string
-  stage: string
-  city?: string
-  state?: string
-  propertyAddress?: string
-  tags: string[]
-  lifetimeGrossCommission?: number
-  lifetimeNetCommission?: number
-  transactions?: Transaction[]
-  properties?: Property[]
-  calls?: Call[]
-  activities?: Activity[]
-  todos?: Todo[]
-  createdAt?: string
-  lastContact?: string
+  type: string
+  status: string
+  propertyAddress: string
+  salePrice?: number
+  listPrice?: number
+  commissionRate?: number
+  grossCommission?: number
+  netCommission?: number
+  splitPercentage?: number
+  brokerageFee?: number
+  closeDate?: string
+  listDate?: string
+  contractDate?: string
   notes?: string
+  createdAt: string
 }
 
 interface Property {
   id: string
   address: string
+  city?: string
+  state?: string
   price?: number
   type: string
-  status: string
   bedrooms?: number
   bathrooms?: number
   sqft?: number
-  notes?: string
-  dateAdded: string
+  yearBuilt?: number
+  mls?: string
+  description?: string
+  status: string
+  createdAt: string
 }
 
 interface Call {
   id: string
-  date: string
+  phoneNumber: string
   duration?: number
-  type: 'INBOUND' | 'OUTBOUND'
-  outcome: string
-  notes: string
-  followUpDate?: string
-}
-
-interface Activity {
-  id: string
-  type: 'CALL' | 'EMAIL' | 'MEETING' | 'SHOWING' | 'NOTE'
-  title: string
-  description?: string
-  date: string
-  completed?: boolean
+  notes?: string
+  outcome?: string
+  followUp: boolean
+  createdAt: string
 }
 
 interface Todo {
   id: string
   title: string
   description?: string
-  dueDate?: string
-  priority: 'LOW' | 'MEDIUM' | 'HIGH'
   completed: boolean
+  priority: string
+  dueDate?: string
   createdAt: string
 }
 
-interface Transaction {
+interface Activity {
   id: string
   type: string
-  propertyAddress: string
+  title: string
+  description: string
+  createdAt: string
+}
+
+interface Reminder {
+  id: string
+  title: string
+  description?: string
+  reminderDate: string
+  type: string
+  completed: boolean
+  recurring: boolean
+}
+
+interface Email {
+  id: string
+  subject: string
+  body: string
+  to: string[]
   status: string
-  price?: number
-  grossCommission?: number
-  netCommissionToMe?: number
-  closeDate?: string
+  sentAt?: string
+  createdAt: string
+}
+
+interface Client {
+  id: string
+  firstName: string
+  lastName: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zipCode?: string
+  birthday?: string
+  anniversary?: string
+  occupation?: string
+  spouse?: string
+  children?: string
+  notes?: string
+  preferredContact: string
+  leadSource?: string
+  referredBy?: string
+  tags: string[]
+  avatar?: string
+  createdAt: string
+  transactions?: Transaction[]
+  properties?: Property[]
+  calls?: Call[]
+  todos?: Todo[]
+  activities?: Activity[]
+  reminders?: Reminder[]
+  emails?: Email[]
 }
 
 function App() {
@@ -111,372 +153,148 @@ function App() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  
-  console.log('App component state:', { user: !!user, loading, error, clientsCount: clients.length })
   const [showAddClient, setShowAddClient] = useState(false)
-  const [editingClient, setEditingClient] = useState<Client | null>(null)
-  const [autoCallData, setAutoCallData] = useState<{clientId: string, propertyAddress?: string} | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTag, setSelectedTag] = useState('')
 
   // Check for existing auth
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('auth_token')
-        if (token) {
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-          await fetchClients()
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        localStorage.removeItem('auth_token')
-        delete api.defaults.headers.common['Authorization']
-      } finally {
-        setLoading(false)
-      }
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      loadUserData()
+    } else {
+      setLoading(false)
     }
-    
-    checkAuth()
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const loadUserData = async () => {
     try {
-      console.log('Attempting login with API URL:', API_URL)
-      
-      // Try API first, fall back to mock if API fails
-      try {
-        const response = await api.post('/auth/login', { email, password })
-        console.log('Login response:', response.data)
-        const { token, user: userData } = response.data
-        
-        localStorage.setItem('auth_token', token)
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        setUser(userData)
-        fetchClients()
-        setError('')
-        return
-      } catch (apiError) {
-        console.log('API login failed, trying mock authentication...')
-      }
-      
-      // Mock authentication fallback
-      if (email === 'rodrigo@realtor.com' && password === 'admin123') {
-        console.log('✅ Mock login successful!')
-        const mockToken = 'mock-token-' + Date.now()
-        const mockUser = {
-          id: '1',
-          email: 'rodrigo@realtor.com',
-          firstName: 'Rodrigo',
-          lastName: 'Silva',
-          role: 'agent'
-        }
-        
-        localStorage.setItem('auth_token', mockToken)
-        api.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`
-        setUser(mockUser)
-        
-        // Load mock clients with enhanced data
-        setClients([
-          {
-            id: '1',
-            firstName: 'John',
-            lastName: 'Smith',
-            email: 'john.smith@email.com',
-            phone: '(555) 123-4567',
-            role: 'BUYER',
-            stage: 'ACTIVE',
-            city: 'Miami',
-            state: 'FL',
-            tags: ['first-time-buyer'],
-            lifetimeGrossCommission: 12500,
-            lifetimeNetCommission: 10000,
-            createdAt: '2024-01-15',
-            lastContact: '2024-08-20',
-            notes: 'Looking for a family home in Miami. Budget around $400K.',
-            propertyAddress: '123 Ocean Drive, Miami, FL',
-            properties: [
-              {
-                id: 'p1',
-                address: '123 Ocean Drive, Miami, FL',
-                price: 425000,
-                type: 'Single Family',
-                status: 'INTERESTED',
-                bedrooms: 3,
-                bathrooms: 2,
-                sqft: 1800,
-                notes: 'Client loves the location but concerned about price',
-                dateAdded: '2024-08-15'
-              }
-            ],
-            calls: [
-              {
-                id: 'c1',
-                date: '2024-08-20',
-                duration: 15,
-                type: 'OUTBOUND',
-                outcome: 'Follow-up scheduled',
-                notes: 'Discussed property options and budget',
-                followUpDate: '2024-08-27'
-              }
-            ],
-            activities: [
-              {
-                id: 'a1',
-                type: 'CALL',
-                title: 'Initial consultation call',
-                description: 'Discussed client needs and budget',
-                date: '2024-08-20',
-                completed: true
-              },
-              {
-                id: 'a2',
-                type: 'SHOWING',
-                title: 'Property showing scheduled',
-                description: '123 Ocean Drive showing',
-                date: '2024-08-27',
-                completed: false
-              }
-            ],
-            todos: [
-              {
-                id: 't1',
-                title: 'Send mortgage pre-approval info',
-                description: 'Email client mortgage broker contacts',
-                dueDate: '2024-08-25',
-                priority: 'HIGH',
-                completed: false,
-                createdAt: '2024-08-20'
-              }
-            ]
-          },
-          {
-            id: '2',
-            firstName: 'Sarah',
-            lastName: 'Johnson',
-            email: 'sarah.j@email.com',
-            phone: '(555) 987-6543',
-            role: 'SELLER',
-            stage: 'SHOWING',
-            city: 'Miami',
-            state: 'FL',
-            tags: ['luxury'],
-            lifetimeGrossCommission: 25000,
-            lifetimeNetCommission: 20000,
-            createdAt: '2024-02-10',
-            lastContact: '2024-08-18',
-            notes: 'Selling luxury condo. Wants quick sale.',
-            propertyAddress: '456 Biscayne Blvd, Miami, FL',
-            properties: [
-              {
-                id: 'p2',
-                address: '456 Biscayne Blvd, Miami, FL',
-                price: 750000,
-                type: 'Condo',
-                status: 'LISTED',
-                bedrooms: 2,
-                bathrooms: 2.5,
-                sqft: 1200,
-                notes: 'Luxury unit with bay views',
-                dateAdded: '2024-08-10'
-              }
-            ],
-            calls: [
-              {
-                id: 'c2',
-                date: '2024-08-18',
-                duration: 20,
-                type: 'INBOUND',
-                outcome: 'Price adjustment discussed',
-                notes: 'Client considering price reduction',
-                followUpDate: '2024-08-25'
-              }
-            ],
-            activities: [
-              {
-                id: 'a3',
-                type: 'MEETING',
-                title: 'Listing agreement signed',
-                description: 'Contract signed, marketing materials prepared',
-                date: '2024-08-10',
-                completed: true
-              }
-            ],
-            todos: [
-              {
-                id: 't2',
-                title: 'Schedule professional photos',
-                description: 'Book photographer for property',
-                dueDate: '2024-08-24',
-                priority: 'MEDIUM',
-                completed: false,
-                createdAt: '2024-08-18'
-              }
-            ]
-          }
-        ])
-        
-        setError('')
-        return
-      } else {
-        throw new Error('Invalid credentials')
-      }
-    } catch (err: any) {
-      console.error('Login error:', err)
-      setError('Invalid credentials. Use rodrigo@realtor.com / admin123')
+      const response = await api.get('/auth/me')
+      setUser(response.data.user)
+      await loadClients()
+    } catch (error) {
+      console.error('Auth check failed:', error)
+      localStorage.removeItem('auth_token')
+      setLoading(false)
     }
   }
 
-  const logout = () => {
+  const loadClients = async () => {
+    try {
+      const response = await api.get('/clients')
+      setClients(response.data)
+      setLoading(false)
+    } catch (error) {
+      console.error('Failed to load clients:', error)
+      setError('Failed to load clients')
+      setLoading(false)
+    }
+  }
+
+  const onLogin = async (email: string, password: string) => {
+    try {
+      setError('')
+      const response = await api.post('/auth/login', { email, password })
+      localStorage.setItem('auth_token', response.data.token)
+      setUser(response.data.user)
+      await loadClients()
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Login failed')
+    }
+  }
+
+  const onLogout = () => {
     localStorage.removeItem('auth_token')
-    delete api.defaults.headers.common['Authorization']
     setUser(null)
     setClients([])
     setSelectedClient(null)
   }
 
-  const fetchClients = async () => {
+  const addClient = async (clientData: Omit<Client, 'id' | 'createdAt' | 'transactions' | 'properties' | 'calls' | 'todos' | 'activities' | 'reminders' | 'emails'>) => {
     try {
-      setLoading(true)
-      const response = await api.get('/clients')
-      setClients(response.data.clients)
-      if (!user) {
-        // If we successfully fetched clients, we must be logged in
-        setUser({ id: '1', email: 'rodrigo@realtor.com', firstName: 'Rodrigo', lastName: 'Martinez', role: 'admin' })
-      }
+      const response = await api.post('/clients', clientData)
+      const newClient = response.data
+      setClients(prev => [...prev, newClient])
+      setShowAddClient(false)
     } catch (error) {
-      console.error('Failed to fetch clients:', error)
-    } finally {
-      setLoading(false)
+      console.error('Failed to add client:', error)
     }
   }
 
-  const fetchClientDetails = async (clientId: string) => {
-    try {
-      const response = await api.get(`/clients/${clientId}`)
-      setSelectedClient(response.data.client)
-    } catch (error) {
-      console.error('Failed to fetch client details:', error)
-      // Fallback to mock data for selected client
-      const client = clients.find(c => c.id === clientId)
-      if (client) {
-        setSelectedClient(client)
-      }
-    }
-  }
-
-  const addClient = (newClient: Omit<Client, 'id' | 'createdAt'>) => {
-    const client: Client = {
-      ...newClient,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString().split('T')[0],
-      properties: [],
-      calls: [],
-      activities: [],
-      todos: []
-    }
-    setClients(prev => [...prev, client])
-    setShowAddClient(false)
-  }
-
-  const updateClient = (updatedClient: Client) => {
-    setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c))
-    if (selectedClient?.id === updatedClient.id) {
-      setSelectedClient(updatedClient)
-    }
-  }
-
-  const addCall = (clientId: string, call: Omit<Call, 'id'>) => {
-    const newCall: Call = { ...call, id: Date.now().toString() }
-    const updatedClient = clients.find(c => c.id === clientId)
-    if (updatedClient) {
-      const updated = {
-        ...updatedClient,
-        calls: [...(updatedClient.calls || []), newCall],
-        lastContact: call.date
-      }
-      updateClient(updated)
-    }
-  }
-
-  const addTodo = (clientId: string, todo: Omit<Todo, 'id' | 'createdAt'>) => {
-    const newTodo: Todo = {
-      ...todo,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString().split('T')[0]
-    }
-    const updatedClient = clients.find(c => c.id === clientId)
-    if (updatedClient) {
-      const updated = {
-        ...updatedClient,
-        todos: [...(updatedClient.todos || []), newTodo]
-      }
-      updateClient(updated)
-    }
-  }
-
-  const toggleTodo = (clientId: string, todoId: string) => {
-    const updatedClient = clients.find(c => c.id === clientId)
-    if (updatedClient) {
-      const updated = {
-        ...updatedClient,
-        todos: updatedClient.todos?.map(t => 
-          t.id === todoId ? { ...t, completed: !t.completed } : t
-        ) || []
-      }
-      updateClient(updated)
-    }
-  }
-
-  const addProperty = (clientId: string, property: Omit<Property, 'id' | 'dateAdded'>) => {
-    const newProperty: Property = {
-      ...property,
-      id: Date.now().toString(),
-      dateAdded: new Date().toISOString().split('T')[0]
-    }
-    const updatedClient = clients.find(c => c.id === clientId)
-    if (updatedClient) {
-      const updated = {
-        ...updatedClient,
-        properties: [...(updatedClient.properties || []), newProperty]
-      }
-      updateClient(updated)
-    }
-  }
-
+  // Helper functions
   const formatCurrency = (amount?: number) => {
     if (!amount) return '$0'
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
   }
 
-  const getInitials = (firstName: string, lastName: string) => {
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const getClientInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
   }
 
-  const getStatusColor = (stage: string) => {
-    const colors = {
-      NEW: 'bg-blue-500',
-      NURTURE: 'bg-yellow-500',
-      SHOWING: 'bg-purple-500',
-      ACTIVE: 'bg-green-500',
-      CLOSED: 'bg-gray-500',
-    }
-    return colors[stage as keyof typeof colors] || 'bg-gray-500'
+  const getTotalCommissions = (client: Client) => {
+    const transactions = client.transactions || []
+    const gross = transactions.reduce((sum, t) => sum + (t.grossCommission || 0), 0)
+    const net = transactions.reduce((sum, t) => sum + (t.netCommission || 0), 0)
+    return { gross, net }
   }
 
+  const getNextBirthday = (birthday?: string) => {
+    if (!birthday) return null
+    const today = new Date()
+    const birthDate = new Date(birthday)
+    const thisYear = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
+    
+    if (thisYear < today) {
+      thisYear.setFullYear(today.getFullYear() + 1)
+    }
+    
+    const diffTime = thisYear.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
+
+  const getAllTags = () => {
+    const allTags = clients.flatMap(client => client.tags)
+    return [...new Set(allTags)].filter(Boolean)
+  }
+
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = searchTerm === '' || 
+      `${client.firstName} ${client.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.phone?.includes(searchTerm)
+    
+    const matchesTag = selectedTag === '' || client.tags.includes(selectedTag)
+    
+    return matchesSearch && matchesTag
+  })
+
   if (loading) {
-    console.log('App: Showing loading state')
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
       </div>
     )
   }
 
   if (!user) {
-    console.log('App: Showing login form')
-    return <LoginForm onLogin={login} error={error} />
+    return <LoginForm onLogin={onLogin} error={error} />
   }
-  
-  console.log('App: Showing main CRM interface')
+
+  if (selectedClient) {
+    return (
+      <ClientDetailView 
+        client={selectedClient} 
+        onBack={() => setSelectedClient(null)}
+        onUpdate={loadClients}
+      />
+    )
+  }
 
   if (showAddClient) {
     return (
@@ -487,32 +305,837 @@ function App() {
     )
   }
 
-  if (selectedClient) {
-    return (
-      <ClientDetail
-        client={selectedClient}
-        onBack={() => setSelectedClient(null)}
-        onAddCall={(call) => addCall(selectedClient.id, call)}
-        onAddTodo={(todo) => addTodo(selectedClient.id, todo)}
-        onToggleTodo={(todoId) => toggleTodo(selectedClient.id, todoId)}
-        onAddProperty={(property) => addProperty(selectedClient.id, property)}
-      />
-    )
-  }
-
   return (
-    <ClientList
-      clients={clients}
-      user={user}
-      onLogout={logout}
-      onSelectClient={fetchClientDetails}
-      onAddClient={() => setShowAddClient(true)}
-    />
+    <div className="min-h-screen bg-black text-white">
+      {/* Netflix-style Header */}
+      <header className="bg-gradient-to-r from-black via-gray-900 to-black px-6 py-4 sticky top-0 z-50 border-b border-red-600/20">
+        <div className="flex justify-between items-center max-w-7xl mx-auto">
+          <div className="flex items-center space-x-8">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-red-400 bg-clip-text text-transparent">
+              REALTOR CRM
+            </h1>
+            <nav className="hidden md:flex space-x-6">
+              <button className="text-white hover:text-red-400 transition-colors">Clients</button>
+              <button className="text-gray-400 hover:text-red-400 transition-colors">Properties</button>
+              <button className="text-gray-400 hover:text-red-400 transition-colors">Transactions</button>
+              <button className="text-gray-400 hover:text-red-400 transition-colors">Reports</button>
+            </nav>
+          </div>
+          <div className="flex items-center space-x-4">
+            <span className="text-gray-300">Welcome, {user.firstName}!</span>
+            <button
+              onClick={onLogout}
+              className="bg-gray-800 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-all duration-200 border border-gray-700 hover:border-red-500"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Search and Filters */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search clients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center space-x-4">
+              <select
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                className="px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+              >
+                <option value="">All Tags</option>
+                {getAllTags().map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setShowAddClient(true)}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg"
+              >
+                <span>+</span>
+                <span>Add Client</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Clients Grid - Netflix Style */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-6">Your Clients ({filteredClients.length})</h2>
+          {filteredClients.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">No clients found. Add your first client to get started!</div>
+              <button
+                onClick={() => setShowAddClient(true)}
+                className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Add Your First Client
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+              {filteredClients.map((client) => (
+                <ClientTile
+                  key={client.id}
+                  client={client}
+                  onClick={() => setSelectedClient(client)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
-// Login Component
-const LoginForm: React.FC<{ onLogin: (email: string, password: string) => void, error: string }> = ({ onLogin, error }) => {
+// Client Tile Component - Netflix Style
+const ClientTile: React.FC<{
+  client: Client
+  onClick: () => void
+}> = ({ client, onClick }) => {
+  const commissions = client.transactions?.reduce((sum, t) => sum + (t.netCommission || 0), 0) || 0
+  const nextBirthday = client.birthday ? (() => {
+    const today = new Date()
+    const birthDate = new Date(client.birthday!)
+    const thisYear = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
+    
+    if (thisYear < today) {
+      thisYear.setFullYear(today.getFullYear() + 1)
+    }
+    
+    const diffTime = thisYear.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  })() : null
+
+  return (
+    <div
+      onClick={onClick}
+      className="group relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-700 hover:border-red-500"
+    >
+      {/* Client Avatar */}
+      <div className="aspect-[3/4] bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center relative overflow-hidden">
+        {client.avatar ? (
+          <img src={client.avatar} alt={`${client.firstName} ${client.lastName}`} className="w-full h-full object-cover" />
+        ) : (
+          <div className="text-4xl font-bold text-white">
+            {client.firstName.charAt(0)}{client.lastName.charAt(0)}
+          </div>
+        )}
+        
+        {/* Birthday indicator */}
+        {nextBirthday !== null && nextBirthday <= 30 && (
+          <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-bold">
+            🎂 {nextBirthday}d
+          </div>
+        )}
+
+        {/* Overlay on hover */}
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-white text-sm font-semibold">
+            View Details
+          </div>
+        </div>
+      </div>
+
+      {/* Client Info */}
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-white mb-2 truncate">
+          {client.firstName} {client.lastName}
+        </h3>
+        
+        <div className="space-y-1 text-sm text-gray-400">
+          {client.email && (
+            <div className="truncate">{client.email}</div>
+          )}
+          {client.phone && (
+            <div>{client.phone}</div>
+          )}
+          
+          {/* Commission info */}
+          {commissions > 0 && (
+            <div className="text-green-400 font-semibold">
+              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(commissions)}
+            </div>
+          )}
+
+          {/* Transaction count */}
+          <div className="text-xs text-gray-500">
+            {(client.transactions?.length || 0)} transaction{(client.transactions?.length || 0) !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        {/* Tags */}
+        {client.tags.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1">
+            {client.tags.slice(0, 2).map(tag => (
+              <span key={tag} className="px-2 py-1 bg-red-600 text-white text-xs rounded-full">
+                {tag}
+              </span>
+            ))}
+            {client.tags.length > 2 && (
+              <span className="px-2 py-1 bg-gray-600 text-white text-xs rounded-full">
+                +{client.tags.length - 2}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Client Detail View Component
+const ClientDetailView: React.FC<{
+  client: Client
+  onBack: () => void
+  onUpdate: () => void
+}> = ({ client, onBack, onUpdate }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'properties' | 'communications' | 'reminders'>('overview')
+  
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const totalCommissions = client.transactions?.reduce((acc, t) => ({
+    gross: acc.gross + (t.grossCommission || 0),
+    net: acc.net + (t.netCommission || 0)
+  }), { gross: 0, net: 0 }) || { gross: 0, net: 0 }
+
+  const getAge = (birthday?: string) => {
+    if (!birthday) return null
+    const today = new Date()
+    const birthDate = new Date(birthday)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    
+    return age
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-black via-gray-900 to-black px-6 py-4 border-b border-red-600/20">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={onBack}
+              className="text-red-400 hover:text-red-300 text-2xl"
+            >
+              ←
+            </button>
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-600 to-red-800 rounded-lg flex items-center justify-center text-2xl font-bold">
+                {client.avatar ? (
+                  <img src={client.avatar} alt={`${client.firstName} ${client.lastName}`} className="w-full h-full object-cover rounded-lg" />
+                ) : (
+                  `${client.firstName.charAt(0)}${client.lastName.charAt(0)}`
+                )}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">{client.firstName} {client.lastName}</h1>
+                <p className="text-gray-400">{client.email || client.phone}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className="text-right">
+              <div className="text-sm text-gray-400">Total Commissions</div>
+              <div className="text-2xl font-bold text-green-400">{formatCurrency(totalCommissions.net)}</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation Tabs */}
+      <div className="bg-gray-900 px-6 border-b border-gray-700">
+        <div className="max-w-7xl mx-auto">
+          <nav className="flex space-x-8">
+            {[
+              { id: 'overview', label: 'Overview' },
+              { id: 'transactions', label: 'Transactions' },
+              { id: 'properties', label: 'Properties' },
+              { id: 'communications', label: 'Communications' },
+              { id: 'reminders', label: 'Reminders' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-red-500 text-red-400'
+                    : 'border-transparent text-gray-400 hover:text-white hover:border-gray-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {activeTab === 'overview' && (
+          <OverviewTab client={client} />
+        )}
+        
+        {activeTab === 'transactions' && (
+          <TransactionsTab client={client} />
+        )}
+        
+        {activeTab === 'properties' && (
+          <PropertiesTab client={client} />
+        )}
+        
+        {activeTab === 'communications' && (
+          <CommunicationsTab client={client} />
+        )}
+        
+        {activeTab === 'reminders' && (
+          <RemindersTab client={client} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Overview Tab
+const OverviewTab: React.FC<{ client: Client }> = ({ client }) => {
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const getAge = (birthday?: string) => {
+    if (!birthday) return null
+    const today = new Date()
+    const birthDate = new Date(birthday)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    
+    return age
+  }
+
+  const totalCommissions = client.transactions?.reduce((acc, t) => ({
+    gross: acc.gross + (t.grossCommission || 0),
+    net: acc.net + (t.netCommission || 0)
+  }), { gross: 0, net: 0 }) || { gross: 0, net: 0 }
+
+  return (
+    <div className="space-y-8">
+      {/* Personal Information */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-xl font-semibold mb-6">Personal Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div>
+            <label className="text-gray-400 text-sm">Email</label>
+            <div className="text-white font-medium">{client.email || 'N/A'}</div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Phone</label>
+            <div className="text-white font-medium">
+              {client.phone ? (
+                <a href={`tel:${client.phone}`} className="text-red-400 hover:text-red-300">
+                  {client.phone}
+                </a>
+              ) : 'N/A'}
+            </div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Birthday</label>
+            <div className="text-white font-medium">
+              {client.birthday ? (
+                <span>
+                  {formatDate(client.birthday)} 
+                  {getAge(client.birthday) && <span className="text-gray-400 ml-2">({getAge(client.birthday)} years old)</span>}
+                </span>
+              ) : 'N/A'}
+            </div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Anniversary</label>
+            <div className="text-white font-medium">{formatDate(client.anniversary)}</div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Occupation</label>
+            <div className="text-white font-medium">{client.occupation || 'N/A'}</div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Spouse</label>
+            <div className="text-white font-medium">{client.spouse || 'N/A'}</div>
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <label className="text-gray-400 text-sm">Address</label>
+            <div className="text-white font-medium">
+              {[client.address, client.city, client.state, client.zipCode].filter(Boolean).join(', ') || 'N/A'}
+            </div>
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <label className="text-gray-400 text-sm">Children</label>
+            <div className="text-white font-medium">{client.children || 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Financial Summary */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-xl font-semibold mb-6">Financial Summary</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-6 text-center">
+            <div className="text-3xl font-bold">{formatCurrency(totalCommissions.gross)}</div>
+            <div className="text-green-100 mt-2">Gross Commission</div>
+          </div>
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-6 text-center">
+            <div className="text-3xl font-bold">{formatCurrency(totalCommissions.net)}</div>
+            <div className="text-blue-100 mt-2">Net Commission</div>
+          </div>
+          <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg p-6 text-center">
+            <div className="text-3xl font-bold">{client.transactions?.length || 0}</div>
+            <div className="text-purple-100 mt-2">Total Transactions</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-xl font-semibold mb-6">Recent Activity</h3>
+        <div className="space-y-4">
+          {client.activities?.slice(0, 5).map(activity => (
+            <div key={activity.id} className="flex items-center space-x-4 p-4 bg-gray-800 rounded-lg">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <div className="flex-1">
+                <div className="text-white font-medium">{activity.title}</div>
+                <div className="text-gray-400 text-sm">{activity.description}</div>
+              </div>
+              <div className="text-gray-500 text-sm">{formatDate(activity.createdAt)}</div>
+            </div>
+          )) || (
+            <div className="text-gray-400 text-center py-8">No recent activity</div>
+          )}
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-xl font-semibold mb-6">Notes</h3>
+        <div className="text-gray-300">
+          {client.notes || 'No notes available'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Transactions Tab
+const TransactionsTab: React.FC<{ client: Client }> = ({ client }) => {
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'closed': return 'bg-green-600'
+      case 'pending': return 'bg-yellow-600'
+      case 'cancelled': return 'bg-red-600'
+      default: return 'bg-gray-600'
+    }
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'buy': return '🏠'
+      case 'sell': return '💰'
+      case 'lease': return '📋'
+      default: return '📄'
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">Transaction History</h3>
+        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+          Add Transaction
+        </button>
+      </div>
+
+      {client.transactions?.length ? (
+        <div className="space-y-4">
+          {client.transactions.map(transaction => (
+            <div key={transaction.id} className="bg-gray-900 rounded-lg p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <div className="text-3xl">{getTypeIcon(transaction.type)}</div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">{transaction.propertyAddress}</h4>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(transaction.status)}`}>
+                        {transaction.status.toUpperCase()}
+                      </span>
+                      <span className="text-gray-400 text-sm">{transaction.type.toUpperCase()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-white">{formatCurrency(transaction.salePrice)}</div>
+                  <div className="text-green-400 font-medium">{formatCurrency(transaction.netCommission)} net</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-400">List Price:</span>
+                  <div className="text-white font-medium">{formatCurrency(transaction.listPrice)}</div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Commission Rate:</span>
+                  <div className="text-white font-medium">{transaction.commissionRate}%</div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Gross Commission:</span>
+                  <div className="text-white font-medium">{formatCurrency(transaction.grossCommission)}</div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Close Date:</span>
+                  <div className="text-white font-medium">{formatDate(transaction.closeDate)}</div>
+                </div>
+              </div>
+
+              {transaction.notes && (
+                <div className="mt-4 p-3 bg-gray-800 rounded">
+                  <span className="text-gray-400 text-sm">Notes:</span>
+                  <div className="text-gray-300 mt-1">{transaction.notes}</div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-900 rounded-lg">
+          <div className="text-6xl mb-4">💼</div>
+          <div className="text-gray-400 mb-4">No transactions yet</div>
+          <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+            Record First Transaction
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Properties Tab
+const PropertiesTab: React.FC<{ client: Client }> = ({ client }) => {
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-600'
+      case 'sold': return 'bg-blue-600'
+      case 'pending': return 'bg-yellow-600'
+      default: return 'bg-gray-600'
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">Properties</h3>
+        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+          Add Property
+        </button>
+      </div>
+
+      {client.properties?.length ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {client.properties.map(property => (
+            <div key={property.id} className="bg-gray-900 rounded-lg overflow-hidden">
+              <div className="h-48 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
+                <div className="text-6xl">🏠</div>
+              </div>
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">{property.address}</h4>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(property.status)}`}>
+                    {property.status.toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-gray-400 text-sm mb-3">
+                  {[property.city, property.state].filter(Boolean).join(', ')}
+                </div>
+                <div className="text-2xl font-bold text-white mb-3">{formatCurrency(property.price)}</div>
+                <div className="grid grid-cols-3 gap-2 text-sm text-gray-300">
+                  <div>
+                    <div className="text-gray-400">Beds</div>
+                    <div className="font-medium">{property.bedrooms || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Baths</div>
+                    <div className="font-medium">{property.bathrooms || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Sq Ft</div>
+                    <div className="font-medium">{property.sqft?.toLocaleString() || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-900 rounded-lg">
+          <div className="text-6xl mb-4">🏠</div>
+          <div className="text-gray-400 mb-4">No properties yet</div>
+          <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+            Add First Property
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Communications Tab
+const CommunicationsTab: React.FC<{ client: Client }> = ({ client }) => {
+  const [activeComTab, setActiveComTab] = useState<'emails' | 'calls'>('emails')
+
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleString()
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setActiveComTab('emails')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              activeComTab === 'emails' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Emails
+          </button>
+          <button
+            onClick={() => setActiveComTab('calls')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              activeComTab === 'calls' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Calls
+          </button>
+        </div>
+        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+          {activeComTab === 'emails' ? 'Compose Email' : 'Log Call'}
+        </button>
+      </div>
+
+      {activeComTab === 'emails' && (
+        <div className="space-y-4">
+          {client.emails?.length ? (
+            client.emails.map(email => (
+              <div key={email.id} className="bg-gray-900 rounded-lg p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">{email.subject}</h4>
+                    <div className="text-gray-400 text-sm">To: {email.to.join(', ')}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      email.status === 'sent' ? 'bg-green-600' : 
+                      email.status === 'failed' ? 'bg-red-600' : 'bg-gray-600'
+                    } text-white`}>
+                      {email.status.toUpperCase()}
+                    </div>
+                    <div className="text-gray-400 text-sm mt-1">{formatDate(email.sentAt || email.createdAt)}</div>
+                  </div>
+                </div>
+                <div className="text-gray-300 text-sm bg-gray-800 p-3 rounded">
+                  {email.body.substring(0, 200)}...
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 bg-gray-900 rounded-lg">
+              <div className="text-6xl mb-4">📧</div>
+              <div className="text-gray-400 mb-4">No emails yet</div>
+              <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+                Send First Email
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeComTab === 'calls' && (
+        <div className="space-y-4">
+          {client.calls?.length ? (
+            client.calls.map(call => (
+              <div key={call.id} className="bg-gray-900 rounded-lg p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">
+                      <a href={`tel:${call.phoneNumber}`} className="text-red-400 hover:text-red-300">
+                        {call.phoneNumber}
+                      </a>
+                    </h4>
+                    <div className="text-gray-400 text-sm">
+                      {call.duration && `Duration: ${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}`}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      call.outcome === 'answered' ? 'bg-green-600' : 
+                      call.outcome === 'voicemail' ? 'bg-yellow-600' : 'bg-gray-600'
+                    } text-white`}>
+                      {call.outcome?.toUpperCase() || 'UNKNOWN'}
+                    </div>
+                    <div className="text-gray-400 text-sm mt-1">{formatDate(call.createdAt)}</div>
+                  </div>
+                </div>
+                {call.notes && (
+                  <div className="text-gray-300 text-sm bg-gray-800 p-3 rounded">
+                    {call.notes}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 bg-gray-900 rounded-lg">
+              <div className="text-6xl mb-4">📞</div>
+              <div className="text-gray-400 mb-4">No calls logged yet</div>
+              <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+                Log First Call
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Reminders Tab
+const RemindersTab: React.FC<{ client: Client }> = ({ client }) => {
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'birthday': return '🎂'
+      case 'anniversary': return '💒'
+      case 'follow_up': return '📞'
+      case 'closing': return '🏠'
+      default: return '⏰'
+    }
+  }
+
+  const isOverdue = (date: string) => {
+    return new Date(date) < new Date()
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">Reminders & Important Dates</h3>
+        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+          Add Reminder
+        </button>
+      </div>
+
+      {client.reminders?.length ? (
+        <div className="space-y-4">
+          {client.reminders.map(reminder => (
+            <div key={reminder.id} className={`bg-gray-900 rounded-lg p-6 border-l-4 ${
+              isOverdue(reminder.reminderDate) ? 'border-red-500' : 'border-blue-500'
+            }`}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <div className="text-3xl">{getTypeIcon(reminder.type)}</div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">{reminder.title}</h4>
+                    <div className="text-gray-400 text-sm">{reminder.description}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-sm font-medium ${
+                    isOverdue(reminder.reminderDate) ? 'text-red-400' : 'text-blue-400'
+                  }`}>
+                    {formatDate(reminder.reminderDate)}
+                  </div>
+                  <div className="text-gray-500 text-xs mt-1">
+                    {reminder.type.replace('_', ' ').toUpperCase()}
+                  </div>
+                </div>
+              </div>
+              {!reminder.completed && (
+                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                  Mark Complete
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-900 rounded-lg">
+          <div className="text-6xl mb-4">⏰</div>
+          <div className="text-gray-400 mb-4">No reminders set</div>
+          <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+            Set First Reminder
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Login Form Component
+const LoginForm: React.FC<{
+  onLogin: (email: string, password: string) => void
+  error: string
+}> = ({ onLogin, error }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
@@ -522,222 +1145,65 @@ const LoginForm: React.FC<{ onLogin: (email: string, password: string) => void, 
   }
 
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <h2 className="login-title">CLIENT FLOW 360</h2>
-        <form onSubmit={handleSubmit} className="login-form">
-          <input
-            type="email"
-            placeholder="Email (rodrigo@realtor.com)"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password (admin123)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="bg-gray-900 p-8 rounded-xl shadow-2xl w-full max-w-md border border-red-500/30">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-red-400 bg-clip-text text-transparent mb-2">
+            REALTOR CRM
+          </h1>
+          <p className="text-gray-400">Sign in to your account</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
           {error && (
-            <div className="error-message">
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
-          <button type="submit">
-            Sign In to CRM
+
+          <button
+            type="submit"
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 px-4 rounded-lg transition-all duration-200 font-medium"
+          >
+            Sign In
           </button>
         </form>
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-200 mb-2">Demo Account</h3>
-          <div className="text-xs text-gray-400 space-y-1">
-            <div>Email: rodrigo@realtor.com</div>
-            <div>Password: admin123</div>
-          </div>
+
+        <div className="mt-6 text-center text-gray-400 text-sm">
+          Demo: rodrigo@realtor.com / admin123
         </div>
       </div>
     </div>
   )
 }
 
-// Client List Component
-const ClientList: React.FC<{
-  clients: Client[]
-  user: User
-  onLogout: () => void
-  onSelectClient: (id: string) => void
-  onAddClient: () => void
-}> = ({ clients, user, onLogout, onSelectClient, onAddClient }) => {
-  const getFollowUpStatus = (client: Client) => {
-    if (!client.lastContact) return null
-    const lastContact = new Date(client.lastContact)
-    const today = new Date()
-    const daysSince = Math.floor((today.getTime() - lastContact.getTime()) / (1000 * 60 * 60 * 24))
-    
-    if (daysSince >= 7) {
-      return { status: 'overdue', days: daysSince, text: `${daysSince} days overdue` }
-    } else if (daysSince >= 5) {
-      return { status: 'due', days: daysSince, text: `Due in ${7 - daysSince} days` }
-    }
-    return { status: 'good', days: daysSince, text: `Last contact ${daysSince} days ago` }
-  }
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-  }
-
-  const getStatusColor = (stage: string) => {
-    const colors = {
-      NEW: 'bg-blue-500',
-      NURTURE: 'bg-yellow-500',
-      SHOWING: 'bg-purple-500',
-      ACTIVE: 'bg-green-500',
-      CLOSED: 'bg-gray-500',
-    }
-    return colors[stage as keyof typeof colors] || 'bg-gray-500'
-  }
-
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return '$0'
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-  }
-  return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 p-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">Real Estate CRM</h1>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-300">Welcome, {user.firstName}!</span>
-            <button
-              onClick={onLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="p-6">
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">Your Clients ({clients.length})</h2>
-            <button
-              onClick={onAddClient}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            >
-              <span>+</span>
-              <span>Add New Client</span>
-            </button>
-          </div>
-          
-          {clients.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">No clients yet. Let's create some sample data!</div>
-              <button
-                onClick={async () => {
-                  try {
-                    await api.post('/seed')
-                    window.location.reload()
-                  } catch (error) {
-                    console.error('Failed to seed data:', error)
-                  }
-                }}
-                className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Create Sample Data
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {clients.map((client) => (
-                <div
-                  key={client.id}
-                  onClick={() => onSelectClient(client.id)}
-                  className="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-750 transition-colors border border-gray-700 relative"
-                >
-                  {/* Avatar */}
-                  <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-white font-bold">{getInitials(client.firstName, client.lastName)}</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-white font-medium">{client.firstName} {client.lastName}</h3>
-                      <p className="text-gray-400 text-sm">{client.role}</p>
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="mb-3">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(client.stage)}`}>
-                      {client.stage}
-                    </span>
-                  </div>
-
-                  {/* Contact Info */}
-                  <div className="text-gray-300 text-sm space-y-1 mb-3">
-                    {client.email && <div>📧 {client.email}</div>}
-                    {client.phone && <div>📞 {client.phone}</div>}
-                    {client.city && client.state && <div>📍 {client.city}, {client.state}</div>}
-                    {client.propertyAddress && <div>🏠 {client.propertyAddress}</div>}
-                  </div>
-
-                  {/* Commission */}
-                  {client.lifetimeNetCommission && client.lifetimeNetCommission > 0 && (
-                    <div className="text-green-400 font-medium text-sm">
-                      💰 {formatCurrency(client.lifetimeNetCommission)} earned
-                    </div>
-                  )}
-
-                  {/* Follow-up Status */}
-                  {(() => {
-                    const followUp = getFollowUpStatus(client)
-                    if (followUp) {
-                      return (
-                        <div className={`text-xs mb-2 ${
-                          followUp.status === 'overdue' ? 'text-red-400' :
-                          followUp.status === 'due' ? 'text-yellow-400' :
-                          'text-green-400'
-                        }`}>
-                          📅 {followUp.text}
-                        </div>
-                      )
-                    }
-                    return null
-                  })()} 
-
-                  {/* Tags */}
-                  {client.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {client.tags.slice(0, 2).map((tag, index) => (
-                        <span key={index} className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Quick Stats */}
-                  <div className="mt-3 flex justify-between text-xs text-gray-400">
-                    <span>{client.properties?.length || 0} properties</span>
-                    <span>{client.todos?.filter(t => !t.completed).length || 0} todos</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  )
-}
-
 // Add Client Form Component
 const AddClientForm: React.FC<{
-  onSave: (client: Omit<Client, 'id' | 'createdAt'>) => void
+  onSave: (client: Omit<Client, 'id' | 'createdAt' | 'transactions' | 'properties' | 'calls' | 'todos' | 'activities' | 'reminders' | 'emails'>) => void
   onCancel: () => void
 }> = ({ onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -745,37 +1211,27 @@ const AddClientForm: React.FC<{
     lastName: '',
     email: '',
     phone: '',
-    role: 'BUYER',
-    stage: 'NEW',
+    address: '',
     city: '',
     state: '',
-    propertyAddress: '',
+    zipCode: '',
+    birthday: '',
+    anniversary: '',
+    occupation: '',
+    spouse: '',
+    children: '',
     notes: '',
-    tags: [] as string[]
+    preferredContact: 'email',
+    leadSource: '',
+    referredBy: '',
+    tags: [] as string[],
   })
+
   const [newTag, setNewTag] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.firstName || !formData.lastName) {
-      alert('First name and last name are required')
-      return
-    }
-    onSave({
-      ...formData,
-      lifetimeGrossCommission: 0,
-      lifetimeNetCommission: 0,
-      properties: formData.propertyAddress ? [{
-        id: Date.now().toString(),
-        address: formData.propertyAddress,
-        type: 'Unknown',
-        status: 'INTERESTED',
-        dateAdded: new Date().toISOString().split('T')[0]
-      }] : [],
-      calls: [],
-      activities: [],
-      todos: []
-    })
+    onSave(formData)
   }
 
   const addTag = () => {
@@ -796,1399 +1252,263 @@ const AddClientForm: React.FC<{
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <header className="bg-gray-800 border-b border-gray-700 p-4">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={onCancel}
-            className="text-gray-300 hover:text-white transition-colors"
-          >
-            ← Cancel
-          </button>
-          <h1 className="text-2xl font-bold text-white">Add New Client</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="bg-gray-900 rounded-xl p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold">Add New Client</h2>
+            <button
+              onClick={onCancel}
+              className="text-gray-400 hover:text-white text-2xl"
+            >
+              ×
+            </button>
+          </div>
 
-      <main className="p-6">
-        <div className="max-w-2xl mx-auto">
-          <form onSubmit={handleSubmit} className="bg-gray-800 rounded-lg p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">First Name *</label>
-                <input
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Last Name *</label>
-                <input
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Phone</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="BUYER">Buyer</option>
-                  <option value="SELLER">Seller</option>
-                  <option value="BOTH">Both</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Stage</label>
-                <select
-                  value={formData.stage}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stage: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="NEW">New</option>
-                  <option value="NURTURE">Nurture</option>
-                  <option value="SHOWING">Showing</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="CLOSED">Closed</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">City</label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">State</label>
-                <input
-                  type="text"
-                  value={formData.state}
-                  onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="FL"
-                  maxLength={2}
-                />
-              </div>
-            </div>
-
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Personal Information */}
             <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Property Address (If Known)</label>
-              <input
-                type="text"
-                value={formData.propertyAddress}
-                onChange={(e) => setFormData(prev => ({ ...prev, propertyAddress: e.target.value }))}
-                className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                placeholder="123 Main Street, City, State"
-              />
+              <h3 className="text-xl font-semibold mb-4">Personal Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">First Name *</label>
+                  <input
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Last Name *</label>
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Birthday</label>
+                  <input
+                    type="date"
+                    value={formData.birthday}
+                    onChange={(e) => setFormData(prev => ({ ...prev, birthday: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Anniversary</label>
+                  <input
+                    type="date"
+                    value={formData.anniversary}
+                    onChange={(e) => setFormData(prev => ({ ...prev, anniversary: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Occupation</label>
+                  <input
+                    type="text"
+                    value={formData.occupation}
+                    onChange={(e) => setFormData(prev => ({ ...prev, occupation: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Spouse</label>
+                  <input
+                    type="text"
+                    value={formData.spouse}
+                    onChange={(e) => setFormData(prev => ({ ...prev, spouse: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Children</label>
+                  <input
+                    type="text"
+                    value={formData.children}
+                    onChange={(e) => setFormData(prev => ({ ...prev, children: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    placeholder="Names and ages..."
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* Address Information */}
             <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Notes</label>
+              <h3 className="text-xl font-semibold mb-4">Address</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Street Address</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">ZIP Code</label>
+                  <input
+                    type="text"
+                    value={formData.zipCode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Business Information */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Business Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Lead Source</label>
+                  <input
+                    type="text"
+                    value={formData.leadSource}
+                    onChange={(e) => setFormData(prev => ({ ...prev, leadSource: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    placeholder="e.g., Zillow, Referral, Website..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Referred By</label>
+                  <input
+                    type="text"
+                    value={formData.referredBy}
+                    onChange={(e) => setFormData(prev => ({ ...prev, referredBy: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Preferred Contact</label>
+                  <select
+                    value={formData.preferredContact}
+                    onChange={(e) => setFormData(prev => ({ ...prev, preferredContact: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  >
+                    <option value="email">Email</option>
+                    <option value="phone">Phone</option>
+                    <option value="text">Text</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Tags</h3>
+              <div className="space-y-4">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    className="flex-1 p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    placeholder="Add a tag..."
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                  />
+                  <button
+                    type="button"
+                    onClick={addTag}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                {formData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.tags.map(tag => (
+                      <span key={tag} className="bg-red-600 text-white px-3 py-1 rounded-full text-sm flex items-center space-x-2">
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="text-red-200 hover:text-white"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Notes</h3>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none h-24 resize-none"
-                placeholder="Client notes and preferences..."
+                rows={4}
+                className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                placeholder="Any additional notes about this client..."
               />
             </div>
 
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Tags</label>
-              <div className="flex space-x-2 mb-2">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                  className="flex-1 p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="Add tag..."
-                />
-                <button
-                  type="button"
-                  onClick={addTag}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Add
-                </button>
-              </div>
-              {formData.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags.map((tag, index) => (
-                    <span key={index} className="bg-gray-700 text-gray-300 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
-                      <span>{tag}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="text-red-400 hover:text-red-300 ml-1"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex space-x-4 pt-4">
+            {/* Action Buttons */}
+            <div className="flex space-x-4 pt-6">
               <button
                 type="submit"
-                className="flex-1 bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 transition-colors font-medium"
+                className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 px-6 rounded-lg transition-all duration-200 font-medium"
               >
                 Save Client
               </button>
               <button
                 type="button"
                 onClick={onCancel}
-                className="flex-1 bg-gray-600 text-white py-3 px-6 rounded-md hover:bg-gray-700 transition-colors font-medium"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg transition-colors font-medium"
               >
                 Cancel
               </button>
             </div>
           </form>
         </div>
-      </main>
-    </div>
-  )
-}
-
-// Client Detail Component (360° View)
-const ClientDetail: React.FC<{
-  client: Client
-  onBack: () => void
-  onAddCall: (call: Omit<Call, 'id'>) => void
-  onAddTodo: (todo: Omit<Todo, 'id' | 'createdAt'>) => void
-  onToggleTodo: (todoId: string) => void
-  onAddProperty: (property: Omit<Property, 'id' | 'dateAdded'>) => void
-}> = ({ client, onBack, onAddCall, onAddTodo, onToggleTodo, onAddProperty }) => {
-  const [activeView, setActiveView] = useState<'overview' | 'properties' | 'calls' | 'activities' | 'todos'>('overview')
-  const [showAddCall, setShowAddCall] = useState(false)
-  const [showAddTodo, setShowAddTodo] = useState(false)
-  const [showAddProperty, setShowAddProperty] = useState(false)
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return '$0'
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-  }
-
-  const formatDate = (date?: string) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString()
-  }
-
-  const formatDateTime = (date?: string) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleString()
-  }
-
-  const getDaysSinceLastCall = () => {
-    if (!client.calls || client.calls.length === 0) return null
-    const lastCall = client.calls.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-    const daysSince = Math.floor((new Date().getTime() - new Date(lastCall.date).getTime()) / (1000 * 60 * 60 * 24))
-    return { lastCall, daysSince }
-  }
-
-  const getFollowUpStatus = () => {
-    const callInfo = getDaysSinceLastCall()
-    if (!callInfo) return { status: 'no-calls', text: 'No calls logged' }
-    
-    const { daysSince } = callInfo
-    if (daysSince >= 7) {
-      return { status: 'overdue', text: `${daysSince} days since last call - Follow-up overdue!`, color: 'text-red-400' }
-    } else if (daysSince >= 5) {
-      return { status: 'due', text: `Follow-up due in ${7 - daysSince} days`, color: 'text-yellow-400' }
-    }
-    return { status: 'good', text: `Last call ${daysSince} days ago`, color: 'text-green-400' }
-  }
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-  }
-
-  const followUpStatus = getFollowUpStatus()
-
-  const handleQuickCall = () => {
-    const now = new Date()
-    const autoCallData: Omit<Call, 'id'> = {
-      date: now.toISOString(),
-      type: 'OUTBOUND',
-      outcome: 'Quick call initiated',
-      notes: `Quick call initiated from client profile${client.propertyAddress ? ` regarding ${client.propertyAddress}` : ''}`,
-      followUpDate: new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
-    }
-    onAddCall(autoCallData)
-    setShowAddCall(true) // Show the call form to complete details
-  }
-
-  const sections = [
-    { 
-      id: 'overview', 
-      label: 'Overview', 
-      icon: '👤', 
-      count: null,
-      description: 'Client Info'
-    },
-    { 
-      id: 'properties', 
-      label: 'Properties', 
-      icon: '🏠', 
-      count: client.properties?.length || 0,
-      description: 'Property Interests'
-    },
-    { 
-      id: 'calls', 
-      label: 'Call Log', 
-      icon: '📞', 
-      count: client.calls?.length || 0,
-      description: 'Communication History'
-    },
-    { 
-      id: 'activities', 
-      label: 'Activities', 
-      icon: '📋', 
-      count: client.activities?.length || 0,
-      description: 'Activity Timeline'
-    },
-    { 
-      id: 'todos', 
-      label: 'To-dos', 
-      icon: '✅', 
-      count: client.todos?.filter(t => !t.completed).length || 0,
-      description: 'Tasks & Follow-ups'
-    }
-  ] as const
-
-  return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={onBack}
-              className="text-gray-300 hover:text-white transition-colors"
-            >
-              ← Back to Clients
-            </button>
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">{getInitials(client.firstName, client.lastName)}</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">
-                  {client.firstName} {client.lastName}
-                </h1>
-                <p className="text-gray-400 text-sm">{client.role} • {client.stage}</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Follow-up Status Alert */}
-          <div className={`px-4 py-2 rounded-lg border ${followUpStatus.status === 'overdue' ? 'bg-red-900 border-red-600' : followUpStatus.status === 'due' ? 'bg-yellow-900 border-yellow-600' : 'bg-green-900 border-green-600'}`}>
-            <span className={`text-sm font-medium ${followUpStatus.color}`}>📞 {followUpStatus.text}</span>
-          </div>
-        </div>
-
-        {/* Quick Actions Bar */}
-        <div className="flex justify-between items-center mt-6">
-          <div className="flex space-x-3">
-            <button
-              onClick={handleQuickCall}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-            >
-              <span>📞</span>
-              <span>Call Now</span>
-            </button>
-            <button
-              onClick={() => setShowAddProperty(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-            >
-              <span>🏠</span>
-              <span>Add Property</span>
-            </button>
-            <button
-              onClick={() => setShowAddTodo(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-            >
-              <span>✅</span>
-              <span>Add Task</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Section Navigation - Square Icons */}
-        <div className="grid grid-cols-5 gap-4 mt-8">
-          {sections.map((section) => (
-            <button
-              key={section.id}
-              onClick={() => setActiveView(section.id)}
-              className={`p-6 rounded-xl border-2 transition-all duration-200 ${
-                activeView === section.id 
-                  ? 'bg-blue-600 border-blue-500 text-white transform scale-105' 
-                  : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-750 hover:border-gray-600'
-              }`}
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-2">{section.icon}</div>
-                <div className="font-medium text-sm mb-1">{section.label}</div>
-                <div className="text-xs opacity-75 mb-2">{section.description}</div>
-                {section.count !== null && (
-                  <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                    activeView === section.id ? 'bg-blue-500' : 'bg-gray-600'
-                  }`}>
-                    {section.count}
-                  </div>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="p-6">
-        {activeView === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main Info */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Client Information */}
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-white mb-4">Client Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
-                  <div><span className="text-gray-400">Email:</span> <span className="text-white">{client.email || 'Not provided'}</span></div>
-                  <div><span className="text-gray-400">Phone:</span> <span className="text-white">{client.phone || 'Not provided'}</span></div>
-                  <div><span className="text-gray-400">Role:</span> <span className="text-white">{client.role}</span></div>
-                  <div><span className="text-gray-400">Stage:</span> <span className="text-white">{client.stage}</span></div>
-                  <div><span className="text-gray-400">Location:</span> <span className="text-white">{client.city && client.state ? `${client.city}, ${client.state}` : 'Not provided'}</span></div>
-                  <div><span className="text-gray-400">Client Since:</span> <span className="text-white">{formatDate(client.createdAt)}</span></div>
-                  {client.propertyAddress && (
-                    <div className="md:col-span-2"><span className="text-gray-400">Primary Property Interest:</span> <span className="text-white">{client.propertyAddress}</span></div>
-                  )}
-                </div>
-                {client.notes && (
-                  <div className="mt-4">
-                    <span className="text-gray-400">Notes:</span>
-                    <p className="text-white mt-1">{client.notes}</p>
-                  </div>
-                )}
-                {client.tags.length > 0 && (
-                  <div className="mt-4">
-                    <span className="text-gray-400">Tags:</span>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {client.tags.map((tag, index) => (
-                        <span key={index} className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-sm">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Recent Activity Summary */}
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
-                {client.activities && client.activities.length > 0 ? (
-                  <div className="space-y-3">
-                    {client.activities.slice(0, 3).map((activity) => (
-                      <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                          activity.type === 'CALL' ? 'bg-blue-600 text-white' :
-                          activity.type === 'EMAIL' ? 'bg-green-600 text-white' :
-                          activity.type === 'MEETING' ? 'bg-purple-600 text-white' :
-                          activity.type === 'SHOWING' ? 'bg-orange-600 text-white' :
-                          'bg-gray-600 text-white'
-                        }`}>
-                          {activity.type.charAt(0)}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white font-medium">{activity.title}</p>
-                          <p className="text-gray-400 text-sm">{formatDate(activity.date)}</p>
-                        </div>
-                        {activity.completed && (
-                          <div className="text-green-400 text-sm">✓</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-400">No recent activity</p>
-                )}
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Commission Summary */}
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Commission Summary</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-gray-400 text-sm">Lifetime Gross</p>
-                    <p className="text-2xl font-bold text-green-400">
-                      {formatCurrency(client.lifetimeGrossCommission)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-400 text-sm">Lifetime Net</p>
-                    <p className="text-2xl font-bold text-green-400">
-                      {formatCurrency(client.lifetimeNetCommission)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => setShowAddCall(true)}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center justify-center space-x-2"
-                  >
-                    <span>📞</span>
-                    <span>Log Call</span>
-                  </button>
-                  <button
-                    onClick={() => setShowAddProperty(true)}
-                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors text-sm flex items-center justify-center space-x-2"
-                  >
-                    <span>🏠</span>
-                    <span>Add Property</span>
-                  </button>
-                  <button
-                    onClick={() => setShowAddTodo(true)}
-                    className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors text-sm flex items-center justify-center space-x-2"
-                  >
-                    <span>✓</span>
-                    <span>Add To-do</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Upcoming To-dos */}
-              {client.todos && client.todos.filter(t => !t.completed).length > 0 && (
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Upcoming To-dos</h3>
-                  <div className="space-y-2">
-                    {client.todos.filter(t => !t.completed).slice(0, 3).map((todo) => (
-                      <div key={todo.id} className="flex items-center space-x-2">
-                        <button
-                          onClick={() => onToggleTodo(todo.id)}
-                          className="w-4 h-4 border border-gray-500 rounded hover:bg-gray-600 transition-colors"
-                        />
-                        <div className="flex-1">
-                          <p className="text-white text-sm">{todo.title}</p>
-                          {todo.dueDate && (
-                            <p className="text-gray-400 text-xs">Due: {formatDate(todo.dueDate)}</p>
-                          )}
-                        </div>
-                        <div className={`text-xs px-2 py-1 rounded ${
-                          todo.priority === 'HIGH' ? 'bg-red-600 text-white' :
-                          todo.priority === 'MEDIUM' ? 'bg-yellow-600 text-white' :
-                          'bg-gray-600 text-white'
-                        }`}>
-                          {todo.priority}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeView === 'properties' && (
-          <PropertiesTab client={client} onAddProperty={onAddProperty} showAddProperty={showAddProperty} setShowAddProperty={setShowAddProperty} />
-        )}
-
-        {activeView === 'calls' && (
-          <CallsTab client={client} onAddCall={onAddCall} showAddCall={showAddCall} setShowAddCall={setShowAddCall} />
-        )}
-
-        {activeView === 'activities' && (
-          <ActivitiesTab client={client} />
-        )}
-
-        {activeView === 'todos' && (
-          <TodosTab client={client} onAddTodo={onAddTodo} onToggleTodo={onToggleTodo} showAddTodo={showAddTodo} setShowAddTodo={setShowAddTodo} />
-        )}
-      </main>
-    </div>
-  )
-}
-
-// Properties Tab Component
-const PropertiesTab: React.FC<{
-  client: Client
-  onAddProperty: (property: Omit<Property, 'id' | 'dateAdded'>) => void
-  showAddProperty: boolean
-  setShowAddProperty: (show: boolean) => void
-}> = ({ client, onAddProperty, showAddProperty, setShowAddProperty }) => {
-  const [formData, setFormData] = useState({
-    address: '',
-    price: '',
-    type: 'Single Family',
-    status: 'INTERESTED',
-    bedrooms: '',
-    bathrooms: '',
-    sqft: '',
-    notes: ''
-  })
-
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return '$0'
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-  }
-
-  const formatDate = (date?: string) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString()
-  }
-
-  const handleAddProperty = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.address) {
-      alert('Address is required')
-      return
-    }
-    
-    onAddProperty({
-      address: formData.address,
-      price: formData.price ? parseFloat(formData.price) : undefined,
-      type: formData.type,
-      status: formData.status,
-      bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
-      bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : undefined,
-      sqft: formData.sqft ? parseInt(formData.sqft) : undefined,
-      notes: formData.notes || undefined
-    })
-    
-    setFormData({
-      address: '',
-      price: '',
-      type: 'Single Family',
-      status: 'INTERESTED',
-      bedrooms: '',
-      bathrooms: '',
-      sqft: '',
-      notes: ''
-    })
-    setShowAddProperty(false)
-  }
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-white">Properties</h2>
-        <button
-          onClick={() => setShowAddProperty(true)}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"
-        >
-          <span>+</span>
-          <span>Add Property</span>
-        </button>
       </div>
-
-      {showAddProperty && (
-        <div className="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Add New Property</h3>
-          <form onSubmit={handleAddProperty} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-gray-300 text-sm font-medium mb-2">Address *</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="123 Main St, City, State"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Price</label>
-                <input
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="425000"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Type</label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="Single Family">Single Family</option>
-                  <option value="Condo">Condo</option>
-                  <option value="Townhouse">Townhouse</option>
-                  <option value="Multi-Family">Multi-Family</option>
-                  <option value="Land">Land</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="INTERESTED">Interested</option>
-                  <option value="SHOWING">Showing Scheduled</option>
-                  <option value="OFFER_MADE">Offer Made</option>
-                  <option value="UNDER_CONTRACT">Under Contract</option>
-                  <option value="CLOSED">Closed</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Bedrooms</label>
-                <input
-                  type="number"
-                  value={formData.bedrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="3"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Bathrooms</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={formData.bathrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="2"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Square Feet</label>
-                <input
-                  type="number"
-                  value={formData.sqft}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sqft: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="1800"
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-gray-300 text-sm font-medium mb-2">Notes</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none h-20 resize-none"
-                  placeholder="Property notes..."
-                />
-              </div>
-            </div>
-            
-            <div className="flex space-x-4 pt-4">
-              <button
-                type="submit"
-                className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors"
-              >
-                Add Property
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddProperty(false)}
-                className="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Properties List */}
-      {client.properties && client.properties.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {client.properties.map((property) => (
-            <div key={property.id} className="bg-gray-800 rounded-lg p-6">
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="text-white font-medium">{property.address}</h3>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  property.status === 'INTERESTED' ? 'bg-blue-600 text-white' :
-                  property.status === 'SHOWING' ? 'bg-purple-600 text-white' :
-                  property.status === 'OFFER_MADE' ? 'bg-orange-600 text-white' :
-                  property.status === 'UNDER_CONTRACT' ? 'bg-yellow-600 text-white' :
-                  property.status === 'CLOSED' ? 'bg-green-600 text-white' :
-                  'bg-red-600 text-white'
-                }`}>
-                  {property.status.replace('_', ' ')}
-                </span>
-              </div>
-              
-              <div className="space-y-2 text-sm text-gray-300">
-                <div><span className="text-gray-400">Type:</span> <span className="text-white">{property.type}</span></div>
-                {property.price && (
-                  <div><span className="text-gray-400">Price:</span> <span className="text-white font-medium">{formatCurrency(property.price)}</span></div>
-                )}
-                {(property.bedrooms || property.bathrooms) && (
-                  <div>
-                    <span className="text-gray-400">Beds/Baths:</span> 
-                    <span className="text-white"> {property.bedrooms || '?'} bed, {property.bathrooms || '?'} bath</span>
-                  </div>
-                )}
-                {property.sqft && (
-                  <div><span className="text-gray-400">Sq Ft:</span> <span className="text-white">{property.sqft.toLocaleString()}</span></div>
-                )}
-                <div><span className="text-gray-400">Added:</span> <span className="text-white">{formatDate(property.dateAdded)}</span></div>
-              </div>
-              
-              {property.notes && (
-                <div className="mt-3 pt-3 border-t border-gray-700">
-                  <p className="text-gray-300 text-sm">{property.notes}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">No properties tracked yet</div>
-          <button
-            onClick={() => setShowAddProperty(true)}
-            className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition-colors"
-          >
-            Add First Property
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Calls Tab Component
-const CallsTab: React.FC<{
-  client: Client
-  onAddCall: (call: Omit<Call, 'id'>) => void
-  showAddCall: boolean
-  setShowAddCall: (show: boolean) => void
-}> = ({ client, onAddCall, showAddCall, setShowAddCall }) => {
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().slice(0, 5),
-    duration: '',
-    type: 'OUTBOUND' as 'INBOUND' | 'OUTBOUND',
-    outcome: '',
-    notes: '',
-    followUpDate: ''
-  })
-
-  const formatDateTime = (date?: string) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleString()
-  }
-
-  const handleAddCall = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.outcome || !formData.notes) {
-      alert('Outcome and notes are required')
-      return
-    }
-
-    const callDateTime = `${formData.date}T${formData.time}`
-    
-    onAddCall({
-      date: callDateTime,
-      duration: formData.duration ? parseInt(formData.duration) : undefined,
-      type: formData.type,
-      outcome: formData.outcome,
-      notes: formData.notes,
-      followUpDate: formData.followUpDate || undefined
-    })
-    
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().slice(0, 5),
-      duration: '',
-      type: 'OUTBOUND',
-      outcome: '',
-      notes: '',
-      followUpDate: ''
-    })
-    setShowAddCall(false)
-  }
-
-  const getDaysSince = (date: string) => {
-    const daysSince = Math.floor((new Date().getTime() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
-    return daysSince
-  }
-
-  const sortedCalls = client.calls?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || []
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-semibold text-white">Call Log</h2>
-          {sortedCalls.length > 0 && (
-            <p className="text-gray-400 text-sm mt-1">
-              Last call: {getDaysSince(sortedCalls[0].date)} days ago
-              {getDaysSince(sortedCalls[0].date) >= 7 && (
-                <span className="text-red-400 ml-2 font-medium">⚠️ Follow-up overdue</span>
-              )}
-            </p>
-          )}
-        </div>
-        <button
-          onClick={() => setShowAddCall(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
-        >
-          <span>📞</span>
-          <span>Log Call</span>
-        </button>
-      </div>
-
-      {showAddCall && (
-        <div className="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Log New Call</h3>
-          <form onSubmit={handleAddCall} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Date</label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Time</label>
-                <input
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Duration (minutes)</label>
-                <input
-                  type="number"
-                  value={formData.duration}
-                  onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                  placeholder="15"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Call Type</label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'INBOUND' | 'OUTBOUND' }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="OUTBOUND">Outbound</option>
-                  <option value="INBOUND">Inbound</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Follow-up Date</label>
-                <input
-                  type="date"
-                  value={formData.followUpDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, followUpDate: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Outcome *</label>
-              <input
-                type="text"
-                value={formData.outcome}
-                onChange={(e) => setFormData(prev => ({ ...prev, outcome: e.target.value }))}
-                className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                placeholder="e.g., Follow-up scheduled, Showing booked, Contract signed"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Notes *</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none h-24 resize-none"
-                placeholder="Call details, client feedback, next steps..."
-                required
-              />
-            </div>
-            
-            <div className="flex space-x-4 pt-4">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Log Call
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddCall(false)}
-                className="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Calls List */}
-      {sortedCalls.length > 0 ? (
-        <div className="space-y-4">
-          {sortedCalls.map((call, index) => {
-            const daysSince = getDaysSince(call.date)
-            const isFollowUpDue = call.followUpDate && new Date(call.followUpDate) <= new Date()
-            
-            return (
-              <div key={call.id} className="bg-gray-800 rounded-lg p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      call.type === 'INBOUND' ? 'bg-green-600' : 'bg-blue-600'
-                    }`}>
-                      <span className="text-white text-sm">
-                        {call.type === 'INBOUND' ? '📞' : '📱'}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-white font-medium">{call.outcome}</h3>
-                      <p className="text-gray-400 text-sm">
-                        {formatDateTime(call.date)} • {call.type}
-                        {call.duration && ` • ${call.duration} min`}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      daysSince === 0 ? 'bg-green-600 text-white' :
-                      daysSince <= 3 ? 'bg-blue-600 text-white' :
-                      daysSince <= 7 ? 'bg-yellow-600 text-white' :
-                      'bg-red-600 text-white'
-                    }`}>
-                      {daysSince === 0 ? 'Today' : `${daysSince}d ago`}
-                    </span>
-                    {isFollowUpDue && (
-                      <span className="text-xs px-2 py-1 rounded bg-red-600 text-white">
-                        Follow-up Due
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="bg-gray-700 rounded p-3 mb-3">
-                  <p className="text-gray-300">{call.notes}</p>
-                </div>
-                
-                {call.followUpDate && (
-                  <div className="text-sm text-gray-400">
-                    📅 Follow-up scheduled for {new Date(call.followUpDate).toLocaleDateString()}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">No calls logged yet</div>
-          <button
-            onClick={() => setShowAddCall(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Log First Call
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Activities Tab Component
-const ActivitiesTab: React.FC<{ client: Client }> = ({ client }) => {
-  const formatDateTime = (date?: string) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleString()
-  }
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'CALL': return '📞'
-      case 'EMAIL': return '📧'
-      case 'MEETING': return '🤝'
-      case 'SHOWING': return '🏠'
-      case 'NOTE': return '📝'
-      default: return '📋'
-    }
-  }
-
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case 'CALL': return 'bg-blue-600'
-      case 'EMAIL': return 'bg-green-600'
-      case 'MEETING': return 'bg-purple-600'
-      case 'SHOWING': return 'bg-orange-600'
-      case 'NOTE': return 'bg-gray-600'
-      default: return 'bg-gray-600'
-    }
-  }
-
-  const sortedActivities = client.activities?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || []
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-white">Activity Timeline</h2>
-        <div className="text-sm text-gray-400">
-          {sortedActivities.length} total activities
-        </div>
-      </div>
-
-      {sortedActivities.length > 0 ? (
-        <div className="space-y-4">
-          {sortedActivities.map((activity, index) => (
-            <div key={activity.id} className="bg-gray-800 rounded-lg p-6">
-              <div className="flex items-start space-x-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${getActivityColor(activity.type)}`}>
-                  <span className="text-white text-lg">{getActivityIcon(activity.type)}</span>
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="text-white font-medium">{activity.title}</h3>
-                      <p className="text-gray-400 text-sm">
-                        {formatDateTime(activity.date)} • {activity.type}
-                      </p>
-                    </div>
-                    {activity.completed !== undefined && (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        activity.completed ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'
-                      }`}>
-                        {activity.completed ? 'Completed' : 'Pending'}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {activity.description && (
-                    <div className="bg-gray-700 rounded p-3 mt-3">
-                      <p className="text-gray-300">{activity.description}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">No activities recorded yet</div>
-          <p className="text-gray-500 text-sm">Activities are automatically created from calls, meetings, and other interactions</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Todos Tab Component
-const TodosTab: React.FC<{
-  client: Client
-  onAddTodo: (todo: Omit<Todo, 'id' | 'createdAt'>) => void
-  onToggleTodo: (todoId: string) => void
-  showAddTodo: boolean
-  setShowAddTodo: (show: boolean) => void
-}> = ({ client, onAddTodo, onToggleTodo, showAddTodo, setShowAddTodo }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    dueDate: '',
-    priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH'
-  })
-
-  const formatDate = (date?: string) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString()
-  }
-
-  const handleAddTodo = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.title) {
-      alert('Title is required')
-      return
-    }
-    
-    onAddTodo({
-      title: formData.title,
-      description: formData.description || undefined,
-      dueDate: formData.dueDate || undefined,
-      priority: formData.priority,
-      completed: false
-    })
-    
-    setFormData({
-      title: '',
-      description: '',
-      dueDate: '',
-      priority: 'MEDIUM'
-    })
-    setShowAddTodo(false)
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'HIGH': return 'bg-red-600 text-white'
-      case 'MEDIUM': return 'bg-yellow-600 text-white'
-      case 'LOW': return 'bg-green-600 text-white'
-      default: return 'bg-gray-600 text-white'
-    }
-  }
-
-  const isOverdue = (dueDate?: string) => {
-    if (!dueDate) return false
-    return new Date(dueDate) < new Date()
-  }
-
-  const sortedTodos = client.todos?.sort((a, b) => {
-    // Sort by completion status, then by priority, then by due date
-    if (a.completed !== b.completed) {
-      return a.completed ? 1 : -1
-    }
-    const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 }
-    if (a.priority !== b.priority) {
-      return priorityOrder[a.priority] - priorityOrder[b.priority]
-    }
-    if (a.dueDate && b.dueDate) {
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    }
-    return 0
-  }) || []
-
-  const completedCount = sortedTodos.filter(t => t.completed).length
-  const overdueCount = sortedTodos.filter(t => !t.completed && isOverdue(t.dueDate)).length
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-semibold text-white">To-dos</h2>
-          <div className="flex space-x-4 text-sm text-gray-400 mt-1">
-            <span>{sortedTodos.length - completedCount} pending</span>
-            <span>{completedCount} completed</span>
-            {overdueCount > 0 && (
-              <span className="text-red-400">{overdueCount} overdue</span>
-            )}
-          </div>
-        </div>
-        <button
-          onClick={() => setShowAddTodo(true)}
-          className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center space-x-2"
-        >
-          <span>+</span>
-          <span>Add To-do</span>
-        </button>
-      </div>
-
-      {showAddTodo && (
-        <div className="bg-gray-800 rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Add New To-do</h3>
-          <form onSubmit={handleAddTodo} className="space-y-4">
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Title *</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                placeholder="e.g., Send property listings"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none h-20 resize-none"
-                placeholder="Additional details..."
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Due Date</label>
-                <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Priority</label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' }))}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex space-x-4 pt-4">
-              <button
-                type="submit"
-                className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition-colors"
-              >
-                Add To-do
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddTodo(false)}
-                className="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Todos List */}
-      {sortedTodos.length > 0 ? (
-        <div className="space-y-3">
-          {sortedTodos.map((todo) => (
-            <div
-              key={todo.id}
-              className={`bg-gray-800 rounded-lg p-4 ${todo.completed ? 'opacity-60' : ''}`}
-            >
-              <div className="flex items-start space-x-3">
-                <button
-                  onClick={() => onToggleTodo(todo.id)}
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors ${
-                    todo.completed
-                      ? 'bg-green-600 border-green-600'
-                      : 'border-gray-500 hover:border-gray-400'
-                  }`}
-                >
-                  {todo.completed && <span className="text-white text-xs">✓</span>}
-                </button>
-                
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className={`font-medium ${todo.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
-                      {todo.title}
-                    </h3>
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(todo.priority)}`}>
-                        {todo.priority}
-                      </span>
-                      {todo.dueDate && !todo.completed && (
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          isOverdue(todo.dueDate) ? 'bg-red-600 text-white' : 'bg-gray-600 text-white'
-                        }`}>
-                          {isOverdue(todo.dueDate) ? 'Overdue' : `Due ${formatDate(todo.dueDate)}`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {todo.description && (
-                    <p className={`text-sm mb-2 ${todo.completed ? 'text-gray-500' : 'text-gray-300'}`}>
-                      {todo.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex justify-between items-center text-xs text-gray-400">
-                    <span>Created {formatDate(todo.createdAt)}</span>
-                    {todo.dueDate && !isOverdue(todo.dueDate) && !todo.completed && (
-                      <span>Due {formatDate(todo.dueDate)}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">No to-dos yet</div>
-          <button
-            onClick={() => setShowAddTodo(true)}
-            className="bg-purple-600 text-white px-6 py-3 rounded-md hover:bg-purple-700 transition-colors"
-          >
-            Create First To-do
-          </button>
-        </div>
-      )}
     </div>
   )
 }
