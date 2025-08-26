@@ -147,6 +147,271 @@ interface Client {
   emails?: Email[]
 }
 
+// Tasks Dashboard Component
+const TasksDashboard: React.FC<{
+  allTasks: Array<Todo & { clientId: string; clientName: string }>
+  onToggleTask: (taskId: string, clientId: string) => void
+  clients: Client[]
+}> = ({ allTasks, onToggleTask, clients }) => {
+  const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all')
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
+  const [clientFilter, setClientFilter] = useState('')
+  const [taskSearchTerm, setTaskSearchTerm] = useState('')
+
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const isOverdue = (dueDate?: string) => {
+    if (!dueDate) return false
+    return new Date(dueDate) < new Date()
+  }
+
+  const getDaysUntilDue = (dueDate?: string) => {
+    if (!dueDate) return null
+    const today = new Date()
+    const due = new Date(dueDate)
+    const diffTime = due.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'from-red-600 to-red-700 border-red-500'
+      case 'medium': return 'from-yellow-600 to-yellow-700 border-yellow-500'
+      case 'low': return 'from-blue-600 to-blue-700 border-blue-500'
+      default: return 'from-gray-600 to-gray-700 border-gray-500'
+    }
+  }
+
+  const filteredTasks = allTasks.filter(task => {
+    const matchesCompletion = taskFilter === 'all' || 
+      (taskFilter === 'pending' && !task.completed) || 
+      (taskFilter === 'completed' && task.completed)
+    
+    const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
+    
+    const matchesClient = clientFilter === '' || task.clientId === clientFilter
+    
+    const matchesSearch = taskSearchTerm === '' || 
+      task.title.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+      task.description?.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+      task.clientName.toLowerCase().includes(taskSearchTerm.toLowerCase())
+    
+    return matchesCompletion && matchesPriority && matchesClient && matchesSearch
+  })
+
+  const taskStats = {
+    total: allTasks.length,
+    pending: allTasks.filter(t => !t.completed).length,
+    completed: allTasks.filter(t => t.completed).length,
+    overdue: allTasks.filter(t => !t.completed && isOverdue(t.dueDate)).length
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Tasks Dashboard Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white mb-2">All Tasks Dashboard</h2>
+          <div className="flex items-center space-x-6 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span className="text-gray-300">Total: {taskStats.total}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <span className="text-gray-300">Pending: {taskStats.pending}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-gray-300">Completed: {taskStats.completed}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span className="text-gray-300">Overdue: {taskStats.overdue}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-4">Filter Tasks</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-gray-400 text-sm mb-2">Search Tasks</label>
+            <input
+              type="text"
+              value={taskSearchTerm}
+              onChange={(e) => setTaskSearchTerm(e.target.value)}
+              placeholder="Search by title, description, or client..."
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-red-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-400 text-sm mb-2">Status</label>
+            <select
+              value={taskFilter}
+              onChange={(e) => setTaskFilter(e.target.value as any)}
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-red-500 focus:outline-none"
+            >
+              <option value="all">All Tasks</option>
+              <option value="pending">Pending Only</option>
+              <option value="completed">Completed Only</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-400 text-sm mb-2">Priority</label>
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value as any)}
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-red-500 focus:outline-none"
+            >
+              <option value="all">All Priorities</option>
+              <option value="high">High Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="low">Low Priority</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-400 text-sm mb-2">Client</label>
+            <select
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-red-500 focus:outline-none"
+            >
+              <option value="">All Clients</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.firstName} {client.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Tasks List */}
+      <div className="space-y-4">
+        {filteredTasks.length === 0 ? (
+          <div className="bg-gray-900 rounded-lg p-12 text-center">
+            <div className="text-6xl mb-4">📋</div>
+            <div className="text-xl text-gray-400 mb-2">No tasks found</div>
+            <div className="text-gray-500">
+              {allTasks.length === 0 
+                ? "Use the voice command to add tasks for your clients." 
+                : "Try adjusting your filters to see more tasks."}
+            </div>
+          </div>
+        ) : (
+          filteredTasks.map(task => {
+            const daysUntilDue = getDaysUntilDue(task.dueDate)
+            const overdue = isOverdue(task.dueDate)
+            
+            return (
+              <div
+                key={`${task.clientId}-${task.id}`}
+                className={`bg-gray-900 rounded-lg p-6 border-l-4 ${
+                  task.completed 
+                    ? 'border-green-500 bg-green-900/10' 
+                    : overdue 
+                    ? 'border-red-500 bg-red-900/10' 
+                    : getPriorityColor(task.priority).split(' ')[2]
+                } transition-all duration-200 hover:shadow-lg`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h4 className={`text-lg font-semibold ${task.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+                        {task.title}
+                      </h4>
+                      {task.title.includes('Voice Task') && (
+                        <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full flex items-center space-x-1">
+                          <span>🎤</span>
+                          <span>Voice</span>
+                        </span>
+                      )}
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        task.priority === 'high' ? 'bg-red-600 text-white' :
+                        task.priority === 'medium' ? 'bg-yellow-600 text-black' :
+                        'bg-blue-600 text-white'
+                      }`}>
+                        {task.priority.toUpperCase()}
+                      </span>
+                    </div>
+                    
+                    {task.description && (
+                      <p className={`text-sm mb-3 ${task.completed ? 'text-gray-500' : 'text-gray-300'}`}>
+                        {task.description}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center space-x-4 text-sm text-gray-400">
+                      <div className="flex items-center space-x-1">
+                        <span>👤</span>
+                        <span>{task.clientName}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span>📅</span>
+                        <span>Due: {formatDate(task.dueDate)}</span>
+                        {daysUntilDue !== null && (
+                          <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                            overdue ? 'bg-red-600 text-white' :
+                            daysUntilDue <= 1 ? 'bg-orange-600 text-white' :
+                            daysUntilDue <= 3 ? 'bg-yellow-600 text-black' :
+                            'bg-gray-600 text-white'
+                          }`}>
+                            {overdue ? `${Math.abs(daysUntilDue)} days overdue` :
+                             daysUntilDue === 0 ? 'Due today' :
+                             daysUntilDue === 1 ? 'Due tomorrow' :
+                             `${daysUntilDue} days left`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span>🕐</span>
+                        <span>Created: {formatDate(task.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => onToggleTask(task.id, task.clientId)}
+                      className={`px-4 py-2 rounded text-sm font-medium transition-all duration-200 ${
+                        task.completed 
+                          ? 'bg-green-600 text-white hover:bg-green-700' 
+                          : 'bg-gray-600 text-white hover:bg-green-600'
+                      }`}
+                    >
+                      {task.completed ? '✅ Completed' : '⏳ Mark Complete'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+      
+      {/* Summary Footer */}
+      {filteredTasks.length > 0 && (
+        <div className="bg-gray-900 rounded-lg p-4">
+          <div className="text-center text-gray-400">
+            Showing {filteredTasks.length} of {allTasks.length} tasks
+            {taskFilter !== 'all' && ` • Filtered by: ${taskFilter}`}
+            {priorityFilter !== 'all' && ` • Priority: ${priorityFilter}`}
+            {clientFilter && ` • Client: ${clients.find(c => c.id === clientFilter)?.firstName} ${clients.find(c => c.id === clientFilter)?.lastName}`}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [clients, setClients] = useState<Client[]>([])
@@ -159,6 +424,7 @@ function App() {
   const [isListening, setIsListening] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
   const [voiceStatus, setVoiceStatus] = useState('')
+  const [currentView, setCurrentView] = useState<'clients' | 'tasks'>('clients')
 
   // Check for existing auth with event listening
   useEffect(() => {
@@ -517,6 +783,56 @@ function App() {
     }
   }
 
+  // Get all tasks from all clients
+  const getAllTasks = () => {
+    const allTasks: Array<Todo & { clientId: string; clientName: string }> = []
+    
+    clients.forEach(client => {
+      if (client.todos && client.todos.length > 0) {
+        client.todos.forEach(todo => {
+          allTasks.push({
+            ...todo,
+            clientId: client.id,
+            clientName: `${client.firstName} ${client.lastName}`
+          })
+        })
+      }
+    })
+    
+    // Sort by priority (high first) then by due date
+    return allTasks.sort((a, b) => {
+      const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 }
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 1
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 1
+      
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority // High priority first
+      }
+      
+      // If same priority, sort by due date
+      const aDate = new Date(a.dueDate || '9999-12-31').getTime()
+      const bDate = new Date(b.dueDate || '9999-12-31').getTime()
+      return aDate - bDate // Earliest due date first
+    })
+  }
+
+  // Toggle task completion
+  const toggleTaskCompletion = (taskId: string, clientId: string) => {
+    const updatedClients = clients.map(client => {
+      if (client.id === clientId) {
+        const updatedTodos = client.todos?.map(todo => 
+          todo.id === taskId 
+            ? { ...todo, completed: !todo.completed }
+            : todo
+        ) || []
+        return { ...client, todos: updatedTodos }
+      }
+      return client
+    })
+    
+    setClients(updatedClients)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -684,7 +1000,18 @@ function App() {
               REALTOR CRM
             </h1>
             <nav className="hidden md:flex space-x-6">
-              <button className="text-white hover:text-red-400 transition-colors">Clients</button>
+              <button 
+                onClick={() => setCurrentView('clients')}
+                className={`transition-colors ${currentView === 'clients' ? 'text-white' : 'text-gray-400 hover:text-red-400'}`}
+              >
+                Clients
+              </button>
+              <button 
+                onClick={() => setCurrentView('tasks')}
+                className={`transition-colors ${currentView === 'tasks' ? 'text-white' : 'text-gray-400 hover:text-red-400'}`}
+              >
+                All Tasks
+              </button>
               <button className="text-gray-400 hover:text-red-400 transition-colors">Properties</button>
               <button className="text-gray-400 hover:text-red-400 transition-colors">Transactions</button>
               <button className="text-gray-400 hover:text-red-400 transition-colors">Reports</button>
@@ -704,8 +1031,10 @@ function App() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Search and Filters */}
-        <div className="mb-8">
+        {currentView === 'clients' ? (
+          <>
+            {/* Search and Filters */}
+            <div className="mb-8">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex-1 max-w-md">
               <input
@@ -805,6 +1134,14 @@ function App() {
             </div>
           )}
         </div>
+          </>
+        ) : (
+          <TasksDashboard 
+            allTasks={getAllTasks()}
+            onToggleTask={toggleTaskCompletion}
+            clients={clients}
+          />
+        )}
       </div>
     </div>
   )
