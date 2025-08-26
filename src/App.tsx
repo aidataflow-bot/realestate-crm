@@ -182,8 +182,14 @@ function App() {
       
       // Listen for login success from HTML form
       const handleLoginSuccess = (event) => {
-        console.log('App: 🎉 Received login success event!')
-        checkAuth()
+        console.log('App: 🎉 Received login success event!', event.detail)
+        console.log('App: Token in localStorage after login:', localStorage.getItem('auth_token')?.substring(0, 30) + '...')
+        
+        // Add a small delay to ensure localStorage is fully written
+        setTimeout(() => {
+          console.log('App: 🔄 Checking authentication after login event...')
+          checkAuth()
+        }, 100)
       }
       
       // Listen for storage changes
@@ -229,25 +235,46 @@ function App() {
 
   const loadUserData = async () => {
     try {
-      console.log('loadUserData: Checking token...')
+      console.log('loadUserData: Starting authentication check...')
       const token = localStorage.getItem('auth_token')
       if (!token) {
-        console.log('loadUserData: No token found')
+        console.log('loadUserData: ❌ No token found in localStorage')
         setLoading(false)
         return
       }
       
-      console.log('loadUserData: Token found, checking with backend...')
+      console.log('loadUserData: ✅ Token found:', `${token.substring(0, 30)}...`)
+      console.log('loadUserData: Making request to:', `${API_URL}/auth/me`)
+      
       const response = await api.get('/auth/me')
-      console.log('loadUserData: Backend response:', response.data)
+      console.log('loadUserData: ✅ Backend response successful:', response.data)
+      
+      // Set user and load clients
       setUser(response.data.user)
+      console.log('loadUserData: ✅ User set in state, loading clients...')
       await loadClients()
+      console.log('loadUserData: ✅ Authentication complete!')
+      
     } catch (error: any) {
-      console.error('Auth check failed:', error.response?.status, error.response?.data || error.message)
+      console.error('❌ loadUserData: Auth check failed!')
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        }
+      })
+      
       // Only clear token if it's actually invalid (401/403), not network errors
       if (error.response?.status === 401 || error.response?.status === 403) {
-        console.log('loadUserData: Token invalid, clearing...')
+        console.log('loadUserData: 🗑️ Token invalid (401/403), clearing localStorage...')
         localStorage.removeItem('auth_token')
+      } else {
+        console.log('loadUserData: ⚠️ Network/server error, keeping token for retry')
       }
       setLoading(false)
     }
@@ -594,7 +621,7 @@ function App() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-4">
               {filteredClients.map((client) => (
                 <ClientTile
                   key={client.id}
@@ -636,37 +663,37 @@ const ClientTile: React.FC<{
       className="group relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-700 hover:border-red-500"
     >
       {/* Client Avatar */}
-      <div className="aspect-[3/4] bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center relative overflow-hidden">
+      <div className="aspect-square bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center relative overflow-hidden">
         {client.avatar ? (
           <img src={client.avatar} alt={`${client.firstName} ${client.lastName}`} className="w-full h-full object-cover" />
         ) : (
-          <div className="text-4xl font-bold text-white">
+          <div className="text-2xl font-bold text-white">
             {client.firstName.charAt(0)}{client.lastName.charAt(0)}
           </div>
         )}
         
         {/* Birthday indicator */}
         {nextBirthday !== null && nextBirthday <= 30 && (
-          <div className="absolute top-2 right-2 bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-bold">
+          <div className="absolute top-1 right-1 bg-yellow-500 text-black px-1 py-0.5 rounded-full text-xs font-bold">
             🎂 {nextBirthday}d
           </div>
         )}
 
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-          <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-white text-sm font-semibold">
+          <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-white text-xs font-semibold">
             View Details
           </div>
         </div>
       </div>
 
       {/* Client Info */}
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-white mb-2 truncate">
+      <div className="p-2">
+        <h3 className="text-sm font-semibold text-white mb-1 truncate">
           {client.firstName} {client.lastName}
         </h3>
         
-        <div className="space-y-1 text-sm text-gray-400">
+        <div className="space-y-1 text-xs text-gray-400">
           {client.email && (
             <div className="truncate">{client.email}</div>
           )}
@@ -689,15 +716,15 @@ const ClientTile: React.FC<{
 
         {/* Tags */}
         {client.tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {client.tags.slice(0, 2).map(tag => (
-              <span key={tag} className="px-2 py-1 bg-red-600 text-white text-xs rounded-full">
+          <div className="mt-1 flex flex-wrap gap-1">
+            {client.tags.slice(0, 1).map(tag => (
+              <span key={tag} className="px-1 py-0.5 bg-red-600 text-white text-xs rounded">
                 {tag}
               </span>
             ))}
-            {client.tags.length > 2 && (
-              <span className="px-2 py-1 bg-gray-600 text-white text-xs rounded-full">
-                +{client.tags.length - 2}
+            {client.tags.length > 1 && (
+              <span className="px-1 py-0.5 bg-gray-600 text-white text-xs rounded">
+                +{client.tags.length - 1}
               </span>
             )}
           </div>
