@@ -222,28 +222,12 @@ export default async function handler(req, res) {
       return res.json(client);
     }
 
-    // Create new client
+    // Create new client - moved to /api/clients.js
     if (pathname === '/api/clients' && method === 'POST') {
-      const { firstName, lastName, email, phone, tags, notes, birthday, address } = req.body;
-      
-      if (!firstName || !lastName) {
-        return res.status(400).json({ error: 'First name and last name are required' });
-      }
-
-      const clientData = {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone,
-        tags: Array.isArray(tags) ? tags : (tags ? [tags] : []),
-        notes,
-        birthday,
-        address,
-        status: 'active'
-      };
-
-      const newClient = await DB.createClient(clientData);
-      return res.status(201).json(newClient);
+      return res.status(410).json({ 
+        error: 'POST endpoint moved to /api/clients.js',
+        redirect: 'Use dedicated clients endpoint'
+      });
     }
 
     // Update client

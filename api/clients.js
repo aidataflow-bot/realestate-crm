@@ -43,6 +43,8 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
+  console.log('🔍 Request received:', req.method, 'to /api/clients');
+  
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -76,7 +78,10 @@ export default async function handler(req, res) {
     
     if (req.method === 'POST') {
       // Create new client
-      const { firstName, lastName, email, phone, tags, notes, birthday, address } = req.body;
+      console.log('📝 POST request received for client creation');
+      console.log('📝 Request body:', req.body);
+      
+      const { firstName, lastName, email, phone, tags, notes, birthday, address } = req.body || {};
       
       if (!firstName || !lastName) {
         return res.status(400).json({ error: 'First name and last name are required' });
