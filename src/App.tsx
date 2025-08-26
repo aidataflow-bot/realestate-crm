@@ -111,19 +111,31 @@ function App() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  
+  console.log('App component state:', { user: !!user, loading, error, clientsCount: clients.length })
   const [showAddClient, setShowAddClient] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [autoCallData, setAutoCallData] = useState<{clientId: string, propertyAddress?: string} | null>(null)
 
   // Check for existing auth
   useEffect(() => {
-    const token = localStorage.getItem('auth_token')
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      fetchClients()
-    } else {
-      setLoading(false)
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('auth_token')
+        if (token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+          await fetchClients()
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        localStorage.removeItem('auth_token')
+        delete api.defaults.headers.common['Authorization']
+      } finally {
+        setLoading(false)
+      }
     }
+    
+    checkAuth()
   }, [])
 
   const login = async (email: string, password: string) => {
@@ -451,6 +463,7 @@ function App() {
   }
 
   if (loading) {
+    console.log('App: Showing loading state')
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
@@ -459,8 +472,11 @@ function App() {
   }
 
   if (!user) {
+    console.log('App: Showing login form')
     return <LoginForm onLogin={login} error={error} />
   }
+  
+  console.log('App: Showing main CRM interface')
 
   if (showAddClient) {
     return (
@@ -506,9 +522,9 @@ const LoginForm: React.FC<{ onLogin: (email: string, password: string) => void, 
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">Real Estate CRM</h2>
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center" style={{ minHeight: '100vh', backgroundColor: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md" style={{ backgroundColor: '#1f2937', padding: '2rem', borderRadius: '0.5rem', width: '100%', maxWidth: '28rem' }}>
+        <h2 className="text-2xl font-bold text-white mb-6 text-center" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '1.5rem', textAlign: 'center' }}>CLIENT FLOW 360</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
