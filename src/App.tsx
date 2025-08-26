@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const API_URL = 'https://3001-isb1z1ujd4x5imgop7xj8.e2b.dev/api'
 
 console.log('Environment variables:', import.meta.env)
 console.log('API URL being used:', API_URL)

@@ -4,21 +4,25 @@
   "scripts": {
     "dev": "vite",
     "build": "node build.js",
-    "start": "vite preview", 
+    "start": "vite preview",
     "preview": "vite preview",
     "vercel-build": "node build.js"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.1.1",
+    "axios": "^1.6.2",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "axios": "^1.6.2",
-    "vite": "^4.5.0",
-    "@vitejs/plugin-react": "^4.1.1"
+    "vite": "^4.5.0"
   },
   "devDependencies": {
+    "@types/node": "^20.10.0",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
-    "@types/node": "^20.10.0",
     "typescript": "^5.2.2"
   }
 }
