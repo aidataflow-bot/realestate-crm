@@ -212,13 +212,24 @@ function App() {
 
   const onLogin = async (email: string, password: string) => {
     try {
+      console.log('onLogin: Attempting login with:', email)
       setError('')
+      setLoading(true)
+      
       const response = await api.post('/auth/login', { email, password })
+      console.log('onLogin: Login successful, storing token and user')
+      
       localStorage.setItem('auth_token', response.data.token)
       setUser(response.data.user)
+      
+      console.log('onLogin: Loading clients...')
       await loadClients()
+      
+      console.log('onLogin: Complete - user should be logged in')
     } catch (error: any) {
+      console.error('onLogin: Login failed:', error.response?.data || error.message)
       setError(error.response?.data?.error || 'Login failed')
+      setLoading(false)
     }
   }
 
@@ -305,6 +316,13 @@ function App() {
     console.log('App: Showing login form - user is:', user)
     console.log('App: onLogin function is:', typeof onLogin)
     console.log('App: error is:', error)
+    
+    // Check if we just logged in and should bypass the form
+    const hasValidToken = localStorage.getItem('auth_token')
+    if (hasValidToken && !loading) {
+      console.log('App: Found token but no user, forcing loadUserData...')
+      loadUserData()
+    }
     
     // Force visible login form with aggressive styling
     return (
