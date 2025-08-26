@@ -204,10 +204,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get all clients
+    // Clients endpoint moved to /api/clients.js
     if (pathname === '/api/clients' && method === 'GET') {
-      const clients = await DB.getClients();
-      return res.json(clients);
+      return res.status(410).json({ 
+        error: 'This endpoint has been moved to /api/clients.js',
+        redirect: '/api/clients'
+      });
     }
 
     // Get single client
