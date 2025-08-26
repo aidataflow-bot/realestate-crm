@@ -325,7 +325,7 @@
         // Filter clients based on search and tag
         const filteredClients = clients.filter(client => {
           const matchesSearch = !searchTerm || 
-            `${client.firstName} ${client.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            `${client.firstName || client.first_name || ''} ${client.lastName || client.last_name || ''}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
             client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             client.phone.includes(searchTerm);
           
@@ -599,10 +599,10 @@
             React.createElement('div', { className: 'flex items-center space-x-3' },
               React.createElement('div', { 
                 className: 'w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-lg'
-              }, `${client.firstName[0]}${client.lastName[0]}`),
+              }, `${(client.firstName || client.first_name || 'A')[0]}${(client.lastName || client.last_name || 'A')[0]}`),
               React.createElement('div', null,
                 React.createElement('h3', { className: 'font-semibold text-lg' }, 
-                  `${client.firstName} ${client.lastName}`
+                  `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`
                 ),
                 React.createElement('p', { className: 'text-gray-400 text-sm' }, client.email)
               )
@@ -715,7 +715,7 @@
                   },
                     React.createElement('div', null,
                       React.createElement('p', { className: 'font-semibold' }, 
-                        `${client.firstName} ${client.lastName}`
+                        `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`
                       ),
                       React.createElement('p', { className: 'text-sm text-gray-400' }, client.email)
                     ),
@@ -742,7 +742,7 @@
                     },
                       React.createElement('div', null,
                         React.createElement('p', { className: 'font-semibold' }, 
-                          `${client.firstName} ${client.lastName}`
+                          `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`
                         ),
                         React.createElement('p', { className: 'text-sm text-gray-400' }, 
                           `${client.calls ? client.calls.length : 0} calls`
@@ -764,7 +764,7 @@
         const allProperties = clients.flatMap(client => 
           (client.propertiesOfInterest || []).map(property => ({
             ...property,
-            clientName: `${client.firstName} ${client.lastName}`,
+            clientName: `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`,
             clientId: client.id
           }))
         );
@@ -802,7 +802,7 @@
         const allTasks = clients.flatMap(client => 
           (client.todos || []).map(task => ({
             ...task,
-            clientName: `${client.firstName} ${client.lastName}`,
+            clientName: `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`,
             clientId: client.id
           }))
         );
@@ -922,7 +922,7 @@
           },
             React.createElement('div', { className: 'flex justify-between items-center mb-4' },
               React.createElement('h2', { className: 'text-2xl font-bold' }, 
-                `${client.firstName} ${client.lastName}`
+                `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`
               ),
               React.createElement('button', {
                 onClick: onClose,
