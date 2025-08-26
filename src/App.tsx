@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+// Get API URL from environment variables
+const BASE_API_URL = import.meta.env.VITE_API_URL || '/api'
+const API_URL = BASE_API_URL.startsWith('http') 
+  ? BASE_API_URL 
+  : `https://3000-isb1z1ujd4x5imgop7xj8.e2b.dev${BASE_API_URL}`
 
 console.log('Environment variables:', import.meta.env)
 console.log('API URL being used:', API_URL)
@@ -28,31 +32,384 @@ interface User {
   role: string
 }
 
+interface Transaction {
+  id: string
+  type: string
+  status: string
+  propertyAddress: string
+  salePrice?: number
+  listPrice?: number
+  commissionRate?: number
+  grossCommission?: number
+  netCommission?: number
+  splitPercentage?: number
+  brokerageFee?: number
+  closeDate?: string
+  listDate?: string
+  contractDate?: string
+  notes?: string
+  createdAt: string
+}
+
+interface Property {
+  id: string
+  address: string
+  city?: string
+  state?: string
+  price?: number
+  type: string
+  bedrooms?: number
+  bathrooms?: number
+  sqft?: number
+  yearBuilt?: number
+  mls?: string
+  description?: string
+  status: string
+  createdAt: string
+}
+
+interface Call {
+  id: string
+  phoneNumber: string
+  duration?: number
+  notes?: string
+  outcome?: string
+  followUp: boolean
+  createdAt: string
+}
+
+interface Todo {
+  id: string
+  title: string
+  description?: string
+  completed: boolean
+  priority: string
+  dueDate?: string
+  createdAt: string
+}
+
+interface Activity {
+  id: string
+  type: string
+  title: string
+  description: string
+  createdAt: string
+}
+
+interface Reminder {
+  id: string
+  title: string
+  description?: string
+  reminderDate: string
+  type: string
+  completed: boolean
+  recurring: boolean
+}
+
+interface Email {
+  id: string
+  subject: string
+  body: string
+  to: string[]
+  status: string
+  sentAt?: string
+  createdAt: string
+}
+
 interface Client {
   id: string
   firstName: string
   lastName: string
   email?: string
   phone?: string
-  role: string
-  stage: string
+  address?: string
   city?: string
   state?: string
+  zipCode?: string
+  birthday?: string
+  anniversary?: string
+  occupation?: string
+  spouse?: string
+  children?: string
+  notes?: string
+  preferredContact: string
+  leadSource?: string
+  referredBy?: string
   tags: string[]
-  lifetimeGrossCommission?: number
-  lifetimeNetCommission?: number
+  avatar?: string
+  createdAt: string
   transactions?: Transaction[]
+  properties?: Property[]
+  calls?: Call[]
+  todos?: Todo[]
+  activities?: Activity[]
+  reminders?: Reminder[]
+  emails?: Email[]
 }
 
-interface Transaction {
-  id: string
-  type: string
-  propertyAddress: string
-  status: string
-  price?: number
-  grossCommission?: number
-  netCommissionToMe?: number
-  closeDate?: string
+// Tasks Dashboard Component
+const TasksDashboard: React.FC<{
+  allTasks: Array<Todo & { clientId: string; clientName: string }>
+  onToggleTask: (taskId: string, clientId: string) => void
+  clients: Client[]
+}> = ({ allTasks, onToggleTask, clients }) => {
+  const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'completed'>('all')
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
+  const [clientFilter, setClientFilter] = useState('')
+  const [taskSearchTerm, setTaskSearchTerm] = useState('')
+
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const isOverdue = (dueDate?: string) => {
+    if (!dueDate) return false
+    return new Date(dueDate) < new Date()
+  }
+
+  const getDaysUntilDue = (dueDate?: string) => {
+    if (!dueDate) return null
+    const today = new Date()
+    const due = new Date(dueDate)
+    const diffTime = due.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'from-red-600 to-red-700 border-red-500'
+      case 'medium': return 'from-yellow-600 to-yellow-700 border-yellow-500'
+      case 'low': return 'from-blue-600 to-blue-700 border-blue-500'
+      default: return 'from-gray-600 to-gray-700 border-gray-500'
+    }
+  }
+
+  const filteredTasks = allTasks.filter(task => {
+    const matchesCompletion = taskFilter === 'all' || 
+      (taskFilter === 'pending' && !task.completed) || 
+      (taskFilter === 'completed' && task.completed)
+    
+    const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
+    
+    const matchesClient = clientFilter === '' || task.clientId === clientFilter
+    
+    const matchesSearch = taskSearchTerm === '' || 
+      task.title.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+      task.description?.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+      task.clientName.toLowerCase().includes(taskSearchTerm.toLowerCase())
+    
+    return matchesCompletion && matchesPriority && matchesClient && matchesSearch
+  })
+
+  const taskStats = {
+    total: allTasks.length,
+    pending: allTasks.filter(t => !t.completed).length,
+    completed: allTasks.filter(t => t.completed).length,
+    overdue: allTasks.filter(t => !t.completed && isOverdue(t.dueDate)).length
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Tasks Dashboard Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white mb-2">All Tasks Dashboard</h2>
+          <div className="flex items-center space-x-6 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span className="text-gray-300">Total: {taskStats.total}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <span className="text-gray-300">Pending: {taskStats.pending}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span className="text-gray-300">Completed: {taskStats.completed}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span className="text-gray-300">Overdue: {taskStats.overdue}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-4">Filter Tasks</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-gray-400 text-sm mb-2">Search Tasks</label>
+            <input
+              type="text"
+              value={taskSearchTerm}
+              onChange={(e) => setTaskSearchTerm(e.target.value)}
+              placeholder="Search by title, description, or client..."
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-red-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-400 text-sm mb-2">Status</label>
+            <select
+              value={taskFilter}
+              onChange={(e) => setTaskFilter(e.target.value as any)}
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-red-500 focus:outline-none"
+            >
+              <option value="all">All Tasks</option>
+              <option value="pending">Pending Only</option>
+              <option value="completed">Completed Only</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-400 text-sm mb-2">Priority</label>
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value as any)}
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-red-500 focus:outline-none"
+            >
+              <option value="all">All Priorities</option>
+              <option value="high">High Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="low">Low Priority</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-400 text-sm mb-2">Client</label>
+            <select
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-600 focus:border-red-500 focus:outline-none"
+            >
+              <option value="">All Clients</option>
+              {clients.map(client => (
+                <option key={client.id} value={client.id}>
+                  {client.firstName} {client.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Tasks List */}
+      <div className="space-y-4">
+        {filteredTasks.length === 0 ? (
+          <div className="bg-gray-900 rounded-lg p-12 text-center">
+            <div className="text-6xl mb-4">📋</div>
+            <div className="text-xl text-gray-400 mb-2">No tasks found</div>
+            <div className="text-gray-500">
+              {allTasks.length === 0 
+                ? "Use the voice command to add tasks for your clients." 
+                : "Try adjusting your filters to see more tasks."}
+            </div>
+          </div>
+        ) : (
+          filteredTasks.map(task => {
+            const daysUntilDue = getDaysUntilDue(task.dueDate)
+            const overdue = isOverdue(task.dueDate)
+            
+            return (
+              <div
+                key={`${task.clientId}-${task.id}`}
+                className={`bg-gray-900 rounded-lg p-6 border-l-4 ${
+                  task.completed 
+                    ? 'border-green-500 bg-green-900/10' 
+                    : overdue 
+                    ? 'border-red-500 bg-red-900/10' 
+                    : getPriorityColor(task.priority).split(' ')[2]
+                } transition-all duration-200 hover:shadow-lg`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h4 className={`text-lg font-semibold ${task.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+                        {task.title}
+                      </h4>
+                      {task.title.includes('Voice Task') && (
+                        <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full flex items-center space-x-1">
+                          <span>🎤</span>
+                          <span>Voice</span>
+                        </span>
+                      )}
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        task.priority === 'high' ? 'bg-red-600 text-white' :
+                        task.priority === 'medium' ? 'bg-yellow-600 text-black' :
+                        'bg-blue-600 text-white'
+                      }`}>
+                        {task.priority.toUpperCase()}
+                      </span>
+                    </div>
+                    
+                    {task.description && (
+                      <p className={`text-sm mb-3 ${task.completed ? 'text-gray-500' : 'text-gray-300'}`}>
+                        {task.description}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center space-x-4 text-sm text-gray-400">
+                      <div className="flex items-center space-x-1">
+                        <span>👤</span>
+                        <span>{task.clientName}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span>📅</span>
+                        <span>Due: {formatDate(task.dueDate)}</span>
+                        {daysUntilDue !== null && (
+                          <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                            overdue ? 'bg-red-600 text-white' :
+                            daysUntilDue <= 1 ? 'bg-orange-600 text-white' :
+                            daysUntilDue <= 3 ? 'bg-yellow-600 text-black' :
+                            'bg-gray-600 text-white'
+                          }`}>
+                            {overdue ? `${Math.abs(daysUntilDue)} days overdue` :
+                             daysUntilDue === 0 ? 'Due today' :
+                             daysUntilDue === 1 ? 'Due tomorrow' :
+                             `${daysUntilDue} days left`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span>🕐</span>
+                        <span>Created: {formatDate(task.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => onToggleTask(task.id, task.clientId)}
+                      className={`px-4 py-2 rounded text-sm font-medium transition-all duration-200 ${
+                        task.completed 
+                          ? 'bg-green-600 text-white hover:bg-green-700' 
+                          : 'bg-gray-600 text-white hover:bg-green-600'
+                      }`}
+                    >
+                      {task.completed ? '✅ Completed' : '⏳ Mark Complete'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+      
+      {/* Summary Footer */}
+      {filteredTasks.length > 0 && (
+        <div className="bg-gray-900 rounded-lg p-4">
+          <div className="text-center text-gray-400">
+            Showing {filteredTasks.length} of {allTasks.length} tasks
+            {taskFilter !== 'all' && ` • Filtered by: ${taskFilter}`}
+            {priorityFilter !== 'all' && ` • Priority: ${priorityFilter}`}
+            {clientFilter && ` • Client: ${clients.find(c => c.id === clientFilter)?.firstName} ${clients.find(c => c.id === clientFilter)?.lastName}`}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function App() {
@@ -61,333 +418,191 @@ function App() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showAddClient, setShowAddClient] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTag, setSelectedTag] = useState('')
+  const [isListening, setIsListening] = useState(false)
+  const [voiceTranscript, setVoiceTranscript] = useState('')
+  const [voiceStatus, setVoiceStatus] = useState('')
+  const [currentView, setCurrentView] = useState<'clients' | 'tasks'>('clients')
 
-  // Check for existing auth
+  // Check for existing auth with event listening
   useEffect(() => {
-    const token = localStorage.getItem('auth_token')
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      fetchClients()
-    } else {
-      setLoading(false)
+    console.log('App: useEffect - setting up authentication')
+    
+    const checkAuth = () => {
+      const token = localStorage.getItem('auth_token')
+      console.log('App: Token check:', token ? `${token.substring(0, 20)}...` : 'null')
+      
+      if (token) {
+        console.log('App: ✅ Token found, loading user data...')
+        setLoading(true)
+        loadUserData()
+        return true
+      } else {
+        console.log('App: ❌ No token found')
+        return false
+      }
+    }
+    
+    // Initial auth check
+    if (!checkAuth()) {
+      console.log('App: No initial token, setting up listeners...')
+      
+      // Listen for login success from HTML form
+      const handleLoginSuccess = (event) => {
+        console.log('App: 🎉 Received login success event!', event.detail)
+        console.log('App: Token in localStorage after login:', localStorage.getItem('auth_token')?.substring(0, 30) + '...')
+        
+        // Add a small delay to ensure localStorage is fully written
+        setTimeout(() => {
+          console.log('App: 🔄 Checking authentication after login event...')
+          checkAuth()
+        }, 100)
+      }
+      
+      // Listen for storage changes
+      const handleStorage = (event) => {
+        if (event.key === 'auth_token' && event.newValue) {
+          console.log('App: 🔄 Storage event - token added!')
+          checkAuth()
+        }
+      }
+      
+      window.addEventListener('loginSuccess', handleLoginSuccess)
+      window.addEventListener('storage', handleStorage)
+      
+      // Periodic check as fallback
+      const interval = setInterval(() => {
+        console.log('App: 🔍 Periodic token check...')
+        if (checkAuth()) {
+          clearInterval(interval)
+        }
+      }, 2000)
+      
+      // Clean up after 15 seconds
+      setTimeout(() => {
+        clearInterval(interval)
+        window.removeEventListener('loginSuccess', handleLoginSuccess)
+        window.removeEventListener('storage', handleStorage)
+        
+        if (!localStorage.getItem('auth_token')) {
+          console.log('App: ⏰ Timeout reached, showing login form')
+          setLoading(false)
+        }
+      }, 15000)
+      
+      // Also show login form immediately if still no token after 2 seconds
+      setTimeout(() => {
+        if (!localStorage.getItem('auth_token')) {
+          console.log('App: 📋 Quick timeout, showing login form')
+          setLoading(false)
+        }
+      }, 2000)
     }
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const loadUserData = async () => {
     try {
-      console.log('Attempting login with API URL:', API_URL)
-      
-      // Try API first, fall back to mock if API fails
-      try {
-        const response = await api.post('/auth/login', { email, password })
-        console.log('Login response:', response.data)
-        const { token, user: userData } = response.data
-        
-        localStorage.setItem('auth_token', token)
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        setUser(userData)
-        fetchClients()
-        setError('')
+      console.log('loadUserData: Starting authentication check...')
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('loadUserData: ❌ No token found in localStorage')
+        setLoading(false)
         return
-      } catch (apiError) {
-        console.log('API login failed, trying mock authentication...')
       }
       
-      // Mock authentication fallback
-      if (email === 'rodrigo@realtor.com' && password === 'admin123') {
-        console.log('✅ Mock login successful!')
-        const mockToken = 'mock-token-' + Date.now()
-        const mockUser = {
-          id: '1',
-          email: 'rodrigo@realtor.com',
-          firstName: 'Rodrigo',
-          lastName: 'Silva',
-          role: 'agent'
+      console.log('loadUserData: ✅ Token found:', `${token.substring(0, 30)}...`)
+      console.log('loadUserData: Making request to:', `${API_URL}/auth/me`)
+      
+      const response = await api.get('/auth/me')
+      console.log('loadUserData: ✅ Backend response successful:', response.data)
+      
+      // Set user and load clients
+      setUser(response.data.user)
+      console.log('loadUserData: ✅ User set in state, loading clients...')
+      await loadClients()
+      console.log('loadUserData: ✅ Authentication complete!')
+      
+    } catch (error: any) {
+      console.error('❌ loadUserData: Auth check failed!')
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
         }
-        
-        localStorage.setItem('auth_token', mockToken)
-        api.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`
-        setUser(mockUser)
-        
-        // Load mock clients
-        setClients([
-          {
-            id: '1',
-            firstName: 'John',
-            lastName: 'Smith',
-            email: 'john.smith@email.com',
-            phone: '(555) 123-4567',
-            role: 'BUYER',
-            stage: 'ACTIVE',
-            city: 'Miami',
-            state: 'FL',
-            tags: ['first-time-buyer'],
-            lifetimeGrossCommission: 12500,
-            lifetimeNetCommission: 10000
-          },
-          {
-            id: '2',
-            firstName: 'Sarah',
-            lastName: 'Johnson',
-            email: 'sarah.j@email.com',
-            phone: '(555) 987-6543',
-            role: 'SELLER',
-            stage: 'SHOWING',
-            city: 'Miami',
-            state: 'FL',
-            tags: ['luxury'],
-            lifetimeGrossCommission: 25000,
-            lifetimeNetCommission: 20000
-          }
-        ])
-        
-        setError('')
-        return
+      })
+      
+      // Only clear token if it's actually invalid (401/403), not network errors
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('loadUserData: 🗑️ Token invalid (401/403), clearing localStorage...')
+        localStorage.removeItem('auth_token')
       } else {
-        throw new Error('Invalid credentials')
+        console.log('loadUserData: ⚠️ Network/server error, keeping token for retry')
       }
-    } catch (err: any) {
-      console.error('Login error:', err)
-      setError('Invalid credentials. Use rodrigo@realtor.com / admin123')
+      setLoading(false)
     }
   }
 
-  const logout = () => {
+  const loadClients = async () => {
+    try {
+      const response = await api.get('/clients')
+      setClients(response.data)
+      setLoading(false)
+    } catch (error) {
+      console.error('Failed to load clients:', error)
+      setError('Failed to load clients')
+      setLoading(false)
+    }
+  }
+
+  const onLogin = async (email: string, password: string) => {
+    try {
+      console.log('onLogin: Attempting login with:', email)
+      setError('')
+      setLoading(true)
+      
+      const response = await api.post('/auth/login', { email, password })
+      console.log('onLogin: Login successful, storing token and user')
+      
+      localStorage.setItem('auth_token', response.data.token)
+      setUser(response.data.user)
+      
+      console.log('onLogin: Loading clients...')
+      await loadClients()
+      
+      console.log('onLogin: Complete - user should be logged in')
+    } catch (error: any) {
+      console.error('onLogin: Login failed:', error.response?.data || error.message)
+      setError(error.response?.data?.error || 'Login failed')
+      setLoading(false)
+    }
+  }
+
+  const onLogout = () => {
     localStorage.removeItem('auth_token')
-    delete api.defaults.headers.common['Authorization']
     setUser(null)
     setClients([])
     setSelectedClient(null)
   }
 
-  const fetchClients = async () => {
+  const addClient = async (clientData: Omit<Client, 'id' | 'createdAt' | 'transactions' | 'properties' | 'calls' | 'todos' | 'activities' | 'reminders' | 'emails'>) => {
     try {
-      setLoading(true)
-      const response = await api.get('/clients')
-      setClients(response.data.clients)
-      if (!user) {
-        // If we successfully fetched clients, we must be logged in
-        setUser({ id: '1', email: 'rodrigo@realtor.com', firstName: 'Rodrigo', lastName: 'Martinez', role: 'admin' })
-      }
+      const response = await api.post('/clients', clientData)
+      const newClient = response.data
+      setClients(prev => [...prev, newClient])
+      setShowAddClient(false)
     } catch (error) {
-      console.error('Failed to fetch clients:', error)
-    } finally {
-      setLoading(false)
+      console.error('Failed to add client:', error)
     }
   }
 
-  const fetchClientDetails = async (clientId: string) => {
-    try {
-      const response = await api.get(`/clients/${clientId}`)
-      setSelectedClient(response.data.client)
-    } catch (error) {
-      console.error('Failed to fetch client details:', error)
-    }
-  }
-
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return '$0'
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-  }
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-  }
-
-  const getStatusColor = (stage: string) => {
-    const colors = {
-      NEW: 'bg-blue-500',
-      NURTURE: 'bg-yellow-500',
-      SHOWING: 'bg-purple-500',
-      ACTIVE: 'bg-green-500',
-      CLOSED: 'bg-gray-500',
-    }
-    return colors[stage as keyof typeof colors] || 'bg-gray-500'
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return <LoginForm onLogin={login} error={error} />
-  }
-
-  if (selectedClient) {
-    return <ClientDetail client={selectedClient} onBack={() => setSelectedClient(null)} />
-  }
-
-  return <ClientList clients={clients} user={user} onLogout={logout} onSelectClient={fetchClientDetails} />
-}
-
-// Login Component
-const LoginForm: React.FC<{ onLogin: (email: string, password: string) => void, error: string }> = ({ onLogin, error }) => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onLogin(email, password)
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">Real Estate CRM</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
-            required
-          />
-          {error && (
-            <div className="bg-red-900 border border-red-600 text-red-200 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Sign In
-          </button>
-        </form>
-        <div className="mt-6 p-4 bg-gray-700 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-200 mb-2">Demo Account</h3>
-          <div className="text-xs text-gray-400 space-y-1">
-            <div>Email: rodrigo@realtor.com</div>
-            <div>Password: admin123</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Client List Component
-const ClientList: React.FC<{
-  clients: Client[]
-  user: User
-  onLogout: () => void
-  onSelectClient: (id: string) => void
-}> = ({ clients, user, onLogout, onSelectClient }) => {
-  return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 p-4">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-white">Real Estate CRM</h1>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-300">Welcome, {user.firstName}!</span>
-            <button
-              onClick={onLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Your Clients ({clients.length})</h2>
-          
-          {clients.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">No clients yet. Let's create some sample data!</div>
-              <button
-                onClick={async () => {
-                  try {
-                    await api.post('/seed')
-                    window.location.reload()
-                  } catch (error) {
-                    console.error('Failed to seed data:', error)
-                  }
-                }}
-                className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Create Sample Data
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {clients.map((client) => (
-                <div
-                  key={client.id}
-                  onClick={() => onSelectClient(client.id)}
-                  className="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-750 transition-colors border border-gray-700"
-                >
-                  {/* Avatar */}
-                  <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-white font-bold">{getInitials(client.firstName, client.lastName)}</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-white font-medium">{client.firstName} {client.lastName}</h3>
-                      <p className="text-gray-400 text-sm">{client.role}</p>
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="mb-3">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(client.stage)}`}>
-                      {client.stage}
-                    </span>
-                  </div>
-
-                  {/* Contact Info */}
-                  <div className="text-gray-300 text-sm space-y-1 mb-3">
-                    {client.email && <div>📧 {client.email}</div>}
-                    {client.phone && <div>📞 {client.phone}</div>}
-                    {client.city && client.state && <div>📍 {client.city}, {client.state}</div>}
-                  </div>
-
-                  {/* Commission */}
-                  {client.lifetimeNetCommission && client.lifetimeNetCommission > 0 && (
-                    <div className="text-green-400 font-medium text-sm">
-                      💰 {formatCurrency(client.lifetimeNetCommission)} earned
-                    </div>
-                  )}
-
-                  {/* Tags */}
-                  {client.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {client.tags.slice(0, 2).map((tag, index) => (
-                        <span key={index} className="bg-gray-700 text-gray-300 px-2 py-1 rounded text-xs">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  )
-}
-
-// Client Detail Component
-const ClientDetail: React.FC<{ client: Client, onBack: () => void }> = ({ client, onBack }) => {
+  // Helper functions
   const formatCurrency = (amount?: number) => {
     if (!amount) return '$0'
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
@@ -398,112 +613,1712 @@ const ClientDetail: React.FC<{ client: Client, onBack: () => void }> = ({ client
     return new Date(date).toLocaleDateString()
   }
 
+  const getClientInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  }
+
+  const getTotalCommissions = (client: Client) => {
+    const transactions = client.transactions || []
+    const gross = transactions.reduce((sum, t) => sum + (t.grossCommission || 0), 0)
+    const net = transactions.reduce((sum, t) => sum + (t.netCommission || 0), 0)
+    return { gross, net }
+  }
+
+  const getNextBirthday = (birthday?: string) => {
+    if (!birthday) return null
+    const today = new Date()
+    const birthDate = new Date(birthday)
+    const thisYear = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
+    
+    if (thisYear < today) {
+      thisYear.setFullYear(today.getFullYear() + 1)
+    }
+    
+    const diffTime = thisYear.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
+
+  const getAllTags = () => {
+    const allTags = clients.flatMap(client => client.tags)
+    return [...new Set(allTags)].filter(Boolean)
+  }
+
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = searchTerm === '' || 
+      `${client.firstName} ${client.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.phone?.includes(searchTerm)
+    
+    const matchesTag = selectedTag === '' || client.tags.includes(selectedTag)
+    
+    return matchesSearch && matchesTag
+  })
+
+  // Voice Recognition Functions
+  const startVoiceRecognition = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setVoiceStatus('❌ Voice recognition not supported in this browser')
+      return
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognition.lang = 'en-US'
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      setVoiceStatus('🎤 Listening... Say "Add task for [Client Name] to [task description]"')
+      setVoiceTranscript('')
+    }
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.toLowerCase()
+      setVoiceTranscript(transcript)
+      console.log('Voice transcript:', transcript)
+      
+      // Process voice command
+      processVoiceCommand(transcript)
+    }
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false)
+      setVoiceStatus(`❌ Voice recognition error: ${event.error}`)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+      if (!voiceTranscript) {
+        setVoiceStatus('⏹️ No speech detected. Try again.')
+      }
+    }
+
+    recognition.start()
+  }
+
+  const processVoiceCommand = async (transcript: string) => {
+    try {
+      setVoiceStatus('🔍 Processing voice command...')
+      
+      // Parse voice command: "add task for [client name] to [task description]"
+      const addTaskRegex = /add task for (.+?) to (.+)/i
+      const match = transcript.match(addTaskRegex)
+      
+      if (!match) {
+        setVoiceStatus('❌ Command not recognized. Say: "Add task for [Client Name] to [task description]"')
+        return
+      }
+
+      const clientName = match[1].trim()
+      const taskDescription = match[2].trim()
+
+      // Find matching client
+      const matchingClient = clients.find(client => {
+        const fullName = `${client.firstName} ${client.lastName}`.toLowerCase()
+        const firstName = client.firstName.toLowerCase()
+        const lastName = client.lastName.toLowerCase()
+        
+        return fullName.includes(clientName) || 
+               firstName.includes(clientName) || 
+               lastName.includes(clientName) ||
+               clientName.includes(firstName) ||
+               clientName.includes(lastName)
+      })
+
+      if (!matchingClient) {
+        setVoiceStatus(`❌ Client "${clientName}" not found. Available clients: ${clients.map(c => `${c.firstName} ${c.lastName}`).join(', ')}`)
+        return
+      }
+
+      // Create the task
+      await createVoiceTask(matchingClient, taskDescription)
+      
+    } catch (error) {
+      console.error('Voice command processing error:', error)
+      setVoiceStatus('❌ Error processing voice command')
+    }
+  }
+
+  const createVoiceTask = async (client: Client, description: string) => {
+    try {
+      // Create a new todo/task for the client
+      const newTask = {
+        title: `Voice Task: ${description}`,
+        description: description,
+        priority: 'medium',
+        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Due tomorrow
+        completed: false
+      }
+
+      // In a real app, you'd POST this to your API
+      // For now, we'll simulate it by updating the client locally
+      const updatedClients = clients.map(c => 
+        c.id === client.id 
+          ? {
+              ...c, 
+              todos: [
+                ...(c.todos || []), 
+                {
+                  ...newTask,
+                  id: `voice-${Date.now()}`,
+                  createdAt: new Date().toISOString()
+                }
+              ]
+            }
+          : c
+      )
+      
+      setClients(updatedClients)
+      setVoiceStatus(`✅ Task created for ${client.firstName} ${client.lastName}: "${description}"`)
+      
+      // Auto-clear status after 3 seconds
+      setTimeout(() => setVoiceStatus(''), 3000)
+      
+    } catch (error) {
+      console.error('Error creating voice task:', error)
+      setVoiceStatus('❌ Error creating task')
+    }
+  }
+
+  // Get all tasks from all clients
+  const getAllTasks = () => {
+    const allTasks: Array<Todo & { clientId: string; clientName: string }> = []
+    
+    clients.forEach(client => {
+      if (client.todos && client.todos.length > 0) {
+        client.todos.forEach(todo => {
+          allTasks.push({
+            ...todo,
+            clientId: client.id,
+            clientName: `${client.firstName} ${client.lastName}`
+          })
+        })
+      }
+    })
+    
+    // Sort by priority (high first) then by due date
+    return allTasks.sort((a, b) => {
+      const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 }
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 1
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 1
+      
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority // High priority first
+      }
+      
+      // If same priority, sort by due date
+      const aDate = new Date(a.dueDate || '9999-12-31').getTime()
+      const bDate = new Date(b.dueDate || '9999-12-31').getTime()
+      return aDate - bDate // Earliest due date first
+    })
+  }
+
+  // Toggle task completion
+  const toggleTaskCompletion = (taskId: string, clientId: string) => {
+    const updatedClients = clients.map(client => {
+      if (client.id === clientId) {
+        const updatedTodos = client.todos?.map(todo => 
+          todo.id === taskId 
+            ? { ...todo, completed: !todo.completed }
+            : todo
+        ) || []
+        return { ...client, todos: updatedTodos }
+      }
+      return client
+    })
+    
+    setClients(updatedClients)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    console.log('App: Showing login form - user is:', user)
+    console.log('App: onLogin function is:', typeof onLogin)
+    console.log('App: error is:', error)
+    
+    // Check if we just logged in and should bypass the form
+    const hasValidToken = localStorage.getItem('auth_token')
+    if (hasValidToken && !loading) {
+      console.log('App: Found token but no user, forcing loadUserData...')
+      setLoading(true)
+      loadUserData()
+      return (
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="text-white text-xl">🔄 Authenticating with token...</div>
+        </div>
+      )
+    }
+    
+    // Force visible login form with aggressive styling
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#111827', 
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        zIndex: 99999
+      }}>
+        <div style={{
+          background: '#1f2937',
+          padding: '2rem',
+          borderRadius: '8px',
+          width: '100%',
+          maxWidth: '28rem',
+          border: '2px solid #ef4444',
+          color: 'white'
+        }}>
+          <h2 style={{
+            color: '#ef4444',
+            textAlign: 'center',
+            marginBottom: '1.5rem',
+            fontSize: '1.5rem',
+            fontWeight: 'bold'
+          }}>🎬 CLIENT FLOW 360</h2>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            const email = (e.target as any).email.value
+            const password = (e.target as any).password.value
+            console.log('Login attempt with:', email, password)
+            onLogin(email, password)
+          }} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+            <input
+              name="email"
+              type="email"
+              placeholder="Email (rodrigo@realtor.com)"
+              defaultValue="rodrigo@realtor.com"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: '#374151',
+                border: '1px solid #4b5563',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '1rem'
+              }}
+              required
+            />
+            <input
+              name="password"
+              type="password"
+              placeholder="Password (admin123)"
+              defaultValue="admin123"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: '#374151',
+                border: '1px solid #4b5563',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '1rem'
+              }}
+              required
+            />
+            {error && (
+              <div style={{
+                background: '#7f1d1d',
+                border: '1px solid #dc2626',
+                color: '#fca5a5',
+                padding: '0.75rem',
+                borderRadius: '6px'
+              }}>
+                {error}
+              </div>
+            )}
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Sign In to CRM
+            </button>
+          </form>
+          
+          <div style={{
+            marginTop: '1rem',
+            textAlign: 'center',
+            color: '#9ca3af',
+            fontSize: '0.875rem'
+          }}>
+            Demo: rodrigo@realtor.com / admin123
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (selectedClient) {
+    return (
+      <ClientDetailView 
+        client={selectedClient} 
+        onBack={() => setSelectedClient(null)}
+        onUpdate={loadClients}
+      />
+    )
+  }
+
+  if (showAddClient) {
+    return (
+      <AddClientForm
+        onSave={addClient}
+        onCancel={() => setShowAddClient(false)}
+      />
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 p-4">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={onBack}
-            className="text-gray-300 hover:text-white transition-colors"
-          >
-            ← Back to Clients
-          </button>
-          <h1 className="text-2xl font-bold text-white">
-            {client.firstName} {client.lastName}
-          </h1>
+    <div className="min-h-screen bg-black text-white">
+      {/* Netflix-style Header */}
+      <header className="bg-gradient-to-r from-black via-gray-900 to-black px-6 py-4 sticky top-0 z-50 border-b border-red-600/20">
+        <div className="flex justify-between items-center max-w-7xl mx-auto">
+          <div className="flex items-center space-x-8">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-red-400 bg-clip-text text-transparent">
+              REALTOR CRM
+            </h1>
+            <nav className="hidden md:flex space-x-6">
+              <button 
+                onClick={() => setCurrentView('clients')}
+                className={`transition-colors ${currentView === 'clients' ? 'text-white' : 'text-gray-400 hover:text-red-400'}`}
+              >
+                Clients
+              </button>
+              <button 
+                onClick={() => setCurrentView('tasks')}
+                className={`transition-colors ${currentView === 'tasks' ? 'text-white' : 'text-gray-400 hover:text-red-400'}`}
+              >
+                All Tasks
+              </button>
+              <button className="text-gray-400 hover:text-red-400 transition-colors">Properties</button>
+              <button className="text-gray-400 hover:text-red-400 transition-colors">Transactions</button>
+              <button className="text-gray-400 hover:text-red-400 transition-colors">Reports</button>
+            </nav>
+          </div>
+          <div className="flex items-center space-x-4">
+            <span className="text-gray-300">Welcome, {user.firstName}!</span>
+            <button
+              onClick={onLogout}
+              className="bg-gray-800 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-all duration-200 border border-gray-700 hover:border-red-500"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Client Info */}
-          <div className="lg:col-span-2">
-            <div className="bg-gray-800 rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Client Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
-                <div><strong>Email:</strong> {client.email || 'Not provided'}</div>
-                <div><strong>Phone:</strong> {client.phone || 'Not provided'}</div>
-                <div><strong>Role:</strong> {client.role}</div>
-                <div><strong>Stage:</strong> {client.stage}</div>
-                <div><strong>Location:</strong> {client.city && client.state ? `${client.city}, ${client.state}` : 'Not provided'}</div>
-                <div><strong>Tags:</strong> {client.tags.join(', ') || 'None'}</div>
-              </div>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {currentView === 'clients' ? (
+          <>
+            {/* Search and Filters */}
+            <div className="mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search clients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+              />
             </div>
-
-            {/* Transactions */}
-            <div className="bg-gray-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Transaction History</h2>
-              {client.transactions && client.transactions.length > 0 ? (
-                <div className="space-y-4">
-                  {client.transactions.map((transaction) => (
-                    <div key={transaction.id} className="bg-gray-700 rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="text-white font-medium">{transaction.propertyAddress}</h3>
-                          <p className="text-gray-400 text-sm">{transaction.type} • {transaction.status}</p>
-                        </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          transaction.status === 'CLOSED' ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'
-                        }`}>
-                          {transaction.status}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-300">
-                        <div>
-                          <span className="text-gray-400">Price:</span>
-                          <p className="text-white">{formatCurrency(transaction.price)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Gross Commission:</span>
-                          <p className="text-green-400">{formatCurrency(transaction.grossCommission)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Net to Me:</span>
-                          <p className="text-green-400">{formatCurrency(transaction.netCommissionToMe)}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Close Date:</span>
-                          <p className="text-white">{formatDate(transaction.closeDate)}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  No transactions yet
+            <div className="flex items-center space-x-4">
+              <select
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                className="px-4 py-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+              >
+                <option value="">All Tags</option>
+                {getAllTags().map(tag => (
+                  <option key={tag} value={tag}>{tag}</option>
+                ))}
+              </select>
+              
+              {/* Voice Recognition Button */}
+              <button
+                onClick={startVoiceRecognition}
+                disabled={isListening}
+                className={`px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg ${
+                  isListening 
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 animate-pulse' 
+                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                } text-white`}
+                title="Voice Command: Add task for [Client Name] to [task description]"
+              >
+                <span>{isListening ? '🔴' : '🎤'}</span>
+                <span>{isListening ? 'Listening...' : 'Voice Task'}</span>
+              </button>
+              
+              <button
+                onClick={() => setShowAddClient(true)}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg"
+              >
+                <span>+</span>
+                <span>Add Client</span>
+              </button>
+            </div>
+          </div>
+          
+          {/* Voice Status */}
+          {voiceStatus && (
+            <div className="mt-4 p-4 bg-gray-800 rounded-lg border border-blue-500">
+              <div className="text-blue-400 font-medium">🎤 Voice Assistant</div>
+              <div className="text-white mt-1">{voiceStatus}</div>
+              {voiceTranscript && (
+                <div className="text-gray-400 text-sm mt-2">
+                  Heard: "{voiceTranscript}"
                 </div>
               )}
             </div>
-          </div>
+          )}
+          
+          {/* Voice Instructions (show when no status) */}
+          {!voiceStatus && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg border border-blue-500/30">
+              <div className="text-blue-400 font-medium text-sm">🎤 Voice Commands Available</div>
+              <div className="text-gray-300 text-sm mt-1">
+                Click "🎤 Voice Task" and say: <span className="text-blue-300 font-medium">"Add task for [Client Name] to [task description]"</span>
+              </div>
+              <div className="text-gray-400 text-xs mt-2">
+                Example: "Add task for John Smith to call about property viewing tomorrow"
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Commission Summary */}
-            <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Commission Summary</h3>
-              <div className="space-y-3">
+        {/* Clients Grid - Netflix Style */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-6">Your Clients ({filteredClients.length})</h2>
+          {filteredClients.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">No clients found. Add your first client to get started!</div>
+              <button
+                onClick={() => setShowAddClient(true)}
+                className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Add Your First Client
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-3">
+              {filteredClients.map((client) => (
+                <ClientTile
+                  key={client.id}
+                  client={client}
+                  onClick={() => setSelectedClient(client)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+          </>
+        ) : (
+          <TasksDashboard 
+            allTasks={getAllTasks()}
+            onToggleTask={toggleTaskCompletion}
+            clients={clients}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Client Tile Component - Netflix Style
+const ClientTile: React.FC<{
+  client: Client
+  onClick: () => void
+}> = ({ client, onClick }) => {
+  const commissions = client.transactions?.reduce((sum, t) => sum + (t.netCommission || 0), 0) || 0
+  const nextBirthday = client.birthday ? (() => {
+    const today = new Date()
+    const birthDate = new Date(client.birthday!)
+    const thisYear = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
+    
+    if (thisYear < today) {
+      thisYear.setFullYear(today.getFullYear() + 1)
+    }
+    
+    const diffTime = thisYear.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  })() : null
+
+  return (
+    <div
+      onClick={onClick}
+      className="group relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-gray-700 hover:border-red-500"
+    >
+      {/* Client Avatar */}
+      <div className="aspect-square bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center relative overflow-hidden">
+        {client.avatar ? (
+          <img src={client.avatar} alt={`${client.firstName} ${client.lastName}`} className="w-full h-full object-cover" />
+        ) : (
+          <div className="text-lg font-bold text-white">
+            {client.firstName.charAt(0)}{client.lastName.charAt(0)}
+          </div>
+        )}
+        
+        {/* Birthday indicator */}
+        {nextBirthday !== null && nextBirthday <= 30 && (
+          <div className="absolute top-0.5 right-0.5 bg-yellow-500 text-black px-0.5 py-0.5 rounded text-xs font-bold leading-none">
+            🎂{nextBirthday}d
+          </div>
+        )}
+
+        {/* Overlay on hover */}
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-white text-xs font-semibold leading-tight">
+            View
+          </div>
+        </div>
+      </div>
+
+      {/* Client Info */}
+      <div className="p-1.5">
+        <h3 className="text-xs font-semibold text-white mb-0.5 truncate">
+          {client.firstName} {client.lastName}
+        </h3>
+        
+        <div className="space-y-0.5 text-xs text-gray-400">
+          {client.email && (
+            <div className="truncate">{client.email}</div>
+          )}
+          {client.phone && (
+            <div>{client.phone}</div>
+          )}
+          
+          {/* Commission info */}
+          {commissions > 0 && (
+            <div className="text-green-400 font-semibold">
+              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(commissions)}
+            </div>
+          )}
+
+          {/* Transaction count */}
+          <div className="text-xs text-gray-500 leading-tight">
+            {(client.transactions?.length || 0)} deal{(client.transactions?.length || 0) !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        {/* Tags */}
+        {client.tags.length > 0 && (
+          <div className="mt-0.5 flex flex-wrap gap-0.5">
+            {client.tags.slice(0, 1).map(tag => (
+              <span key={tag} className="px-0.5 py-0.5 bg-red-600 text-white text-xs rounded text-xs leading-none">
+                {tag}
+              </span>
+            ))}
+            {client.tags.length > 1 && (
+              <span className="px-0.5 py-0.5 bg-gray-600 text-white text-xs rounded leading-none">
+                +{client.tags.length - 1}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Client Detail View Component
+const ClientDetailView: React.FC<{
+  client: Client
+  onBack: () => void
+  onUpdate: () => void
+}> = ({ client, onBack, onUpdate }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'properties' | 'communications' | 'reminders'>('overview')
+  
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const totalCommissions = client.transactions?.reduce((acc, t) => ({
+    gross: acc.gross + (t.grossCommission || 0),
+    net: acc.net + (t.netCommission || 0)
+  }), { gross: 0, net: 0 }) || { gross: 0, net: 0 }
+
+  const getAge = (birthday?: string) => {
+    if (!birthday) return null
+    const today = new Date()
+    const birthDate = new Date(birthday)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    
+    return age
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-black via-gray-900 to-black px-6 py-4 border-b border-red-600/20">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={onBack}
+              className="text-red-400 hover:text-red-300 text-2xl"
+            >
+              ←
+            </button>
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-600 to-red-800 rounded-lg flex items-center justify-center text-2xl font-bold">
+                {client.avatar ? (
+                  <img src={client.avatar} alt={`${client.firstName} ${client.lastName}`} className="w-full h-full object-cover rounded-lg" />
+                ) : (
+                  `${client.firstName.charAt(0)}${client.lastName.charAt(0)}`
+                )}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">{client.firstName} {client.lastName}</h1>
+                <p className="text-gray-400">{client.email || client.phone}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className="text-right">
+              <div className="text-sm text-gray-400">Total Commissions</div>
+              <div className="text-2xl font-bold text-green-400">{formatCurrency(totalCommissions.net)}</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation Tabs */}
+      <div className="bg-gray-900 px-6 border-b border-gray-700">
+        <div className="max-w-7xl mx-auto">
+          <nav className="flex space-x-8">
+            {[
+              { id: 'overview', label: 'Overview' },
+              { id: 'transactions', label: 'Transactions' },
+              { id: 'properties', label: 'Properties' },
+              { id: 'communications', label: 'Communications' },
+              { id: 'reminders', label: 'Reminders' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-red-500 text-red-400'
+                    : 'border-transparent text-gray-400 hover:text-white hover:border-gray-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {activeTab === 'overview' && (
+          <OverviewTab client={client} />
+        )}
+        
+        {activeTab === 'transactions' && (
+          <TransactionsTab client={client} />
+        )}
+        
+        {activeTab === 'properties' && (
+          <PropertiesTab client={client} />
+        )}
+        
+        {activeTab === 'communications' && (
+          <CommunicationsTab client={client} />
+        )}
+        
+        {activeTab === 'reminders' && (
+          <RemindersTab client={client} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Overview Tab
+const OverviewTab: React.FC<{ client: Client }> = ({ client }) => {
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const getAge = (birthday?: string) => {
+    if (!birthday) return null
+    const today = new Date()
+    const birthDate = new Date(birthday)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    
+    return age
+  }
+
+  const totalCommissions = client.transactions?.reduce((acc, t) => ({
+    gross: acc.gross + (t.grossCommission || 0),
+    net: acc.net + (t.netCommission || 0)
+  }), { gross: 0, net: 0 }) || { gross: 0, net: 0 }
+
+  return (
+    <div className="space-y-8">
+      {/* Personal Information */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-xl font-semibold mb-6">Personal Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div>
+            <label className="text-gray-400 text-sm">Email</label>
+            <div className="text-white font-medium">{client.email || 'N/A'}</div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Phone</label>
+            <div className="text-white font-medium">
+              {client.phone ? (
+                <a href={`tel:${client.phone}`} className="text-red-400 hover:text-red-300">
+                  {client.phone}
+                </a>
+              ) : 'N/A'}
+            </div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Birthday</label>
+            <div className="text-white font-medium">
+              {client.birthday ? (
+                <span>
+                  {formatDate(client.birthday)} 
+                  {getAge(client.birthday) && <span className="text-gray-400 ml-2">({getAge(client.birthday)} years old)</span>}
+                </span>
+              ) : 'N/A'}
+            </div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Anniversary</label>
+            <div className="text-white font-medium">{formatDate(client.anniversary)}</div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Occupation</label>
+            <div className="text-white font-medium">{client.occupation || 'N/A'}</div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-sm">Spouse</label>
+            <div className="text-white font-medium">{client.spouse || 'N/A'}</div>
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <label className="text-gray-400 text-sm">Address</label>
+            <div className="text-white font-medium">
+              {[client.address, client.city, client.state, client.zipCode].filter(Boolean).join(', ') || 'N/A'}
+            </div>
+          </div>
+          <div className="md:col-span-2 lg:col-span-3">
+            <label className="text-gray-400 text-sm">Children</label>
+            <div className="text-white font-medium">{client.children || 'N/A'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Financial Summary */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-xl font-semibold mb-6">Financial Summary</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-6 text-center">
+            <div className="text-3xl font-bold">{formatCurrency(totalCommissions.gross)}</div>
+            <div className="text-green-100 mt-2">Gross Commission</div>
+          </div>
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-6 text-center">
+            <div className="text-3xl font-bold">{formatCurrency(totalCommissions.net)}</div>
+            <div className="text-blue-100 mt-2">Net Commission</div>
+          </div>
+          <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg p-6 text-center">
+            <div className="text-3xl font-bold">{client.transactions?.length || 0}</div>
+            <div className="text-purple-100 mt-2">Total Transactions</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-xl font-semibold mb-6">Recent Activity</h3>
+        <div className="space-y-4">
+          {client.activities?.slice(0, 5).map(activity => (
+            <div key={activity.id} className="flex items-center space-x-4 p-4 bg-gray-800 rounded-lg">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <div className="flex-1">
+                <div className="text-white font-medium">{activity.title}</div>
+                <div className="text-gray-400 text-sm">{activity.description}</div>
+              </div>
+              <div className="text-gray-500 text-sm">{formatDate(activity.createdAt)}</div>
+            </div>
+          )) || (
+            <div className="text-gray-400 text-center py-8">No recent activity</div>
+          )}
+        </div>
+      </div>
+
+      {/* Voice Tasks & Todos */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold">Tasks & To-Do Items</h3>
+          <div className="text-sm text-blue-400">
+            🎤 Use voice command to add tasks
+          </div>
+        </div>
+        <div className="space-y-3">
+          {client.todos?.length ? (
+            client.todos.map(todo => (
+              <div key={todo.id} className={`flex items-start space-x-4 p-4 rounded-lg border-l-4 ${
+                todo.completed ? 'bg-green-900/20 border-green-500' : 
+                todo.priority === 'high' ? 'bg-red-900/20 border-red-500' : 
+                todo.priority === 'medium' ? 'bg-yellow-900/20 border-yellow-500' : 
+                'bg-blue-900/20 border-blue-500'
+              }`}>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <h4 className="text-white font-medium">{todo.title}</h4>
+                    {todo.title.includes('Voice Task') && (
+                      <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">
+                        🎤 Voice
+                      </span>
+                    )}
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      todo.priority === 'high' ? 'bg-red-600 text-white' :
+                      todo.priority === 'medium' ? 'bg-yellow-600 text-black' :
+                      'bg-blue-600 text-white'
+                    }`}>
+                      {todo.priority}
+                    </span>
+                  </div>
+                  {todo.description && (
+                    <p className="text-gray-300 text-sm mt-1">{todo.description}</p>
+                  )}
+                  <div className="flex items-center space-x-4 text-xs text-gray-400 mt-2">
+                    <span>Due: {formatDate(todo.dueDate)}</span>
+                    <span>Created: {formatDate(todo.createdAt)}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end space-y-2">
+                  <button className={`px-3 py-1 text-xs rounded ${
+                    todo.completed ? 'bg-green-600 text-white' : 'bg-gray-600 text-white hover:bg-green-600'
+                  }`}>
+                    {todo.completed ? '✅ Done' : '⏳ Pending'}
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🎤</div>
+              <div className="text-gray-400 mb-4">No tasks yet</div>
+              <div className="text-gray-500 text-sm">
+                Use the voice command: "Add task for {client.firstName} to [description]"
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <h3 className="text-xl font-semibold mb-6">Notes</h3>
+        <div className="text-gray-300">
+          {client.notes || 'No notes available'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Transactions Tab
+const TransactionsTab: React.FC<{ client: Client }> = ({ client }) => {
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'closed': return 'bg-green-600'
+      case 'pending': return 'bg-yellow-600'
+      case 'cancelled': return 'bg-red-600'
+      default: return 'bg-gray-600'
+    }
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'buy': return '🏠'
+      case 'sell': return '💰'
+      case 'lease': return '📋'
+      default: return '📄'
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">Transaction History</h3>
+        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+          Add Transaction
+        </button>
+      </div>
+
+      {client.transactions?.length ? (
+        <div className="space-y-4">
+          {client.transactions.map(transaction => (
+            <div key={transaction.id} className="bg-gray-900 rounded-lg p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <div className="text-3xl">{getTypeIcon(transaction.type)}</div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">{transaction.propertyAddress}</h4>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(transaction.status)}`}>
+                        {transaction.status.toUpperCase()}
+                      </span>
+                      <span className="text-gray-400 text-sm">{transaction.type.toUpperCase()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-white">{formatCurrency(transaction.salePrice)}</div>
+                  <div className="text-green-400 font-medium">{formatCurrency(transaction.netCommission)} net</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-400 text-sm">Lifetime Gross</p>
-                  <p className="text-2xl font-bold text-green-400">
-                    {formatCurrency(client.lifetimeGrossCommission)}
-                  </p>
+                  <span className="text-gray-400">List Price:</span>
+                  <div className="text-white font-medium">{formatCurrency(transaction.listPrice)}</div>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Lifetime Net</p>
-                  <p className="text-2xl font-bold text-green-400">
-                    {formatCurrency(client.lifetimeNetCommission)}
-                  </p>
+                  <span className="text-gray-400">Commission Rate:</span>
+                  <div className="text-white font-medium">{transaction.commissionRate}%</div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Gross Commission:</span>
+                  <div className="text-white font-medium">{formatCurrency(transaction.grossCommission)}</div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Close Date:</span>
+                  <div className="text-white font-medium">{formatDate(transaction.closeDate)}</div>
+                </div>
+              </div>
+
+              {transaction.notes && (
+                <div className="mt-4 p-3 bg-gray-800 rounded">
+                  <span className="text-gray-400 text-sm">Notes:</span>
+                  <div className="text-gray-300 mt-1">{transaction.notes}</div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-900 rounded-lg">
+          <div className="text-6xl mb-4">💼</div>
+          <div className="text-gray-400 mb-4">No transactions yet</div>
+          <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+            Record First Transaction
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Properties Tab
+const PropertiesTab: React.FC<{ client: Client }> = ({ client }) => {
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return '$0'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-600'
+      case 'sold': return 'bg-blue-600'
+      case 'pending': return 'bg-yellow-600'
+      default: return 'bg-gray-600'
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">Properties</h3>
+        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+          Add Property
+        </button>
+      </div>
+
+      {client.properties?.length ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {client.properties.map(property => (
+            <div key={property.id} className="bg-gray-900 rounded-lg overflow-hidden">
+              <div className="h-48 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
+                <div className="text-6xl">🏠</div>
+              </div>
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-white">{property.address}</h4>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(property.status)}`}>
+                    {property.status.toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-gray-400 text-sm mb-3">
+                  {[property.city, property.state].filter(Boolean).join(', ')}
+                </div>
+                <div className="text-2xl font-bold text-white mb-3">{formatCurrency(property.price)}</div>
+                <div className="grid grid-cols-3 gap-2 text-sm text-gray-300">
+                  <div>
+                    <div className="text-gray-400">Beds</div>
+                    <div className="font-medium">{property.bedrooms || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Baths</div>
+                    <div className="font-medium">{property.bathrooms || 'N/A'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Sq Ft</div>
+                    <div className="font-medium">{property.sqft?.toLocaleString() || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-900 rounded-lg">
+          <div className="text-6xl mb-4">🏠</div>
+          <div className="text-gray-400 mb-4">No properties yet</div>
+          <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+            Add First Property
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Communications Tab
+const CommunicationsTab: React.FC<{ client: Client }> = ({ client }) => {
+  const [activeComTab, setActiveComTab] = useState<'emails' | 'calls'>('emails')
+
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleString()
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setActiveComTab('emails')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              activeComTab === 'emails' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Emails
+          </button>
+          <button
+            onClick={() => setActiveComTab('calls')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              activeComTab === 'calls' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Calls
+          </button>
+        </div>
+        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+          {activeComTab === 'emails' ? 'Compose Email' : 'Log Call'}
+        </button>
+      </div>
+
+      {activeComTab === 'emails' && (
+        <div className="space-y-4">
+          {client.emails?.length ? (
+            client.emails.map(email => (
+              <div key={email.id} className="bg-gray-900 rounded-lg p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">{email.subject}</h4>
+                    <div className="text-gray-400 text-sm">To: {email.to.join(', ')}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      email.status === 'sent' ? 'bg-green-600' : 
+                      email.status === 'failed' ? 'bg-red-600' : 'bg-gray-600'
+                    } text-white`}>
+                      {email.status.toUpperCase()}
+                    </div>
+                    <div className="text-gray-400 text-sm mt-1">{formatDate(email.sentAt || email.createdAt)}</div>
+                  </div>
+                </div>
+                <div className="text-gray-300 text-sm bg-gray-800 p-3 rounded">
+                  {email.body.substring(0, 200)}...
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 bg-gray-900 rounded-lg">
+              <div className="text-6xl mb-4">📧</div>
+              <div className="text-gray-400 mb-4">No emails yet</div>
+              <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+                Send First Email
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeComTab === 'calls' && (
+        <div className="space-y-4">
+          {client.calls?.length ? (
+            client.calls.map(call => (
+              <div key={call.id} className="bg-gray-900 rounded-lg p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">
+                      <a href={`tel:${call.phoneNumber}`} className="text-red-400 hover:text-red-300">
+                        {call.phoneNumber}
+                      </a>
+                    </h4>
+                    <div className="text-gray-400 text-sm">
+                      {call.duration && `Duration: ${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, '0')}`}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      call.outcome === 'answered' ? 'bg-green-600' : 
+                      call.outcome === 'voicemail' ? 'bg-yellow-600' : 'bg-gray-600'
+                    } text-white`}>
+                      {call.outcome?.toUpperCase() || 'UNKNOWN'}
+                    </div>
+                    <div className="text-gray-400 text-sm mt-1">{formatDate(call.createdAt)}</div>
+                  </div>
+                </div>
+                {call.notes && (
+                  <div className="text-gray-300 text-sm bg-gray-800 p-3 rounded">
+                    {call.notes}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 bg-gray-900 rounded-lg">
+              <div className="text-6xl mb-4">📞</div>
+              <div className="text-gray-400 mb-4">No calls logged yet</div>
+              <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+                Log First Call
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Reminders Tab
+const RemindersTab: React.FC<{ client: Client }> = ({ client }) => {
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString()
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'birthday': return '🎂'
+      case 'anniversary': return '💒'
+      case 'follow_up': return '📞'
+      case 'closing': return '🏠'
+      default: return '⏰'
+    }
+  }
+
+  const isOverdue = (date: string) => {
+    return new Date(date) < new Date()
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold">Reminders & Important Dates</h3>
+        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
+          Add Reminder
+        </button>
+      </div>
+
+      {client.reminders?.length ? (
+        <div className="space-y-4">
+          {client.reminders.map(reminder => (
+            <div key={reminder.id} className={`bg-gray-900 rounded-lg p-6 border-l-4 ${
+              isOverdue(reminder.reminderDate) ? 'border-red-500' : 'border-blue-500'
+            }`}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <div className="text-3xl">{getTypeIcon(reminder.type)}</div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-white">{reminder.title}</h4>
+                    <div className="text-gray-400 text-sm">{reminder.description}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-sm font-medium ${
+                    isOverdue(reminder.reminderDate) ? 'text-red-400' : 'text-blue-400'
+                  }`}>
+                    {formatDate(reminder.reminderDate)}
+                  </div>
+                  <div className="text-gray-500 text-xs mt-1">
+                    {reminder.type.replace('_', ' ').toUpperCase()}
+                  </div>
+                </div>
+              </div>
+              {!reminder.completed && (
+                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                  Mark Complete
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-900 rounded-lg">
+          <div className="text-6xl mb-4">⏰</div>
+          <div className="text-gray-400 mb-4">No reminders set</div>
+          <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors">
+            Set First Reminder
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Login Form Component
+const LoginForm: React.FC<{
+  onLogin: (email: string, password: string) => void
+  error: string
+}> = ({ onLogin, error }) => {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onLogin(email, password)
+  }
+
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="bg-gray-900 p-8 rounded-xl shadow-2xl w-full max-w-md border border-red-500/30">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-red-400 bg-clip-text text-transparent mb-2">
+            REALTOR CRM
+          </h1>
+          <p className="text-gray-400">Sign in to your account</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 px-4 rounded-lg transition-all duration-200 font-medium"
+          >
+            Sign In
+          </button>
+        </form>
+
+        <div className="mt-6 text-center text-gray-400 text-sm">
+          Demo: rodrigo@realtor.com / admin123
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Add Client Form Component
+const AddClientForm: React.FC<{
+  onSave: (client: Omit<Client, 'id' | 'createdAt' | 'transactions' | 'properties' | 'calls' | 'todos' | 'activities' | 'reminders' | 'emails'>) => void
+  onCancel: () => void
+}> = ({ onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    birthday: '',
+    anniversary: '',
+    occupation: '',
+    spouse: '',
+    children: '',
+    notes: '',
+    preferredContact: 'email',
+    leadSource: '',
+    referredBy: '',
+    tags: [] as string[],
+  })
+
+  const [newTag, setNewTag] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  const addTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()]
+      }))
+      setNewTag('')
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }))
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="bg-gray-900 rounded-xl p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold">Add New Client</h2>
+            <button
+              onClick={onCancel}
+              className="text-gray-400 hover:text-white text-2xl"
+            >
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Personal Information */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Personal Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">First Name *</label>
+                  <input
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Last Name *</label>
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Birthday</label>
+                  <input
+                    type="date"
+                    value={formData.birthday}
+                    onChange={(e) => setFormData(prev => ({ ...prev, birthday: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Anniversary</label>
+                  <input
+                    type="date"
+                    value={formData.anniversary}
+                    onChange={(e) => setFormData(prev => ({ ...prev, anniversary: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Occupation</label>
+                  <input
+                    type="text"
+                    value={formData.occupation}
+                    onChange={(e) => setFormData(prev => ({ ...prev, occupation: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Spouse</label>
+                  <input
+                    type="text"
+                    value={formData.spouse}
+                    onChange={(e) => setFormData(prev => ({ ...prev, spouse: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Children</label>
+                  <input
+                    type="text"
+                    value={formData.children}
+                    onChange={(e) => setFormData(prev => ({ ...prev, children: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    placeholder="Names and ages..."
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions - TODO: Add client action buttons */}
-          </div>
+            {/* Address Information */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Address</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Street Address</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">ZIP Code</label>
+                  <input
+                    type="text"
+                    value={formData.zipCode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Business Information */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Business Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Lead Source</label>
+                  <input
+                    type="text"
+                    value={formData.leadSource}
+                    onChange={(e) => setFormData(prev => ({ ...prev, leadSource: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    placeholder="e.g., Zillow, Referral, Website..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Referred By</label>
+                  <input
+                    type="text"
+                    value={formData.referredBy}
+                    onChange={(e) => setFormData(prev => ({ ...prev, referredBy: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">Preferred Contact</label>
+                  <select
+                    value={formData.preferredContact}
+                    onChange={(e) => setFormData(prev => ({ ...prev, preferredContact: e.target.value }))}
+                    className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                  >
+                    <option value="email">Email</option>
+                    <option value="phone">Phone</option>
+                    <option value="text">Text</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Tags</h3>
+              <div className="space-y-4">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    className="flex-1 p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                    placeholder="Add a tag..."
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                  />
+                  <button
+                    type="button"
+                    onClick={addTag}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                {formData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.tags.map(tag => (
+                      <span key={tag} className="bg-red-600 text-white px-3 py-1 rounded-full text-sm flex items-center space-x-2">
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="text-red-200 hover:text-white"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Notes</h3>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                rows={4}
+                className="w-full p-3 bg-gray-800 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none"
+                placeholder="Any additional notes about this client..."
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-4 pt-6">
+              <button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 px-6 rounded-lg transition-all duration-200 font-medium"
+              >
+                Save Client
+              </button>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
-      </main>
+      </div>
     </div>
   )
 }
