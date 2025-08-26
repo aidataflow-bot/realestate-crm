@@ -22,5 +22,6 @@
     "env": {
       "VITE_API_URL": "/api"
     }
-  }
+  },
+  "buildCommand": "./build.sh"
 }
