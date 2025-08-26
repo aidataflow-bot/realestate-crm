@@ -500,4 +500,12 @@ const ClientDetail: React.FC<{ client: Client, onBack: () => void }> = ({ client
               </div>
             </div>
 
-            {/* Quick
+            {/* Quick Actions - TODO: Add client action buttons */}
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+export default App
