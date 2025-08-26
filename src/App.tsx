@@ -156,6 +156,9 @@ function App() {
   const [showAddClient, setShowAddClient] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState('')
+  const [isListening, setIsListening] = useState(false)
+  const [voiceTranscript, setVoiceTranscript] = useState('')
+  const [voiceStatus, setVoiceStatus] = useState('')
 
   // Check for existing auth with event listening
   useEffect(() => {
@@ -386,6 +389,134 @@ function App() {
     return matchesSearch && matchesTag
   })
 
+  // Voice Recognition Functions
+  const startVoiceRecognition = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      setVoiceStatus('❌ Voice recognition not supported in this browser')
+      return
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognition.lang = 'en-US'
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      setVoiceStatus('🎤 Listening... Say "Add task for [Client Name] to [task description]"')
+      setVoiceTranscript('')
+    }
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript.toLowerCase()
+      setVoiceTranscript(transcript)
+      console.log('Voice transcript:', transcript)
+      
+      // Process voice command
+      processVoiceCommand(transcript)
+    }
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false)
+      setVoiceStatus(`❌ Voice recognition error: ${event.error}`)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+      if (!voiceTranscript) {
+        setVoiceStatus('⏹️ No speech detected. Try again.')
+      }
+    }
+
+    recognition.start()
+  }
+
+  const processVoiceCommand = async (transcript: string) => {
+    try {
+      setVoiceStatus('🔍 Processing voice command...')
+      
+      // Parse voice command: "add task for [client name] to [task description]"
+      const addTaskRegex = /add task for (.+?) to (.+)/i
+      const match = transcript.match(addTaskRegex)
+      
+      if (!match) {
+        setVoiceStatus('❌ Command not recognized. Say: "Add task for [Client Name] to [task description]"')
+        return
+      }
+
+      const clientName = match[1].trim()
+      const taskDescription = match[2].trim()
+
+      // Find matching client
+      const matchingClient = clients.find(client => {
+        const fullName = `${client.firstName} ${client.lastName}`.toLowerCase()
+        const firstName = client.firstName.toLowerCase()
+        const lastName = client.lastName.toLowerCase()
+        
+        return fullName.includes(clientName) || 
+               firstName.includes(clientName) || 
+               lastName.includes(clientName) ||
+               clientName.includes(firstName) ||
+               clientName.includes(lastName)
+      })
+
+      if (!matchingClient) {
+        setVoiceStatus(`❌ Client "${clientName}" not found. Available clients: ${clients.map(c => `${c.firstName} ${c.lastName}`).join(', ')}`)
+        return
+      }
+
+      // Create the task
+      await createVoiceTask(matchingClient, taskDescription)
+      
+    } catch (error) {
+      console.error('Voice command processing error:', error)
+      setVoiceStatus('❌ Error processing voice command')
+    }
+  }
+
+  const createVoiceTask = async (client: Client, description: string) => {
+    try {
+      // Create a new todo/task for the client
+      const newTask = {
+        title: `Voice Task: ${description}`,
+        description: description,
+        priority: 'medium',
+        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Due tomorrow
+        completed: false
+      }
+
+      // In a real app, you'd POST this to your API
+      // For now, we'll simulate it by updating the client locally
+      const updatedClients = clients.map(c => 
+        c.id === client.id 
+          ? {
+              ...c, 
+              todos: [
+                ...(c.todos || []), 
+                {
+                  ...newTask,
+                  id: `voice-${Date.now()}`,
+                  createdAt: new Date().toISOString()
+                }
+              ]
+            }
+          : c
+      )
+      
+      setClients(updatedClients)
+      setVoiceStatus(`✅ Task created for ${client.firstName} ${client.lastName}: "${description}"`)
+      
+      // Auto-clear status after 3 seconds
+      setTimeout(() => setVoiceStatus(''), 3000)
+      
+    } catch (error) {
+      console.error('Error creating voice task:', error)
+      setVoiceStatus('❌ Error creating task')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -596,6 +727,22 @@ function App() {
                   <option key={tag} value={tag}>{tag}</option>
                 ))}
               </select>
+              
+              {/* Voice Recognition Button */}
+              <button
+                onClick={startVoiceRecognition}
+                disabled={isListening}
+                className={`px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg ${
+                  isListening 
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 animate-pulse' 
+                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                } text-white`}
+                title="Voice Command: Add task for [Client Name] to [task description]"
+              >
+                <span>{isListening ? '🔴' : '🎤'}</span>
+                <span>{isListening ? 'Listening...' : 'Voice Task'}</span>
+              </button>
+              
               <button
                 onClick={() => setShowAddClient(true)}
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg"
@@ -605,6 +752,32 @@ function App() {
               </button>
             </div>
           </div>
+          
+          {/* Voice Status */}
+          {voiceStatus && (
+            <div className="mt-4 p-4 bg-gray-800 rounded-lg border border-blue-500">
+              <div className="text-blue-400 font-medium">🎤 Voice Assistant</div>
+              <div className="text-white mt-1">{voiceStatus}</div>
+              {voiceTranscript && (
+                <div className="text-gray-400 text-sm mt-2">
+                  Heard: "{voiceTranscript}"
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Voice Instructions (show when no status) */}
+          {!voiceStatus && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-lg border border-blue-500/30">
+              <div className="text-blue-400 font-medium text-sm">🎤 Voice Commands Available</div>
+              <div className="text-gray-300 text-sm mt-1">
+                Click "🎤 Voice Task" and say: <span className="text-blue-300 font-medium">"Add task for [Client Name] to [task description]"</span>
+              </div>
+              <div className="text-gray-400 text-xs mt-2">
+                Example: "Add task for John Smith to call about property viewing tomorrow"
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Clients Grid - Netflix Style */}
@@ -981,6 +1154,68 @@ const OverviewTab: React.FC<{ client: Client }> = ({ client }) => {
             </div>
           )) || (
             <div className="text-gray-400 text-center py-8">No recent activity</div>
+          )}
+        </div>
+      </div>
+
+      {/* Voice Tasks & Todos */}
+      <div className="bg-gray-900 rounded-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold">Tasks & To-Do Items</h3>
+          <div className="text-sm text-blue-400">
+            🎤 Use voice command to add tasks
+          </div>
+        </div>
+        <div className="space-y-3">
+          {client.todos?.length ? (
+            client.todos.map(todo => (
+              <div key={todo.id} className={`flex items-start space-x-4 p-4 rounded-lg border-l-4 ${
+                todo.completed ? 'bg-green-900/20 border-green-500' : 
+                todo.priority === 'high' ? 'bg-red-900/20 border-red-500' : 
+                todo.priority === 'medium' ? 'bg-yellow-900/20 border-yellow-500' : 
+                'bg-blue-900/20 border-blue-500'
+              }`}>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <h4 className="text-white font-medium">{todo.title}</h4>
+                    {todo.title.includes('Voice Task') && (
+                      <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">
+                        🎤 Voice
+                      </span>
+                    )}
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      todo.priority === 'high' ? 'bg-red-600 text-white' :
+                      todo.priority === 'medium' ? 'bg-yellow-600 text-black' :
+                      'bg-blue-600 text-white'
+                    }`}>
+                      {todo.priority}
+                    </span>
+                  </div>
+                  {todo.description && (
+                    <p className="text-gray-300 text-sm mt-1">{todo.description}</p>
+                  )}
+                  <div className="flex items-center space-x-4 text-xs text-gray-400 mt-2">
+                    <span>Due: {formatDate(todo.dueDate)}</span>
+                    <span>Created: {formatDate(todo.createdAt)}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end space-y-2">
+                  <button className={`px-3 py-1 text-xs rounded ${
+                    todo.completed ? 'bg-green-600 text-white' : 'bg-gray-600 text-white hover:bg-green-600'
+                  }`}>
+                    {todo.completed ? '✅ Done' : '⏳ Pending'}
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-6xl mb-4">🎤</div>
+              <div className="text-gray-400 mb-4">No tasks yet</div>
+              <div className="text-gray-500 text-sm">
+                Use the voice command: "Add task for {client.firstName} to [description]"
+              </div>
+            </div>
           )}
         </div>
       </div>
