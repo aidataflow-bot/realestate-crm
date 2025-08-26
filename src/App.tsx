@@ -159,22 +159,41 @@ function App() {
 
   // Check for existing auth
   useEffect(() => {
+    console.log('App: useEffect - checking for existing auth')
     const token = localStorage.getItem('auth_token')
+    console.log('App: Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null')
+    
     if (token) {
+      console.log('App: Token found, calling loadUserData')
       loadUserData()
     } else {
+      console.log('App: No token found, setting loading to false')
       setLoading(false)
     }
   }, [])
 
   const loadUserData = async () => {
     try {
+      console.log('loadUserData: Checking token...')
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.log('loadUserData: No token found')
+        setLoading(false)
+        return
+      }
+      
+      console.log('loadUserData: Token found, checking with backend...')
       const response = await api.get('/auth/me')
+      console.log('loadUserData: Backend response:', response.data)
       setUser(response.data.user)
       await loadClients()
-    } catch (error) {
-      console.error('Auth check failed:', error)
-      localStorage.removeItem('auth_token')
+    } catch (error: any) {
+      console.error('Auth check failed:', error.response?.status, error.response?.data || error.message)
+      // Only clear token if it's actually invalid (401/403), not network errors
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('loadUserData: Token invalid, clearing...')
+        localStorage.removeItem('auth_token')
+      }
       setLoading(false)
     }
   }
