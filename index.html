@@ -74,9 +74,18 @@
         clients: {
           getAll: async () => {
             console.log('📡 Making API call to fetch clients...');
-            const response = await axios.get(`${API.baseURL}/clients`);
-            console.log('✅ API response received:', response.data);
-            return response.data;
+            console.log('🔍 API URL:', `${API.baseURL}/clients`);
+            console.log('🔍 Request method: GET');
+            try {
+              const response = await axios.get(`${API.baseURL}/clients`);
+              console.log('✅ API response received:', response.data);
+              return response.data;
+            } catch (error) {
+              console.error('❌ API call failed:', error);
+              console.error('❌ Error response:', error.response?.data);
+              console.error('❌ Error status:', error.response?.status);
+              throw error;
+            }
           },
           
           getById: async (id) => {
