@@ -171,15 +171,28 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { url, method } = req;
+  const { method } = req;
+  
+  // Parse URL properly for Vercel
+  const urlObject = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = urlObject.pathname;
+  
+  // Debug logging
+  console.log('🔍 Request details:');
+  console.log('Method:', method);
+  console.log('Original URL:', req.url);
+  console.log('Parsed pathname:', pathname);
+  console.log('Host:', req.headers.host);
   
   try {
     // Health check
-    if (url === '/api/health' && method === 'GET') {
+    if (pathname === '/api/health' && method === 'GET') {
+      const clients = await DB.getClients();
       return res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         storage: isConnected ? 'Supabase Connected' : 'In-Memory Fallback',
+        clients: clients.length,
         debug: {
           hasSupabaseUrl: !!process.env.SUPABASE_URL,
           hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
@@ -191,14 +204,14 @@ export default async function handler(req, res) {
     }
 
     // Get all clients
-    if (url === '/api/clients' && method === 'GET') {
+    if (pathname === '/api/clients' && method === 'GET') {
       const clients = await DB.getClients();
       return res.json(clients);
     }
 
     // Get single client
-    if (url.startsWith('/api/clients/') && method === 'GET') {
-      const id = url.split('/')[3];
+    if (pathname.startsWith('/api/clients/') && method === 'GET') {
+      const id = pathname.split('/')[3];
       const client = await DB.getClient(id);
       if (!client) {
         return res.status(404).json({ error: 'Client not found' });
@@ -207,7 +220,7 @@ export default async function handler(req, res) {
     }
 
     // Create new client
-    if (url === '/api/clients' && method === 'POST') {
+    if (pathname === '/api/clients' && method === 'POST') {
       const { firstName, lastName, email, phone, tags, notes, birthday, address } = req.body;
       
       if (!firstName || !lastName) {
@@ -231,38 +244,38 @@ export default async function handler(req, res) {
     }
 
     // Update client
-    if (url.startsWith('/api/clients/') && method === 'PUT') {
-      const id = url.split('/')[3];
+    if (pathname.startsWith('/api/clients/') && method === 'PUT') {
+      const id = pathname.split('/')[3];
       const updates = req.body;
       const updatedClient = await DB.updateClient(id, updates);
       return res.json(updatedClient);
     }
 
     // Delete client
-    if (url.startsWith('/api/clients/') && method === 'DELETE') {
-      const id = url.split('/')[3];
+    if (pathname.startsWith('/api/clients/') && method === 'DELETE') {
+      const id = pathname.split('/')[3];
       await DB.deleteClient(id);
       return res.json({ success: true });
     }
 
     // Placeholder routes for other resources
-    if (url.match(/\/api\/clients\/[^\/]+\/properties/) && method === 'GET') {
+    if (pathname.match(/\/api\/clients\/[^\/]+\/properties/) && method === 'GET') {
       return res.json([]);
     }
 
-    if (url.match(/\/api\/clients\/[^\/]+\/properties/) && method === 'POST') {
+    if (pathname.match(/\/api\/clients\/[^\/]+\/properties/) && method === 'POST') {
       return res.status(501).json({ error: 'Property management not yet implemented' });
     }
 
-    if (url === '/api/tasks' && method === 'GET') {
+    if (pathname === '/api/tasks' && method === 'GET') {
       return res.json([]);
     }
 
-    if (url.match(/\/api\/clients\/[^\/]+\/tasks/) && method === 'POST') {
+    if (pathname.match(/\/api\/clients\/[^\/]+\/tasks/) && method === 'POST') {
       return res.status(501).json({ error: 'Task management not yet implemented' });
     }
 
-    if (url.match(/\/api\/clients\/[^\/]+\/calls/) && method === 'POST') {
+    if (pathname.match(/\/api\/clients\/[^\/]+\/calls/) && method === 'POST') {
       return res.status(501).json({ error: 'Call logging not yet implemented' });
     }
 
