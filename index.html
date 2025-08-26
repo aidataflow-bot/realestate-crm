@@ -595,8 +595,11 @@
             )
           ),
 
-          // Netflix-style Clients Grid
-          React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20' },
+          // Netflix-style Clients Grid with horizontal scroll on mobile
+          React.createElement('div', { 
+            className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20',
+            style: { minHeight: '400px' } // Ensure space for hover overlays
+          },
             clients.map(client => React.createElement(ClientCard, {
               key: client.id,
               client,

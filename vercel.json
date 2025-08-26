@@ -13,15 +13,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "DATABASE_URL": "@database-url",
-    "JWT_SECRET": "@jwt-secret"
-  },
-  "build": {
-    "env": {
-      "VITE_API_URL": "/api"
-    }
-  },
-  "buildCommand": "./build.sh"
+  ]
 }
