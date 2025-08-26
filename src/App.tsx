@@ -157,42 +157,73 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState('')
 
-  // Check for existing auth with multiple attempts
+  // Check for existing auth with event listening
   useEffect(() => {
-    console.log('App: useEffect - checking for existing auth')
+    console.log('App: useEffect - setting up authentication')
     
     const checkAuth = () => {
       const token = localStorage.getItem('auth_token')
-      console.log('App: Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null')
+      console.log('App: Token check:', token ? `${token.substring(0, 20)}...` : 'null')
       
       if (token) {
-        console.log('App: Token found, calling loadUserData')
+        console.log('App: ✅ Token found, loading user data...')
+        setLoading(true)
         loadUserData()
         return true
       } else {
-        console.log('App: No token found')
+        console.log('App: ❌ No token found')
         return false
       }
     }
     
-    // Initial check
+    // Initial auth check
     if (!checkAuth()) {
-      // If no token initially, check again in intervals (for HTML login handoff)
+      console.log('App: No initial token, setting up listeners...')
+      
+      // Listen for login success from HTML form
+      const handleLoginSuccess = (event) => {
+        console.log('App: 🎉 Received login success event!')
+        checkAuth()
+      }
+      
+      // Listen for storage changes
+      const handleStorage = (event) => {
+        if (event.key === 'auth_token' && event.newValue) {
+          console.log('App: 🔄 Storage event - token added!')
+          checkAuth()
+        }
+      }
+      
+      window.addEventListener('loginSuccess', handleLoginSuccess)
+      window.addEventListener('storage', handleStorage)
+      
+      // Periodic check as fallback
       const interval = setInterval(() => {
-        console.log('App: Rechecking for token...')
+        console.log('App: 🔍 Periodic token check...')
         if (checkAuth()) {
           clearInterval(interval)
         }
-      }, 1000)
+      }, 2000)
       
-      // Stop checking after 10 seconds and show login form
+      // Clean up after 15 seconds
       setTimeout(() => {
         clearInterval(interval)
+        window.removeEventListener('loginSuccess', handleLoginSuccess)
+        window.removeEventListener('storage', handleStorage)
+        
         if (!localStorage.getItem('auth_token')) {
-          console.log('App: No token after 10 seconds, showing login')
+          console.log('App: ⏰ Timeout reached, showing login form')
           setLoading(false)
         }
-      }, 10000)
+      }, 15000)
+      
+      // Also show login form immediately if still no token after 2 seconds
+      setTimeout(() => {
+        if (!localStorage.getItem('auth_token')) {
+          console.log('App: 📋 Quick timeout, showing login form')
+          setLoading(false)
+        }
+      }, 2000)
     }
   }, [])
 
