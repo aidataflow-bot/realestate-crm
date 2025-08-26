@@ -283,7 +283,120 @@ function App() {
   }
 
   if (!user) {
-    return <LoginForm onLogin={onLogin} error={error} />
+    console.log('App: Showing login form - user is:', user)
+    console.log('App: onLogin function is:', typeof onLogin)
+    console.log('App: error is:', error)
+    
+    // Force visible login form with aggressive styling
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#111827', 
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        zIndex: 99999
+      }}>
+        <div style={{
+          background: '#1f2937',
+          padding: '2rem',
+          borderRadius: '8px',
+          width: '100%',
+          maxWidth: '28rem',
+          border: '2px solid #ef4444',
+          color: 'white'
+        }}>
+          <h2 style={{
+            color: '#ef4444',
+            textAlign: 'center',
+            marginBottom: '1.5rem',
+            fontSize: '1.5rem',
+            fontWeight: 'bold'
+          }}>🎬 CLIENT FLOW 360</h2>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            const email = (e.target as any).email.value
+            const password = (e.target as any).password.value
+            console.log('Login attempt with:', email, password)
+            onLogin(email, password)
+          }} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+            <input
+              name="email"
+              type="email"
+              placeholder="Email (rodrigo@realtor.com)"
+              defaultValue="rodrigo@realtor.com"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: '#374151',
+                border: '1px solid #4b5563',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '1rem'
+              }}
+              required
+            />
+            <input
+              name="password"
+              type="password"
+              placeholder="Password (admin123)"
+              defaultValue="admin123"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: '#374151',
+                border: '1px solid #4b5563',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '1rem'
+              }}
+              required
+            />
+            {error && (
+              <div style={{
+                background: '#7f1d1d',
+                border: '1px solid #dc2626',
+                color: '#fca5a5',
+                padding: '0.75rem',
+                borderRadius: '6px'
+              }}>
+                {error}
+              </div>
+            )}
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                background: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Sign In to CRM
+            </button>
+          </form>
+          
+          <div style={{
+            marginTop: '1rem',
+            textAlign: 'center',
+            color: '#9ca3af',
+            fontSize: '0.875rem'
+          }}>
+            Demo: rodrigo@realtor.com / admin123
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (selectedClient) {
