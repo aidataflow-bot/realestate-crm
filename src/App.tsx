@@ -621,7 +621,7 @@ function App() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-4">
+            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-3">
               {filteredClients.map((client) => (
                 <ClientTile
                   key={client.id}
@@ -667,33 +667,33 @@ const ClientTile: React.FC<{
         {client.avatar ? (
           <img src={client.avatar} alt={`${client.firstName} ${client.lastName}`} className="w-full h-full object-cover" />
         ) : (
-          <div className="text-2xl font-bold text-white">
+          <div className="text-lg font-bold text-white">
             {client.firstName.charAt(0)}{client.lastName.charAt(0)}
           </div>
         )}
         
         {/* Birthday indicator */}
         {nextBirthday !== null && nextBirthday <= 30 && (
-          <div className="absolute top-1 right-1 bg-yellow-500 text-black px-1 py-0.5 rounded-full text-xs font-bold">
-            🎂 {nextBirthday}d
+          <div className="absolute top-0.5 right-0.5 bg-yellow-500 text-black px-0.5 py-0.5 rounded text-xs font-bold leading-none">
+            🎂{nextBirthday}d
           </div>
         )}
 
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-          <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-white text-xs font-semibold">
-            View Details
+          <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-white text-xs font-semibold leading-tight">
+            View
           </div>
         </div>
       </div>
 
       {/* Client Info */}
-      <div className="p-2">
-        <h3 className="text-sm font-semibold text-white mb-1 truncate">
+      <div className="p-1.5">
+        <h3 className="text-xs font-semibold text-white mb-0.5 truncate">
           {client.firstName} {client.lastName}
         </h3>
         
-        <div className="space-y-1 text-xs text-gray-400">
+        <div className="space-y-0.5 text-xs text-gray-400">
           {client.email && (
             <div className="truncate">{client.email}</div>
           )}
@@ -709,21 +709,21 @@ const ClientTile: React.FC<{
           )}
 
           {/* Transaction count */}
-          <div className="text-xs text-gray-500">
-            {(client.transactions?.length || 0)} transaction{(client.transactions?.length || 0) !== 1 ? 's' : ''}
+          <div className="text-xs text-gray-500 leading-tight">
+            {(client.transactions?.length || 0)} deal{(client.transactions?.length || 0) !== 1 ? 's' : ''}
           </div>
         </div>
 
         {/* Tags */}
         {client.tags.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
+          <div className="mt-0.5 flex flex-wrap gap-0.5">
             {client.tags.slice(0, 1).map(tag => (
-              <span key={tag} className="px-1 py-0.5 bg-red-600 text-white text-xs rounded">
+              <span key={tag} className="px-0.5 py-0.5 bg-red-600 text-white text-xs rounded text-xs leading-none">
                 {tag}
               </span>
             ))}
             {client.tags.length > 1 && (
-              <span className="px-1 py-0.5 bg-gray-600 text-white text-xs rounded">
+              <span className="px-0.5 py-0.5 bg-gray-600 text-white text-xs rounded leading-none">
                 +{client.tags.length - 1}
               </span>
             )}
