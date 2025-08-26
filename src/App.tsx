@@ -522,36 +522,31 @@ const LoginForm: React.FC<{ onLogin: (email: string, password: string) => void, 
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center" style={{ minHeight: '100vh', backgroundColor: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md" style={{ backgroundColor: '#1f2937', padding: '2rem', borderRadius: '0.5rem', width: '100%', maxWidth: '28rem' }}>
-        <h2 className="text-2xl font-bold text-white mb-6 text-center" style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '1.5rem', textAlign: 'center' }}>CLIENT FLOW 360</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="login-container">
+      <div className="login-box">
+        <h2 className="login-title">CLIENT FLOW 360</h2>
+        <form onSubmit={handleSubmit} className="login-form">
           <input
             type="email"
-            placeholder="Email"
+            placeholder="Email (rodrigo@realtor.com)"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
             required
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Password (admin123)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 bg-gray-700 text-white rounded-md border border-gray-600 focus:border-blue-500 focus:outline-none"
             required
           />
           {error && (
-            <div className="bg-red-900 border border-red-600 text-red-200 px-4 py-3 rounded">
+            <div className="error-message">
               {error}
             </div>
           )}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Sign In
+          <button type="submit">
+            Sign In to CRM
           </button>
         </form>
         <div className="mt-6 p-4 bg-gray-700 rounded-lg">
