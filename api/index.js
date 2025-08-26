@@ -178,11 +178,12 @@ export default async function handler(req, res) {
   const pathname = urlObject.pathname;
   
   // Debug logging
-  console.log('🔍 Request details:');
+  console.log('🔍 Request details (API_V2_FIXED):');
   console.log('Method:', method);
   console.log('Original URL:', req.url);
   console.log('Parsed pathname:', pathname);
   console.log('Host:', req.headers.host);
+  console.log('🚀 API V2 with improved URL parsing active!');
   
   try {
     // Health check
