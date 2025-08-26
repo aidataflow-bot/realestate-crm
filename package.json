@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "start": "vite preview",
+    "build": "node build.js",
+    "start": "vite preview", 
     "preview": "vite preview",
-    "vercel-build": "vite build"
+    "vercel-build": "node build.js"
   },
   "dependencies": {
     "react": "^18.2.0",
