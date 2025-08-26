@@ -331,7 +331,7 @@ app.get('/api', (req, res) => {
 })
 
 // Start server
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3000
 
 app.listen(PORT, () => {
   console.log(`🚀 Client Flow 360 API Server running on port ${PORT}`)
