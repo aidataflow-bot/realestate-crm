@@ -8,16 +8,25 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'demo_key';
 let supabase = null;
 let isConnected = false;
 
+// Debug logging
+console.log('🔍 Environment check:');
+console.log('SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
+console.log('SUPABASE_ANON_KEY exists:', !!process.env.SUPABASE_ANON_KEY);
+console.log('SUPABASE_URL value:', process.env.SUPABASE_URL ? `${process.env.SUPABASE_URL.substring(0, 20)}...` : 'undefined');
+
 try {
   if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
     supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     isConnected = true;
-    console.log('✅ Supabase client initialized');
+    console.log('✅ Supabase client initialized successfully');
   } else {
     console.log('⚠️ Supabase credentials not found, using fallback storage');
+    console.log('Missing SUPABASE_URL:', !process.env.SUPABASE_URL);
+    console.log('Missing SUPABASE_ANON_KEY:', !process.env.SUPABASE_ANON_KEY);
   }
 } catch (error) {
   console.error('❌ Supabase initialization failed:', error);
+  isConnected = false;
 }
 
 // Fallback in-memory storage for when Supabase is not configured
@@ -170,7 +179,14 @@ export default async function handler(req, res) {
       return res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
-        storage: isConnected ? 'Supabase Connected' : 'In-Memory Fallback'
+        storage: isConnected ? 'Supabase Connected' : 'In-Memory Fallback',
+        debug: {
+          hasSupabaseUrl: !!process.env.SUPABASE_URL,
+          hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+          supabaseUrlPrefix: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 25) : 'not-set',
+          isConnected: isConnected,
+          environmentKeys: Object.keys(process.env).filter(key => key.includes('SUPABASE'))
+        }
       });
     }
 
