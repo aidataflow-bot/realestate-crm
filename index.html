@@ -17,6 +17,29 @@
         color: white; 
       }
       #root { min-height: 100vh; }
+      
+      /* Netflix-style animations and effects */
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      
+      /* Smooth transitions for tile effects */
+      .group:hover .group-hover\:scale-110 {
+        transform: scale(1.1);
+      }
+      
+      /* Enhanced hover effects */
+      .tile-hover {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      .tile-hover:hover {
+        transform: scale(1.05);
+        z-index: 10;
+      }
     </style>
   </head>
   <body>
@@ -504,7 +527,10 @@
       }) {
         return React.createElement('div', null,
           React.createElement('div', { className: 'flex justify-between items-center mb-6' },
-            React.createElement('h2', { className: 'text-3xl font-bold' }, 'My Clients'),
+            React.createElement('div', null,
+              React.createElement('h2', { className: 'text-3xl font-bold mb-1' }, 'My Clients'),
+              React.createElement('p', { className: 'text-gray-400' }, `${clients.length} active clients in your portfolio`)
+            ),
             React.createElement('div', { className: 'flex space-x-3' },
               React.createElement('button', {
                 onClick: () => setShowAddClientModal(true),
@@ -569,8 +595,8 @@
             )
           ),
 
-          // Clients Grid
-          React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+          // Netflix-style Clients Grid
+          React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20' },
             clients.map(client => React.createElement(ClientCard, {
               key: client.id,
               client,
@@ -589,74 +615,145 @@
         );
       }
 
-      // Client Card Component
+      // Client Card Component - Netflix Movie Tile Style
       function ClientCard({ client, onViewDetails, onLogCall, onManageProperties }) {
+        const clientName = `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`;
+        const initials = `${(client.firstName || client.first_name || 'A')[0]}${(client.lastName || client.last_name || 'A')[0]}`;
+        
+        // Generate a unique gradient based on client name for visual variety
+        const gradients = [
+          'from-red-600 to-red-800',
+          'from-blue-600 to-blue-800', 
+          'from-green-600 to-green-800',
+          'from-purple-600 to-purple-800',
+          'from-yellow-600 to-yellow-800',
+          'from-pink-600 to-pink-800',
+          'from-indigo-600 to-indigo-800',
+          'from-teal-600 to-teal-800'
+        ];
+        const gradientIndex = (clientName.charCodeAt(0) + clientName.charCodeAt(1)) % gradients.length;
+        const gradient = gradients[gradientIndex];
+
         return React.createElement('div', { 
-          className: 'bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors cursor-pointer',
-          onClick: onViewDetails
+          className: 'relative group cursor-pointer transform transition-all duration-300 hover:scale-105',
+          onClick: onViewDetails,
+          style: { aspectRatio: '16/9' }
         },
-          React.createElement('div', { className: 'flex items-center justify-between mb-4' },
-            React.createElement('div', { className: 'flex items-center space-x-3' },
+          // Main Netflix-style tile
+          React.createElement('div', { 
+            className: `relative w-full h-full bg-gradient-to-br ${gradient} rounded-lg overflow-hidden shadow-xl`
+          },
+            // Background pattern for visual interest
+            React.createElement('div', {
+              className: 'absolute inset-0 opacity-20',
+              style: {
+                backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 1px, transparent 1px)',
+                backgroundSize: '20px 20px'
+              }
+            }),
+            
+            // Status badge (top-right corner)
+            React.createElement('div', { 
+              className: `absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-bold ${
+                client.stage === 'ACTIVE' ? 'bg-green-500 text-white' :
+                client.stage === 'PENDING' ? 'bg-yellow-500 text-black' :
+                'bg-gray-500 text-white'
+              }`
+            }, client.stage || 'ACTIVE'),
+
+            // Client avatar (large, centered)
+            React.createElement('div', { className: 'absolute inset-0 flex items-center justify-center' },
               React.createElement('div', { 
-                className: 'w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-lg'
-              }, `${(client.firstName || client.first_name || 'A')[0]}${(client.lastName || client.last_name || 'A')[0]}`),
-              React.createElement('div', null,
-                React.createElement('h3', { className: 'font-semibold text-lg' }, 
-                  `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`
+                className: 'w-20 h-20 bg-black bg-opacity-30 rounded-full flex items-center justify-center text-white font-bold text-3xl border-4 border-white border-opacity-50'
+              }, initials)
+            ),
+
+            // Client info overlay (bottom)
+            React.createElement('div', { 
+              className: 'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black to-transparent p-4'
+            },
+              React.createElement('h3', { className: 'text-white font-bold text-lg mb-1' }, clientName),
+              React.createElement('p', { className: 'text-gray-300 text-sm mb-2' }, client.email),
+              React.createElement('div', { className: 'flex items-center justify-between' },
+                React.createElement('span', { className: 'text-green-400 font-semibold text-sm' }, 
+                  `$${(client.lifetimeNetCommission || 0).toLocaleString()}`
                 ),
-                React.createElement('p', { className: 'text-gray-400 text-sm' }, client.email)
+                React.createElement('span', { className: 'text-gray-400 text-xs' }, 
+                  `${client.calls ? client.calls.length : 0} calls`
+                )
               )
             ),
-            React.createElement('div', { 
-              className: `px-2 py-1 rounded text-xs font-medium ${
-                client.stage === 'ACTIVE' ? 'bg-green-600 text-green-100' :
-                client.stage === 'PENDING' ? 'bg-yellow-600 text-yellow-100' :
-                'bg-gray-600 text-gray-100'
-              }`
-            }, client.stage || 'ACTIVE')
-          ),
 
-          React.createElement('div', { className: 'mb-4' },
-            React.createElement('p', { className: 'text-gray-300 text-sm mb-2' }, 
-              `📍 ${client.city || 'Los Angeles'}, ${client.state || 'CA'}`
-            ),
-            React.createElement('p', { className: 'text-gray-300 text-sm mb-2' }, 
-              `📞 ${client.phone || 'No phone'}`
-            ),
-            React.createElement('p', { className: 'text-green-400 font-semibold' }, 
-              `💰 $${(client.lifetimeNetCommission || 0).toLocaleString()} LTV`
+            // Tags overlay (top-left)
+            client.tags && client.tags.length > 0 && React.createElement('div', { 
+              className: 'absolute top-3 left-3 flex flex-wrap gap-1'
+            },
+              client.tags.slice(0, 2).map((tag, index) =>
+                React.createElement('span', {
+                  key: index,
+                  className: 'px-2 py-1 bg-black bg-opacity-60 text-white rounded text-xs font-medium'
+                }, tag)
+              )
             )
           ),
 
-          client.tags && client.tags.length > 0 && React.createElement('div', { className: 'mb-4' },
-            React.createElement('div', { className: 'flex flex-wrap gap-2' },
-              client.tags.slice(0, 3).map((tag, index) =>
+          // Netflix-style hover overlay with actions
+          React.createElement('div', { 
+            className: 'absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100'
+          },
+            React.createElement('div', { className: 'flex space-x-3' },
+              React.createElement('button', {
+                onClick: (e) => { e.stopPropagation(); onViewDetails(); },
+                className: 'bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-gray-200 transition-colors flex items-center space-x-2'
+              }, 
+                React.createElement('span', null, '▶'),
+                React.createElement('span', null, 'Details')
+              ),
+              React.createElement('button', {
+                onClick: (e) => { e.stopPropagation(); onLogCall(); },
+                className: 'bg-gray-700 text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center space-x-2'
+              }, 
+                React.createElement('span', null, '📞'),
+                React.createElement('span', null, 'Call')
+              ),
+              React.createElement('button', {
+                onClick: (e) => { e.stopPropagation(); onManageProperties(); },
+                className: 'bg-gray-700 text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center space-x-2'
+              }, 
+                React.createElement('span', null, '🏠'),
+                React.createElement('span', null, 'Properties')
+              )
+            )
+          ),
+
+          // Netflix-style bottom info bar (appears on hover)
+          React.createElement('div', { 
+            className: 'absolute -bottom-20 left-0 right-0 bg-gray-800 p-4 rounded-b-lg shadow-xl opacity-0 group-hover:opacity-100 transform group-hover:translate-y-0 translate-y-2 transition-all duration-300'
+          },
+            React.createElement('div', { className: 'flex justify-between items-start mb-2' },
+              React.createElement('div', null,
+                React.createElement('p', { className: 'text-white font-semibold' }, clientName),
+                React.createElement('p', { className: 'text-gray-400 text-sm' }, 
+                  `📍 ${client.city || 'Los Angeles'}, ${client.state || 'CA'}`
+                )
+              ),
+              React.createElement('div', { className: 'text-right' },
+                React.createElement('p', { className: 'text-green-400 font-bold' }, 
+                  `$${(client.lifetimeNetCommission || 0).toLocaleString()}`
+                ),
+                React.createElement('p', { className: 'text-gray-400 text-xs' }, 'LTV')
+              )
+            ),
+            client.tags && client.tags.length > 0 && React.createElement('div', { className: 'flex flex-wrap gap-1 mb-2' },
+              client.tags.map((tag, index) =>
                 React.createElement('span', {
                   key: index,
                   className: 'px-2 py-1 bg-blue-600 text-blue-100 rounded text-xs'
                 }, tag)
-              ),
-              client.tags.length > 3 && React.createElement('span', {
-                className: 'px-2 py-1 bg-gray-600 text-gray-100 rounded text-xs'
-              }, `+${client.tags.length - 3} more`)
-            )
-          ),
-
-          React.createElement('div', { 
-            className: 'flex justify-between items-center pt-4 border-t border-gray-700'
-          },
-            React.createElement('div', { className: 'flex space-x-2' },
-              React.createElement('button', {
-                onClick: (e) => { e.stopPropagation(); onLogCall(); },
-                className: 'text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700'
-              }, '📞 Call'),
-              React.createElement('button', {
-                onClick: (e) => { e.stopPropagation(); onManageProperties(); },
-                className: 'text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700'
-              }, '🏠 Properties')
+              )
             ),
-            React.createElement('div', { className: 'text-xs text-gray-400' },
-              `${client.calls ? client.calls.length : 0} calls`
+            client.notes && React.createElement('p', { className: 'text-gray-300 text-sm line-clamp-2' }, 
+              client.notes
             )
           )
         );
