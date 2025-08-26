@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node build-static.js",
     "preview": "vite preview",
     "server": "node api/index.js"
   },
