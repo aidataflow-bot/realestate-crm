@@ -14,8 +14,13 @@ CREATE TABLE IF NOT EXISTS clients (
   tags TEXT[],
   notes TEXT,
   birthday DATE,
+  anniversary DATE,
+  spouse TEXT,
+  children TEXT,
   address TEXT,
   status TEXT DEFAULT 'active',
+  transactions JSONB DEFAULT '[]'::jsonb,
+  lifetime_commission DECIMAL(12,2) DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
