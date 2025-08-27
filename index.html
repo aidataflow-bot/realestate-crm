@@ -652,7 +652,7 @@
             
             const taskToSave = {
               ...taskData,
-              id: isEditing ? taskData.id : 'task-' + Date.now(),
+              id: isEditing ? taskData.id : 'task-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
               createdAt: isEditing ? taskData.createdAt : new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               completed: taskData.status === 'completed'
@@ -3269,7 +3269,7 @@
                 React.createElement('div', { className: 'space-y-2' },
                   recentTasks.map((task, index) =>
                     React.createElement('div', { 
-                      key: index, 
+                      key: task.id || `task-${index}`, 
                       className: `p-3 rounded flex items-center justify-between ${
                         task.completed ? 'bg-gray-700 opacity-75' : 'bg-gray-600'
                       }`
@@ -3277,32 +3277,38 @@
                       React.createElement('div', { className: 'flex items-center space-x-3' },
                         React.createElement('div', {
                           onClick: () => {
+                            console.log('🔍 Overview task click - Task ID:', task.id, 'Task:', task);
+                            
                             // Update the task completion status
                             const updatedCompleted = !task.completed;
                             const updatedTask = { ...task, completed: updatedCompleted, completedAt: new Date().toISOString() };
                             
-                            // Update clients array
-                            setClients(prevClients => 
-                              prevClients.map(c => 
-                                c.id === client.id 
-                                  ? {
-                                      ...c,
-                                      todos: (c.todos || []).map(t => 
-                                        t.id === task.id ? updatedTask : t
-                                      )
-                                    }
-                                  : c
-                              )
-                            );
+                            console.log('🔄 Updating task in overview:', updatedTask);
                             
-                            // Also update selectedClient if it matches
+                            // Update clients array
+                            setClients(prevClients => {
+                              const newClients = prevClients.map(c => {
+                                if (c.id === client.id) {
+                                  const updatedTodos = (c.todos || []).map(t => {
+                                    console.log('🔍 Comparing task IDs:', t.id, 'vs', task.id);
+                                    return t.id === task.id ? updatedTask : t;
+                                  });
+                                  console.log('📝 Updated todos for client:', updatedTodos);
+                                  return { ...c, todos: updatedTodos };
+                                }
+                                return c;
+                              });
+                              return newClients;
+                            });
+                            
+                            // Force re-render by updating selectedClient
                             if (selectedClient && selectedClient.id === client.id) {
-                              setSelectedClient(prev => ({
-                                ...prev,
-                                todos: (prev.todos || []).map(t => 
+                              setSelectedClient(prev => {
+                                const updatedTodos = (prev.todos || []).map(t => 
                                   t.id === task.id ? updatedTask : t
-                                )
-                              }));
+                                );
+                                return { ...prev, todos: updatedTodos };
+                              });
                             }
                           },
                           className: `w-5 h-5 border-2 rounded cursor-pointer flex items-center justify-center transition-colors ${
@@ -3641,7 +3647,7 @@
               React.createElement('div', { className: 'space-y-3' },
                 tasks.map((task, index) =>
                   React.createElement('div', { 
-                    key: index, 
+                    key: task.id || `task-${index}`, 
                     className: `bg-gray-700 p-4 rounded-lg flex items-center justify-between ${
                       task.completed ? 'opacity-60' : ''
                     }`
@@ -3649,31 +3655,39 @@
                     React.createElement('div', { className: 'flex items-center space-x-3' },
                       React.createElement('div', {
                         onClick: () => {
+                          console.log('🔍 Client modal task click - Task ID:', task.id, 'Task:', task);
+                          console.log('📋 All client todos:', client.todos);
+                          
                           // Handle task completion toggle
                           const updatedCompleted = !task.completed;
                           const updatedTask = { ...task, completed: updatedCompleted, completedAt: new Date().toISOString() };
                           
-                          // Update clients array
-                          setClients(prevClients => 
-                            prevClients.map(c => 
-                              c.id === client.id 
-                                ? {
-                                    ...c,
-                                    todos: (c.todos || []).map(t => 
-                                      t.id === task.id ? updatedTask : t
-                                    )
-                                  }
-                                : c
-                            )
-                          );
+                          console.log('🔄 Updating task in client modal:', updatedTask);
+                          
+                          // Update clients array with precise matching
+                          setClients(prevClients => {
+                            const newClients = prevClients.map(c => {
+                              if (c.id === client.id) {
+                                const updatedTodos = (c.todos || []).map(t => {
+                                  console.log('🔍 Modal comparing task IDs:', t.id, 'vs', task.id, 'Match:', t.id === task.id);
+                                  return t.id === task.id ? updatedTask : t;
+                                });
+                                console.log('📝 Modal updated todos:', updatedTodos);
+                                return { ...c, todos: updatedTodos };
+                              }
+                              return c;
+                            });
+                            return newClients;
+                          });
                           
                           // Update selectedClient to reflect changes in modal
-                          setSelectedClient(prev => ({
-                            ...prev,
-                            todos: (prev.todos || []).map(t => 
-                              t.id === task.id ? updatedTask : t
-                            )
-                          }));
+                          setSelectedClient(prev => {
+                            const updatedTodos = (prev.todos || []).map(t => {
+                              console.log('🔍 SelectedClient comparing:', t.id, 'vs', task.id);
+                              return t.id === task.id ? updatedTask : t;
+                            });
+                            return { ...prev, todos: updatedTodos };
+                          });
                         },
                         className: `w-5 h-5 border-2 rounded cursor-pointer flex items-center justify-center transition-colors ${
                           task.completed 
