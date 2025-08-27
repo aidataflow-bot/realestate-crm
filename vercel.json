@@ -1,20 +1,12 @@
 {
-  "version": 2,
-  "name": "client-flow-360-crm",
-  "builds": [
+  "rewrites": [
     {
-      "src": "index.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://your-backend-api.com/api/$1"
+      "source": "/api/(.*)",
+      "destination": "https://your-backend-api.com/api/$1"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -36,10 +28,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "VITE_APP_NAME": "CLIENT FLOW 360 CRM",
-    "VITE_APP_VERSION": "2.1"
-  }
+  ]
 }
