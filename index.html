@@ -52,6 +52,22 @@
       // Complete Netflix-style CRM with CLIENT FLOW 360 branding + Database Integration  
       // CACHE BUST: BUILD:1756274000 - PROPERTY MANAGEMENT
       const { useState, useEffect, useCallback } = React;
+
+      // Authentication Check - Redirect to landing if not authenticated
+      function checkAuthentication() {
+        const isAuthenticated = sessionStorage.getItem('cf360_authenticated') === 'true';
+        if (!isAuthenticated) {
+          console.log('🔐 User not authenticated, redirecting to landing page...');
+          window.location.href = '/landing.html';
+          return false;
+        }
+        return true;
+      }
+
+      // Check authentication on page load
+      if (!checkAuthentication()) {
+        throw new Error('Authentication required');
+      }
       
       console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v4.0 - PROPERTY_MANAGEMENT_1756274000 - COMPREHENSIVE PROPERTY SYSTEM...');
       
@@ -192,7 +208,14 @@
       };
       
       function NetflixCRM() {
-        const [user, setUser] = useState(null);
+        const [user, setUser] = useState(() => {
+          try {
+            const userData = sessionStorage.getItem('cf360_user');
+            return userData ? JSON.parse(userData) : null;
+          } catch {
+            return null;
+          }
+        });
         const [clients, setClients] = useState([]);
         const [selectedClient, setSelectedClient] = useState(null);
         const [error, setError] = useState('');
@@ -1207,7 +1230,12 @@
             React.createElement('div', { className: 'flex items-center space-x-4' },
               React.createElement('span', { className: 'text-sm' }, `Welcome, ${user.firstName}!`),
               React.createElement('button', {
-                onClick: () => setUser(null),
+                onClick: () => {
+                  sessionStorage.removeItem('cf360_authenticated');
+                  sessionStorage.removeItem('cf360_user');
+                  setUser(null);
+                  window.location.href = '/landing.html';
+                },
                 className: 'bg-red-600 px-3 py-1 rounded text-sm hover:bg-red-700'
               }, 'Logout')
             )
@@ -3057,9 +3085,10 @@
           const lastCall = sortedCalls[0];
           const nextCallbackDate = lastCall?.followUpDate || lastCall?.follow_up_date;
 
-          // Get properties and tasks for full overview
-          const properties = client.propertiesOfInterest || [];
-          const tasks = client.todos || [];
+          // Get properties and tasks for full overview - use selectedClient for most up-to-date data
+          const currentClient = selectedClient || client;
+          const properties = currentClient.propertiesOfInterest || [];
+          const tasks = currentClient.todos || [];
           const pendingTasks = tasks.filter(task => !task.completed);
           // For overview, show recent tasks (both pending and recently completed)
           const recentTasks = tasks
