@@ -3956,13 +3956,11 @@
           style: { backgroundColor: 'rgba(0, 0, 0, 0.75)' } // Ensure visible backdrop
         },
           React.createElement('div', { 
-            className: 'bg-gray-800 rounded-lg w-full max-w-4xl mx-2 sm:mx-4 max-h-[95vh] sm:max-h-[90vh] flex flex-col border-2 border-gray-600',
+            className: 'bg-gray-800 rounded-lg w-full max-w-[95vw] sm:max-w-4xl mx-2 sm:mx-4 max-h-[95vh] sm:max-h-[90vh] flex flex-col border-2 border-gray-600',
             onClick: (e) => e.stopPropagation(),
             style: { 
               backgroundColor: '#1f2937', 
-              minHeight: '500px',
-              // Mobile-specific adjustments
-              maxWidth: window.innerWidth < 640 ? '95vw' : '4rem'
+              minHeight: '500px'
             }
           },
             // Header - Mobile Responsive
