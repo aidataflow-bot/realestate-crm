@@ -1635,7 +1635,12 @@
             }),
             
             currentView === 'dashboard' && React.createElement(DashboardView, { clients }),
-            currentView === 'properties' && React.createElement(PropertiesView, { clients }),
+            currentView === 'properties' && React.createElement(PropertiesView, { 
+              clients, 
+              setClients, 
+              user, 
+              saveUserClients 
+            }),
             currentView === 'tasks' && React.createElement(TasksView, { 
               clients, 
               setClients,
@@ -2415,7 +2420,7 @@
       }
 
       // Properties View Component
-      function PropertiesView({ clients }) {
+      function PropertiesView({ clients, setClients, user, saveUserClients }) {
         const [propertySearchTerm, setPropertySearchTerm] = useState('');
         const [priceRange, setPriceRange] = useState('');
         const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
@@ -2423,6 +2428,96 @@
         const [bedroomsFilter, setBedroomsFilter] = useState('');
         const [showPropertyDetail, setShowPropertyDetail] = useState(null);
         
+        // NEW: Add Property Modal State
+        const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
+        const [propertyFormData, setPropertyFormData] = useState({
+          address: '',
+          price: '',
+          bedrooms: '',
+          bathrooms: '',
+          sqft: '',
+          propertyType: 'house',
+          status: 'active',
+          description: '',
+          yearBuilt: '',
+          lotSize: '',
+          features: '',
+          clientId: ''
+        });
+        
+        // NEW: Property Management Functions
+        const handleAddProperty = () => {
+          setPropertyFormData({
+            address: '',
+            price: '',
+            bedrooms: '',
+            bathrooms: '',
+            sqft: '',
+            propertyType: 'house',
+            status: 'active',
+            description: '',
+            yearBuilt: '',
+            lotSize: '',
+            features: '',
+            clientId: ''
+          });
+          setShowAddPropertyModal(true);
+        };
+
+        const handleSaveProperty = () => {
+          if (!propertyFormData.address.trim()) {
+            alert('❌ Please enter a property address');
+            return;
+          }
+          
+          if (!propertyFormData.clientId) {
+            alert('❌ Please select a client to associate with this property');
+            return;
+          }
+
+          const newProperty = {
+            id: 'prop-' + Date.now(),
+            address: propertyFormData.address,
+            price: parseInt(propertyFormData.price) || 0,
+            bedrooms: parseInt(propertyFormData.bedrooms) || 0,
+            bathrooms: parseInt(propertyFormData.bathrooms) || 0,
+            sqft: parseInt(propertyFormData.sqft) || 0,
+            propertyType: propertyFormData.propertyType,
+            status: propertyFormData.status,
+            description: propertyFormData.description,
+            yearBuilt: propertyFormData.yearBuilt,
+            lotSize: propertyFormData.lotSize,
+            features: propertyFormData.features ? propertyFormData.features.split(',').map(f => f.trim()) : [],
+            createdAt: new Date().toISOString()
+          };
+
+          // Add property to selected client
+          setClients(prevClients => {
+            const updatedClients = prevClients.map(client => {
+              if (client.id === propertyFormData.clientId) {
+                const updatedClient = {
+                  ...client,
+                  propertiesOfInterest: [...(client.propertiesOfInterest || []), newProperty]
+                };
+                console.log('✅ Added property to client:', {
+                  clientName: `${client.firstName} ${client.lastName}`,
+                  propertyAddress: newProperty.address,
+                  propertyId: newProperty.id
+                });
+                return updatedClient;
+              }
+              return client;
+            });
+            
+            // Save updated clients to storage
+            saveUserClients(user, updatedClients);
+            return updatedClients;
+          });
+
+          setShowAddPropertyModal(false);
+          alert(`✅ Property "${newProperty.address}" added successfully!`);
+        };
+
         const allProperties = clients.flatMap(client => 
           (client.propertiesOfInterest || []).map(property => ({
             ...property,
@@ -2466,10 +2561,7 @@
               React.createElement('p', { className: 'text-gray-400' }, `${filteredProperties.length} properties found`)
             ),
             React.createElement('button', {
-              onClick: () => {
-                // In a real app, this would open add property modal
-                alert('Add Property functionality available in client 360° view');
-              },
+              onClick: handleAddProperty,
               className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center space-x-2'
             },
               React.createElement('span', null, '+'),
@@ -2653,6 +2745,210 @@
                       React.createElement('p', { className: 'font-semibold' }, showPropertyDetail.yearBuilt || 'Unknown')
                     )
                   )
+                )
+              )
+            )
+          ),
+          
+          // NEW: Add Property Modal
+          showAddPropertyModal && React.createElement('div', {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4',
+            onClick: () => setShowAddPropertyModal(false)
+          },
+            React.createElement('div', {
+              className: 'bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto',
+              onClick: (e) => e.stopPropagation()
+            },
+              React.createElement('div', { className: 'flex justify-between items-center mb-6' },
+                React.createElement('h3', { className: 'text-2xl font-bold text-white' }, '🏠 Add New Property'),
+                React.createElement('button', {
+                  onClick: () => setShowAddPropertyModal(false),
+                  className: 'text-gray-400 hover:text-white text-2xl'
+                }, '×')
+              ),
+              
+              React.createElement('form', { 
+                className: 'space-y-4',
+                onSubmit: (e) => { e.preventDefault(); handleSaveProperty(); }
+              },
+                // Client Selection
+                React.createElement('div', { className: 'bg-yellow-900 bg-opacity-30 p-4 rounded border border-yellow-600' },
+                  React.createElement('label', { className: 'block text-sm font-medium text-yellow-200 mb-2' }, 
+                    '👤 Associate with Client *'
+                  ),
+                  React.createElement('select', {
+                    value: propertyFormData.clientId,
+                    onChange: (e) => setPropertyFormData(prev => ({ ...prev, clientId: e.target.value })),
+                    className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white focus:border-yellow-500',
+                    required: true
+                  },
+                    React.createElement('option', { value: '' }, 'Select a client...'),
+                    clients.map(client =>
+                      React.createElement('option', { key: client.id, value: client.id }, 
+                        `${client.firstName || client.first_name} ${client.lastName || client.last_name} (${client.email})`
+                      )
+                    )
+                  )
+                ),
+
+                // Basic Property Information
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                  React.createElement('div', null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                      '🏠 Property Address *'
+                    ),
+                    React.createElement('input', {
+                      type: 'text',
+                      value: propertyFormData.address,
+                      onChange: (e) => setPropertyFormData(prev => ({ ...prev, address: e.target.value })),
+                      placeholder: 'Enter full property address...',
+                      className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500',
+                      required: true
+                    })
+                  ),
+                  React.createElement('div', null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                      '💰 Price'
+                    ),
+                    React.createElement('input', {
+                      type: 'number',
+                      value: propertyFormData.price,
+                      onChange: (e) => setPropertyFormData(prev => ({ ...prev, price: e.target.value })),
+                      placeholder: '0',
+                      className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                    })
+                  )
+                ),
+
+                // Property Details
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4' },
+                  React.createElement('div', null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                      '🛏️ Bedrooms'
+                    ),
+                    React.createElement('input', {
+                      type: 'number',
+                      value: propertyFormData.bedrooms,
+                      onChange: (e) => setPropertyFormData(prev => ({ ...prev, bedrooms: e.target.value })),
+                      placeholder: '0',
+                      className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                    })
+                  ),
+                  React.createElement('div', null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                      '🚿 Bathrooms'
+                    ),
+                    React.createElement('input', {
+                      type: 'number',
+                      step: '0.5',
+                      value: propertyFormData.bathrooms,
+                      onChange: (e) => setPropertyFormData(prev => ({ ...prev, bathrooms: e.target.value })),
+                      placeholder: '0',
+                      className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                    })
+                  ),
+                  React.createElement('div', null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                      '📐 Square Feet'
+                    ),
+                    React.createElement('input', {
+                      type: 'number',
+                      value: propertyFormData.sqft,
+                      onChange: (e) => setPropertyFormData(prev => ({ ...prev, sqft: e.target.value })),
+                      placeholder: '0',
+                      className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                    })
+                  ),
+                  React.createElement('div', null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                      '📅 Year Built'
+                    ),
+                    React.createElement('input', {
+                      type: 'number',
+                      value: propertyFormData.yearBuilt,
+                      onChange: (e) => setPropertyFormData(prev => ({ ...prev, yearBuilt: e.target.value })),
+                      placeholder: '2020',
+                      className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                    })
+                  )
+                ),
+
+                // Property Type and Status
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                  React.createElement('div', null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                      '🏢 Property Type'
+                    ),
+                    React.createElement('select', {
+                      value: propertyFormData.propertyType,
+                      onChange: (e) => setPropertyFormData(prev => ({ ...prev, propertyType: e.target.value })),
+                      className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white focus:border-blue-500'
+                    },
+                      React.createElement('option', { value: 'house' }, 'House'),
+                      React.createElement('option', { value: 'condo' }, 'Condo'),
+                      React.createElement('option', { value: 'townhouse' }, 'Townhouse'),
+                      React.createElement('option', { value: 'apartment' }, 'Apartment'),
+                      React.createElement('option', { value: 'duplex' }, 'Duplex'),
+                      React.createElement('option', { value: 'commercial' }, 'Commercial'),
+                      React.createElement('option', { value: 'land' }, 'Land')
+                    )
+                  ),
+                  React.createElement('div', null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                      '📊 Status'
+                    ),
+                    React.createElement('select', {
+                      value: propertyFormData.status,
+                      onChange: (e) => setPropertyFormData(prev => ({ ...prev, status: e.target.value })),
+                      className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white focus:border-blue-500'
+                    },
+                      React.createElement('option', { value: 'active' }, 'Active'),
+                      React.createElement('option', { value: 'pending' }, 'Pending'),
+                      React.createElement('option', { value: 'sold' }, 'Sold'),
+                      React.createElement('option', { value: 'withdrawn' }, 'Withdrawn'),
+                      React.createElement('option', { value: 'contingent' }, 'Contingent')
+                    )
+                  )
+                ),
+
+                // Description and Features
+                React.createElement('div', null,
+                  React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                    '📝 Description'
+                  ),
+                  React.createElement('textarea', {
+                    value: propertyFormData.description,
+                    onChange: (e) => setPropertyFormData(prev => ({ ...prev, description: e.target.value })),
+                    placeholder: 'Describe the property features, location highlights, etc...',
+                    rows: 3,
+                    className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                  })
+                ),
+
+                React.createElement('div', null,
+                  React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 
+                    '✨ Features (comma-separated)'
+                  ),
+                  React.createElement('input', {
+                    type: 'text',
+                    value: propertyFormData.features,
+                    onChange: (e) => setPropertyFormData(prev => ({ ...prev, features: e.target.value })),
+                    placeholder: 'Pool, Garage, Fireplace, Hardwood Floors, etc...',
+                    className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                  })
+                ),
+
+                // Action Buttons
+                React.createElement('div', { className: 'flex space-x-4 pt-6 border-t border-gray-700' },
+                  React.createElement('button', {
+                    type: 'submit',
+                    className: 'flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-colors font-semibold'
+                  }, '✅ Add Property'),
+                  React.createElement('button', {
+                    type: 'button',
+                    onClick: () => setShowAddPropertyModal(false),
+                    className: 'flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transition-colors'
+                  }, '❌ Cancel')
                 )
               )
             )
