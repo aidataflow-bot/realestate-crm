@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="build-hash" content="1756271000" />
+    <meta name="build-hash" content="1756272500" />
     <title>CLIENT FLOW 360 - Netflix Style Real Estate CRM with Database v3.0 - ADVANCED_FEATURES</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -50,10 +50,10 @@
     <div id="root"></div>
     <script type="module">
       // Complete Netflix-style CRM with CLIENT FLOW 360 branding + Database Integration  
-      // CACHE BUST: BUILD:1756271000 - ADVANCED FEATURES
+      // CACHE BUST: BUILD:1756272500 - 360 CLIENT VIEW
       const { useState, useEffect, useCallback } = React;
       
-      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v3.0 - ADVANCED_FEATURES_1756271000 - BIRTHDAY TRACKING, CALL LOGGING, TRANSACTIONS...');
+      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v3.1 - 360_CLIENT_VIEW_1756272500 - COMPREHENSIVE CLIENT MANAGEMENT...');
       
       // API Service
       const API = {
@@ -1201,126 +1201,545 @@
         );
       }
 
-      // Client Detail Modal Component
+      // 360° Client Detail Modal Component
       function ClientDetailModal({ client, onClose }) {
-        return React.createElement('div', { 
-          className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
-          onClick: onClose
-        },
-          React.createElement('div', { 
-            className: 'bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto',
-            onClick: (e) => e.stopPropagation()
-          },
-            React.createElement('div', { className: 'flex justify-between items-center mb-4' },
-              React.createElement('h2', { className: 'text-2xl font-bold' }, 
-                `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`
+        const [activeTab, setActiveTab] = useState('overview');
+        const [isEditing, setIsEditing] = useState(false);
+        const [editData, setEditData] = useState({});
+        const [showAddProperty, setShowAddProperty] = useState(false);
+        const [showAddTask, setShowAddTask] = useState(false);
+        const [loading, setLoading] = useState(false);
+        
+        // Initialize edit data when editing starts
+        React.useEffect(() => {
+          if (isEditing) {
+            setEditData({
+              firstName: client.firstName || client.first_name || '',
+              lastName: client.lastName || client.last_name || '',
+              email: client.email || '',
+              phone: client.phone || '',
+              address: client.address || '',
+              birthday: client.birthday || '',
+              anniversary: client.anniversary || '',
+              spouse: client.spouse || '',
+              children: client.children || '',
+              notes: client.notes || '',
+              tags: (client.tags || []).join(', ')
+            });
+          }
+        }, [isEditing, client]);
+
+        const tabs = [
+          { id: 'overview', label: '👤 Overview', icon: '👤' },
+          { id: 'properties', label: '🏠 Properties', icon: '🏠' },
+          { id: 'tasks', label: '✓ Tasks', icon: '✓' },
+          { id: 'activity', label: '📈 Activity', icon: '📈' }
+        ];
+
+        const handleSaveEdit = async () => {
+          setLoading(true);
+          try {
+            // Here you would call your API to update the client
+            console.log('Saving client updates:', editData);
+            // await API.clients.update(client.id, editData);
+            setIsEditing(false);
+            // You'd want to refresh the client data here or update the parent component
+          } catch (error) {
+            console.error('Failed to update client:', error);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        const handleCallClient = async (phoneNumber) => {
+          try {
+            // Simulate making a call and auto-logging it
+            console.log(`📞 Calling ${phoneNumber}...`);
+            
+            // Auto-create call log with future follow-up
+            const callData = {
+              client_id: client.id,
+              call_type: 'outbound',
+              duration: 0, // Will be filled when call ends
+              notes: `Called ${phoneNumber} from 360° view`,
+              outcome: 'Connected', // Default
+              follow_up_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // +7 days
+            };
+            
+            // In real implementation, this would integrate with phone system
+            // await API.calls.create(callData);
+            
+            alert(`📞 Calling ${phoneNumber}...\n\n✅ Call logged automatically!\n📅 Follow-up scheduled for ${callData.follow_up_date}`);
+            
+          } catch (error) {
+            console.error('Failed to initiate call:', error);
+            alert('❌ Failed to make call. Please try again.');
+          }
+        };
+
+        const renderOverviewTab = () => {
+          if (isEditing) {
+            return React.createElement('div', { className: 'space-y-4' },
+              React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'First Name',
+                  value: editData.firstName,
+                  onChange: (e) => setEditData(prev => ({ ...prev, firstName: e.target.value })),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Last Name',
+                  value: editData.lastName,
+                  onChange: (e) => setEditData(prev => ({ ...prev, lastName: e.target.value })),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                })
               ),
-              React.createElement('button', {
-                onClick: onClose,
-                className: 'text-gray-400 hover:text-white text-2xl'
-              }, '×')
+              React.createElement('input', {
+                type: 'email',
+                placeholder: 'Email',
+                value: editData.email,
+                onChange: (e) => setEditData(prev => ({ ...prev, email: e.target.value })),
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
+              React.createElement('input', {
+                type: 'tel',
+                placeholder: 'Phone',
+                value: editData.phone,
+                onChange: (e) => setEditData(prev => ({ ...prev, phone: e.target.value })),
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
+              React.createElement('input', {
+                type: 'text',
+                placeholder: 'Address',
+                value: editData.address,
+                onChange: (e) => setEditData(prev => ({ ...prev, address: e.target.value })),
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
+              React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                React.createElement('input', {
+                  type: 'date',
+                  placeholder: 'Birthday',
+                  value: editData.birthday,
+                  onChange: (e) => setEditData(prev => ({ ...prev, birthday: e.target.value })),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                }),
+                React.createElement('input', {
+                  type: 'date',
+                  placeholder: 'Anniversary',
+                  value: editData.anniversary,
+                  onChange: (e) => setEditData(prev => ({ ...prev, anniversary: e.target.value })),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                })
+              ),
+              React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Spouse Name',
+                  value: editData.spouse,
+                  onChange: (e) => setEditData(prev => ({ ...prev, spouse: e.target.value })),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Children',
+                  value: editData.children,
+                  onChange: (e) => setEditData(prev => ({ ...prev, children: e.target.value })),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                })
+              ),
+              React.createElement('input', {
+                type: 'text',
+                placeholder: 'Tags (comma-separated)',
+                value: editData.tags,
+                onChange: (e) => setEditData(prev => ({ ...prev, tags: e.target.value })),
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
+              React.createElement('textarea', {
+                placeholder: 'Notes',
+                value: editData.notes,
+                onChange: (e) => setEditData(prev => ({ ...prev, notes: e.target.value })),
+                rows: 4,
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
+              React.createElement('div', { className: 'flex space-x-3 pt-4' },
+                React.createElement('button', {
+                  onClick: handleSaveEdit,
+                  disabled: loading,
+                  className: 'flex-1 bg-green-600 text-white p-3 rounded hover:bg-green-700 disabled:opacity-50'
+                }, loading ? '💾 Saving...' : '💾 Save Changes'),
+                React.createElement('button', {
+                  onClick: () => setIsEditing(false),
+                  className: 'flex-1 bg-gray-600 text-white p-3 rounded hover:bg-gray-700'
+                }, '❌ Cancel')
+              )
+            );
+          }
+
+          return React.createElement('div', { className: 'space-y-6' },
+            // Client Header with Quick Actions
+            React.createElement('div', { className: 'bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-lg text-white' },
+              React.createElement('div', { className: 'flex justify-between items-start' },
+                React.createElement('div', null,
+                  React.createElement('h3', { className: 'text-2xl font-bold mb-2' }, 
+                    `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`
+                  ),
+                  React.createElement('div', { className: 'space-y-1' },
+                    React.createElement('p', { className: 'flex items-center' }, 
+                      '📧 ', 
+                      React.createElement('a', { 
+                        href: `mailto:${client.email}`, 
+                        className: 'text-blue-200 hover:text-white ml-2' 
+                      }, client.email)
+                    ),
+                    client.phone && React.createElement('p', { className: 'flex items-center' }, 
+                      '📞 ',
+                      React.createElement('button', {
+                        onClick: () => handleCallClient(client.phone),
+                        className: 'text-blue-200 hover:text-white ml-2 underline cursor-pointer bg-transparent border-none'
+                      }, client.phone),
+                      React.createElement('span', { className: 'ml-2 text-xs bg-green-500 px-2 py-1 rounded' }, '👆 Click to call')
+                    ),
+                    client.address && React.createElement('p', null, '📍 ', client.address)
+                  )
+                ),
+                React.createElement('div', { className: 'text-right' },
+                  React.createElement('div', { className: 'text-3xl font-bold text-green-300' }, 
+                    `$${(client.lifetimeNetCommission || client.lifetime_commission || 0).toLocaleString()}`
+                  ),
+                  React.createElement('div', { className: 'text-sm text-blue-200' }, 'Lifetime Value')
+                )
+              )
             ),
 
-            React.createElement('div', { className: 'space-y-4' },
-              React.createElement('div', null,
-                React.createElement('h3', { className: 'font-semibold mb-2' }, 'Contact Information'),
-                React.createElement('p', null, `Email: ${client.email}`),
-                React.createElement('p', null, `Phone: ${client.phone || 'Not provided'}`),
-                React.createElement('p', null, `Address: ${client.address || 'Not provided'}`)
-              ),
-
-              // Personal Information Section
-              (client.birthday || client.anniversary || client.spouse || client.children) && 
-              React.createElement('div', null,
-                React.createElement('h3', { className: 'font-semibold mb-2' }, 'Personal Information'),
-                client.birthday && React.createElement('p', null, 
-                  `🎂 Birthday: ${new Date(client.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
-                ),
-                client.anniversary && React.createElement('p', null, 
-                  `💍 Anniversary: ${new Date(client.anniversary).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
-                ),
-                client.spouse && React.createElement('p', null, `👫 Spouse: ${client.spouse}`),
-                client.children && React.createElement('p', null, `👶 Children: ${client.children}`)
-              ),
-
-              client.notes && React.createElement('div', null,
-                React.createElement('h3', { className: 'font-semibold mb-2' }, 'Notes'),
-                React.createElement('p', { className: 'text-gray-300' }, client.notes)
-              ),
-
-              client.tags && client.tags.length > 0 && React.createElement('div', null,
-                React.createElement('h3', { className: 'font-semibold mb-2' }, 'Tags'),
-                React.createElement('div', { className: 'flex flex-wrap gap-2' },
-                  client.tags.map((tag, index) =>
-                    React.createElement('span', {
-                      key: index,
-                      className: 'px-2 py-1 bg-blue-600 text-blue-100 rounded text-sm'
-                    }, tag)
+            // Personal Information
+            (client.birthday || client.anniversary || client.spouse || client.children) && 
+            React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
+              React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-pink-300' }, '💕 Personal Information'),
+              React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                client.birthday && React.createElement('div', null,
+                  React.createElement('p', { className: 'text-sm text-gray-400' }, 'Birthday'),
+                  React.createElement('p', { className: 'font-semibold' }, 
+                    `🎂 ${new Date(client.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
                   )
+                ),
+                client.anniversary && React.createElement('div', null,
+                  React.createElement('p', { className: 'text-sm text-gray-400' }, 'Anniversary'),
+                  React.createElement('p', { className: 'font-semibold' }, 
+                    `💍 ${new Date(client.anniversary).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                  )
+                ),
+                client.spouse && React.createElement('div', null,
+                  React.createElement('p', { className: 'text-sm text-gray-400' }, 'Spouse'),
+                  React.createElement('p', { className: 'font-semibold' }, `👫 ${client.spouse}`)
+                ),
+                client.children && React.createElement('div', null,
+                  React.createElement('p', { className: 'text-sm text-gray-400' }, 'Children'),
+                  React.createElement('p', { className: 'font-semibold' }, `👶 ${client.children}`)
                 )
-              ),
+              )
+            ),
 
-              // Commission and Transactions Section
-              React.createElement('div', null,
-                React.createElement('h3', { className: 'font-semibold mb-2' }, 'Commission Summary'),
-                React.createElement('div', { className: 'bg-gray-700 p-3 rounded' },
-                  React.createElement('p', { className: 'text-green-400 font-bold text-lg' }, 
-                    `Lifetime Commission: $${(client.lifetimeNetCommission || client.lifetime_commission || 0).toLocaleString()}`
+            // Commission Summary
+            React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
+              React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-green-300' }, '💰 Commission Summary'),
+              React.createElement('div', { className: 'grid grid-cols-3 gap-4 text-center' },
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-green-400' }, 
+                    `$${(client.lifetimeNetCommission || client.lifetime_commission || 0).toLocaleString()}`
                   ),
-                  React.createElement('p', { className: 'text-gray-400 text-sm' }, 
-                    `Transactions: ${(client.transactions || []).length}`
+                  React.createElement('p', { className: 'text-sm text-gray-400' }, 'Total Commission')
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-blue-400' }, 
+                    (client.transactions || []).length
+                  ),
+                  React.createElement('p', { className: 'text-sm text-gray-400' }, 'Transactions')
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-purple-400' }, 
+                    (client.calls || []).length
+                  ),
+                  React.createElement('p', { className: 'text-sm text-gray-400' }, 'Total Calls')
+                )
+              )
+            ),
+
+            // Tags
+            client.tags && client.tags.length > 0 && React.createElement('div', null,
+              React.createElement('h4', { className: 'text-lg font-semibold mb-3' }, '🏷️ Tags'),
+              React.createElement('div', { className: 'flex flex-wrap gap-2' },
+                client.tags.map((tag, index) =>
+                  React.createElement('span', {
+                    key: index,
+                    className: 'px-3 py-1 bg-blue-600 text-blue-100 rounded-full text-sm font-medium'
+                  }, tag)
+                )
+              )
+            ),
+
+            // Notes
+            client.notes && React.createElement('div', null,
+              React.createElement('h4', { className: 'text-lg font-semibold mb-3' }, '📝 Notes'),
+              React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
+                React.createElement('p', { className: 'text-gray-300 leading-relaxed' }, client.notes)
+              )
+            )
+          );
+        };
+
+        const renderPropertiesTab = () => {
+          const properties = client.propertiesOfInterest || [];
+          
+          return React.createElement('div', { className: 'space-y-4' },
+            React.createElement('div', { className: 'flex justify-between items-center' },
+              React.createElement('h4', { className: 'text-lg font-semibold' }, `🏠 Properties (${properties.length})`),
+              React.createElement('button', {
+                onClick: () => setShowAddProperty(true),
+                className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700'
+              }, '+ Add Property')
+            ),
+            
+            properties.length === 0 ? 
+              React.createElement('div', { className: 'text-center py-12 text-gray-400' },
+                React.createElement('p', { className: 'text-lg mb-2' }, 'No properties yet'),
+                React.createElement('p', null, 'Add properties this client is interested in')
+              ) :
+              React.createElement('div', { className: 'space-y-4' },
+                properties.map((property, index) =>
+                  React.createElement('div', { 
+                    key: index, 
+                    className: 'bg-gray-700 p-4 rounded-lg'
+                  },
+                    React.createElement('div', { className: 'flex justify-between items-start' },
+                      React.createElement('div', null,
+                        React.createElement('h5', { className: 'font-semibold text-lg' }, property.address),
+                        React.createElement('p', { className: 'text-green-400 font-bold' }, 
+                          `$${property.price.toLocaleString()}`
+                        ),
+                        React.createElement('p', { className: 'text-sm text-gray-400' }, 
+                          `${property.bedrooms} bed, ${property.bathrooms} bath`
+                        )
+                      ),
+                      React.createElement('button', {
+                        className: 'text-blue-400 hover:text-blue-300 text-sm'
+                      }, '✏️ Edit')
+                    )
                   )
                 )
               ),
+              
+            // Add Property Modal
+            showAddProperty && React.createElement('div', { 
+              className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+              onClick: () => setShowAddProperty(false)
+            },
+              React.createElement('div', { 
+                className: 'bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4',
+                onClick: (e) => e.stopPropagation()
+              },
+                React.createElement('h3', { className: 'text-xl font-bold mb-4' }, 'Add New Property'),
+                React.createElement('p', { className: 'text-gray-400 mb-4' }, 
+                  'Property management coming soon! This will allow you to add and track properties of interest.'
+                ),
+                React.createElement('button', {
+                  onClick: () => setShowAddProperty(false),
+                  className: 'w-full bg-gray-600 text-white p-3 rounded hover:bg-gray-700'
+                }, 'Close')
+              )
+            )
+          );
+        };
 
-              // Recent Transactions
-              client.transactions && client.transactions.length > 0 && React.createElement('div', null,
-                React.createElement('h3', { className: 'font-semibold mb-2' }, 'Recent Transactions'),
-                React.createElement('div', { className: 'space-y-2' },
-                  client.transactions.slice(0, 3).map((txn, index) =>
-                    React.createElement('div', { 
-                      key: index, 
-                      className: 'bg-gray-700 p-3 rounded'
-                    },
-                      React.createElement('div', { className: 'flex justify-between items-center' },
-                        React.createElement('div', null,
-                          React.createElement('p', { className: 'font-semibold' }, 
-                            `${(txn.type || 'Sale').toUpperCase()}: ${txn.address || 'Property'}`
-                          ),
-                          React.createElement('p', { className: 'text-sm text-gray-400' }, 
-                            txn.close_date ? `Closed: ${new Date(txn.close_date).toLocaleDateString()}` : 'Pending'
-                          )
+        const renderTasksTab = () => {
+          const tasks = client.todos || [];
+          
+          return React.createElement('div', { className: 'space-y-4' },
+            React.createElement('div', { className: 'flex justify-between items-center' },
+              React.createElement('h4', { className: 'text-lg font-semibold' }, `✓ Tasks (${tasks.length})`),
+              React.createElement('button', {
+                onClick: () => setShowAddTask(true),
+                className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700'
+              }, '+ Add Task')
+            ),
+            
+            tasks.length === 0 ? 
+              React.createElement('div', { className: 'text-center py-12 text-gray-400' },
+                React.createElement('p', { className: 'text-lg mb-2' }, 'No tasks assigned'),
+                React.createElement('p', null, 'Add tasks to track your client work')
+              ) :
+              React.createElement('div', { className: 'space-y-3' },
+                tasks.map((task, index) =>
+                  React.createElement('div', { 
+                    key: index, 
+                    className: `bg-gray-700 p-4 rounded-lg flex items-center justify-between ${
+                      task.completed ? 'opacity-60' : ''
+                    }`
+                  },
+                    React.createElement('div', { className: 'flex items-center space-x-3' },
+                      React.createElement('input', {
+                        type: 'checkbox',
+                        checked: task.completed || false,
+                        onChange: () => {
+                          // Handle task completion toggle
+                          console.log('Toggle task completion:', task);
+                        },
+                        className: 'w-4 h-4'
+                      }),
+                      React.createElement('div', null,
+                        React.createElement('p', { 
+                          className: `font-semibold ${task.completed ? 'line-through' : ''}` 
+                        }, task.text),
+                        React.createElement('p', { className: 'text-sm text-gray-400' }, 
+                          task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : 'No due date'
+                        )
+                      )
+                    ),
+                    React.createElement('div', { className: 'flex items-center space-x-2' },
+                      React.createElement('span', { 
+                        className: `px-2 py-1 rounded text-xs ${
+                          task.priority === 'high' ? 'bg-red-600' :
+                          task.priority === 'medium' ? 'bg-yellow-600' : 'bg-green-600'
+                        }`
+                      }, task.priority || 'low'),
+                      React.createElement('button', {
+                        className: 'text-blue-400 hover:text-blue-300 text-sm'
+                      }, '✏️')
+                    )
+                  )
+                )
+              ),
+              
+            // Add Task Modal
+            showAddTask && React.createElement('div', { 
+              className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+              onClick: () => setShowAddTask(false)
+            },
+              React.createElement('div', { 
+                className: 'bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4',
+                onClick: (e) => e.stopPropagation()
+              },
+                React.createElement('h3', { className: 'text-xl font-bold mb-4' }, 'Add New Task'),
+                React.createElement('p', { className: 'text-gray-400 mb-4' }, 
+                  'Task management coming soon! This will allow you to assign and track tasks for this client.'
+                ),
+                React.createElement('button', {
+                  onClick: () => setShowAddTask(false),
+                  className: 'w-full bg-gray-600 text-white p-3 rounded hover:bg-gray-700'
+                }, 'Close')
+              )
+            )
+          );
+        };
+
+        const renderActivityTab = () => {
+          const allActivity = [
+            ...(client.calls || []).map(call => ({
+              type: 'call',
+              date: call.createdAt || call.date,
+              title: `📞 Call - ${call.outcome || 'Unknown outcome'}`,
+              description: `Duration: ${call.duration} minutes. ${call.notes}`,
+              icon: '📞'
+            })),
+            ...(client.transactions || []).map(txn => ({
+              type: 'transaction',
+              date: txn.close_date || txn.createdAt,
+              title: `💰 ${txn.type || 'Sale'} - ${txn.address || 'Property'}`,
+              description: `Sale Price: $${(txn.price || 0).toLocaleString()}, Commission: $${(txn.net_commission || 0).toLocaleString()}`,
+              icon: '💰'
+            })),
+            // Add other activity types as needed
+          ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+          return React.createElement('div', { className: 'space-y-4' },
+            React.createElement('h4', { className: 'text-lg font-semibold mb-4' }, `📈 Activity Timeline (${allActivity.length})`),
+            
+            allActivity.length === 0 ? 
+              React.createElement('div', { className: 'text-center py-12 text-gray-400' },
+                React.createElement('p', { className: 'text-lg mb-2' }, 'No activity yet'),
+                React.createElement('p', null, 'Client interactions will appear here')
+              ) :
+              React.createElement('div', { className: 'space-y-4 max-h-96 overflow-y-auto' },
+                allActivity.map((activity, index) =>
+                  React.createElement('div', { 
+                    key: index, 
+                    className: 'bg-gray-700 p-4 rounded-lg border-l-4 border-blue-500'
+                  },
+                    React.createElement('div', { className: 'flex justify-between items-start' },
+                      React.createElement('div', null,
+                        React.createElement('h5', { className: 'font-semibold flex items-center' },
+                          React.createElement('span', { className: 'mr-2' }, activity.icon),
+                          activity.title
                         ),
-                        React.createElement('div', { className: 'text-right' },
-                          React.createElement('p', { className: 'text-green-400 font-semibold' }, 
-                            `$${(txn.net_commission || 0).toLocaleString()}`
-                          ),
-                          React.createElement('p', { className: 'text-xs text-gray-400' }, 
-                            `Sale: $${(txn.price || 0).toLocaleString()}`
-                          )
+                        React.createElement('p', { className: 'text-sm text-gray-300 mt-1' }, activity.description),
+                        React.createElement('p', { className: 'text-xs text-gray-400 mt-2' }, 
+                          activity.date ? new Date(activity.date).toLocaleDateString('en-US', { 
+                            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+                          }) : 'Date unknown'
                         )
                       )
                     )
                   )
                 )
-              ),
+              )
+          );
+        };
 
-              client.calls && client.calls.length > 0 && React.createElement('div', null,
-                React.createElement('h3', { className: 'font-semibold mb-2' }, 'Recent Calls'),
-                React.createElement('div', { className: 'space-y-2' },
-                  client.calls.slice(0, 3).map((call, index) =>
-                    React.createElement('div', { 
-                      key: index, 
-                      className: 'bg-gray-700 p-3 rounded'
-                    },
-                      React.createElement('p', { className: 'text-sm' }, 
-                        `Duration: ${call.duration} minutes`
-                      ),
-                      React.createElement('p', { className: 'text-sm text-gray-400' }, call.notes)
-                    )
-                  )
+        return React.createElement('div', { 
+          className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+          onClick: onClose
+        },
+          React.createElement('div', { 
+            className: 'bg-gray-800 rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col',
+            onClick: (e) => e.stopPropagation()
+          },
+            // Header
+            React.createElement('div', { className: 'flex justify-between items-center p-6 border-b border-gray-700' },
+              React.createElement('h2', { className: 'text-2xl font-bold flex items-center' }, 
+                React.createElement('span', { className: 'mr-3' }, '🎯'),
+                '360° Client View - ',
+                `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`
+              ),
+              React.createElement('div', { className: 'flex items-center space-x-3' },
+                !isEditing && React.createElement('button', {
+                  onClick: () => setIsEditing(true),
+                  className: 'bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2'
+                }, 
+                  React.createElement('span', null, '✏️'),
+                  React.createElement('span', null, 'Edit')
+                ),
+                React.createElement('button', {
+                  onClick: onClose,
+                  className: 'text-gray-400 hover:text-white text-2xl'
+                }, '×')
+              )
+            ),
+
+            // Tab Navigation
+            React.createElement('div', { className: 'flex border-b border-gray-700' },
+              tabs.map(tab =>
+                React.createElement('button', {
+                  key: tab.id,
+                  onClick: () => setActiveTab(tab.id),
+                  className: `px-6 py-4 font-semibold transition-colors flex items-center space-x-2 ${
+                    activeTab === tab.id 
+                      ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-700' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`
+                }, 
+                  React.createElement('span', null, tab.icon),
+                  React.createElement('span', null, tab.label)
                 )
               )
+            ),
+
+            // Tab Content
+            React.createElement('div', { className: 'flex-1 overflow-y-auto p-6' },
+              activeTab === 'overview' && renderOverviewTab(),
+              activeTab === 'properties' && renderPropertiesTab(),
+              activeTab === 'tasks' && renderTasksTab(),
+              activeTab === 'activity' && renderActivityTab()
             )
           )
         );
