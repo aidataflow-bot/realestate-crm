@@ -471,7 +471,11 @@
               mentionedName = bestMentionedName;
               console.log(`✅ Client matched with ${bestScore}% confidence: ${clientName} (mentioned as: ${mentionedName})`);
             } else {
-              console.log('❌ No client match found with sufficient confidence');
+              console.log('❌ No client match found with sufficient confidence - assigning to Rodrigo (account owner)');
+              // Fallback to Rodrigo (account owner) for unmatched voice tasks
+              clientId = 'rodrigo-admin';
+              clientName = 'Rodrigo Admin (Owner)';
+              mentionedName = 'unassigned voice task';
             }
             
             // Parse priority from urgency keywords
@@ -1145,7 +1149,7 @@
           // Navigation
           React.createElement('nav', { className: 'bg-gray-800 p-4' },
             React.createElement('div', { className: 'flex space-x-6' },
-              ['clients', 'dashboard', 'properties', 'tasks', 'general-tasks', 'analytics'].map(view =>
+              ['clients', 'dashboard', 'properties', 'tasks', 'analytics'].map(view =>
                 React.createElement('button', {
                   key: view,
                   onClick: () => setCurrentView(view),
@@ -1154,7 +1158,7 @@
                       ? 'bg-red-600 text-white' 
                       : 'text-gray-300 hover:bg-gray-700'
                   }`
-                }, view === 'general-tasks' ? 'General Tasks' : view.charAt(0).toUpperCase() + view.slice(1))
+                }, view.charAt(0).toUpperCase() + view.slice(1))
               )
             )
           ),
@@ -1199,21 +1203,15 @@
             currentView === 'tasks' && React.createElement(TasksView, { 
               clients, 
               setClients,
+              generalTasks,
+              setGeneralTasks,
               setTaskFormData,
               setShowVoiceTaskModal,
               startVoiceTaskCreation,
               isListeningForTask,
               setVoiceStatus
             }),
-            currentView === 'general-tasks' && React.createElement(GeneralTasksView, { 
-              generalTasks, 
-              clients, 
-              assignTaskToClient, 
-              setGeneralTasks,
-              startVoiceTaskCreation,
-              isListeningForTask,
-              setVoiceStatus
-            }),
+
             currentView === 'analytics' && React.createElement(AnalyticsView, { clients })
           ),
 
@@ -2203,44 +2201,58 @@
       }
 
       // Tasks View Component
-      function TasksView({ clients, setClients, setTaskFormData, setShowVoiceTaskModal, startVoiceTaskCreation, isListeningForTask, setVoiceStatus }) {
+      function TasksView({ clients, setClients, generalTasks, setGeneralTasks, setTaskFormData, setShowVoiceTaskModal, startVoiceTaskCreation, isListeningForTask, setVoiceStatus }) {
         const [sortBy, setSortBy] = useState('created');
         const [filterBy, setFilterBy] = useState('all');
         const [showAddTask, setShowAddTask] = useState(false);
         
-        // Handle task completion
-        const handleCompleteTask = (taskId, clientId) => {
-          setClients(prevClients => 
-            prevClients.map(client => 
-              client.id === clientId 
-                ? {
-                    ...client,
-                    todos: (client.todos || []).map(task => 
-                      task.id === taskId 
-                        ? { ...task, completed: !task.completed, completedAt: new Date().toISOString() }
-                        : task
-                    )
-                  }
-                : client
-            )
-          );
-          setVoiceStatus(`✅ Task ${taskId ? 'completed' : 'reopened'} successfully!`);
-          setTimeout(() => setVoiceStatus(''), 3000);
-        };
-        
-        // Handle task deletion
-        const handleDeleteTask = (taskId, clientId) => {
-          if (confirm('Are you sure you want to delete this task?')) {
+        // Handle task completion (for both client and general tasks)
+        const handleCompleteTask = (taskId, clientId, isGeneralTask) => {
+          if (isGeneralTask) {
+            setGeneralTasks(prevTasks => 
+              prevTasks.map(task => 
+                task.id === taskId 
+                  ? { ...task, completed: !task.completed, completedAt: new Date().toISOString() }
+                  : task
+              )
+            );
+          } else {
             setClients(prevClients => 
               prevClients.map(client => 
                 client.id === clientId 
                   ? {
                       ...client,
-                      todos: (client.todos || []).filter(task => task.id !== taskId)
+                      todos: (client.todos || []).map(task => 
+                        task.id === taskId 
+                          ? { ...task, completed: !task.completed, completedAt: new Date().toISOString() }
+                          : task
+                      )
                     }
                   : client
               )
             );
+          }
+          setVoiceStatus(`✅ Task ${taskId ? 'completed' : 'reopened'} successfully!`);
+          setTimeout(() => setVoiceStatus(''), 3000);
+        };
+        
+        // Handle task deletion (for both client and general tasks)
+        const handleDeleteTask = (taskId, clientId, isGeneralTask) => {
+          if (confirm('Are you sure you want to delete this task?')) {
+            if (isGeneralTask) {
+              setGeneralTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+            } else {
+              setClients(prevClients => 
+                prevClients.map(client => 
+                  client.id === clientId 
+                    ? {
+                        ...client,
+                        todos: (client.todos || []).filter(task => task.id !== taskId)
+                      }
+                    : client
+                )
+              );
+            }
             setVoiceStatus('🗑️ Task deleted successfully!');
             setTimeout(() => setVoiceStatus(''), 3000);
           }
@@ -2262,13 +2274,24 @@
           setShowVoiceTaskModal(true);
         };
         
-        const allTasks = clients.flatMap(client => 
+        // Combine tasks from clients and general tasks (assign general tasks to Rodrigo)
+        const clientTasks = clients.flatMap(client => 
           (client.todos || []).map(task => ({
             ...task,
             clientName: `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`,
-            clientId: client.id
+            clientId: client.id,
+            isGeneralTask: false
           }))
         );
+        
+        const rodrigoTasks = (generalTasks || []).map(task => ({
+          ...task,
+          clientName: 'Rodrigo Admin (Owner)',
+          clientId: 'rodrigo-admin',
+          isGeneralTask: true
+        }));
+        
+        const allTasks = [...clientTasks, ...rodrigoTasks];
 
         // Filter tasks
         const filteredTasks = allTasks.filter(task => {
@@ -2389,43 +2412,74 @@
               React.createElement('p', { className: 'text-xl mb-2' }, 
                 filterBy === 'all' ? 'No tasks found' : `No ${filterBy} tasks found`
               ),
-              React.createElement('p', null, 'Tasks will appear here when you add them to clients')
+              React.createElement('p', null, 'Tasks will appear here when you add them')
             ) :
-            React.createElement('div', { className: 'space-y-4' },
-              sortedTasks.map((task, index) =>
-                React.createElement('div', { 
-                  key: `${task.id || index}`, 
-                  className: `bg-gray-800 rounded-lg p-6 border-l-4 ${
-                    task.completed ? 'border-green-500 opacity-75' :
-                    task.dueDate && new Date(task.dueDate) < new Date() ? 'border-red-500' :
-                    task.priority === 'high' ? 'border-red-400' :
-                    task.priority === 'medium' ? 'border-yellow-400' : 'border-blue-400'
-                  }`
-                },
-                  React.createElement('div', { className: 'flex justify-between items-start' },
-                    React.createElement('div', { className: 'flex-1' },
-                      // Task Title
-                      React.createElement('h3', { 
-                        className: `text-lg font-semibold mb-2 ${task.completed ? 'line-through text-gray-400' : 'text-white'}` 
-                      }, task.title || task.text),
+            // Table Layout
+            React.createElement('div', { className: 'bg-gray-800 rounded-lg overflow-hidden' },
+              // Table Header
+              React.createElement('div', { className: 'bg-gray-700 px-6 py-4 border-b border-gray-600' },
+                React.createElement('div', { className: 'grid grid-cols-12 gap-4 font-semibold text-gray-200 text-sm' },
+                  React.createElement('div', { className: 'col-span-1 text-center' }, 'Status'),
+                  React.createElement('div', { className: 'col-span-4' }, 'Task'),
+                  React.createElement('div', { className: 'col-span-2' }, 'Client'),
+                  React.createElement('div', { className: 'col-span-2' }, 'Type & Priority'),
+                  React.createElement('div', { className: 'col-span-2' }, 'Due Date'),
+                  React.createElement('div', { className: 'col-span-1 text-center' }, 'Actions')
+                )
+              ),
+              // Table Body
+              React.createElement('div', { className: 'divide-y divide-gray-700' },
+                sortedTasks.map((task, index) =>
+                  React.createElement('div', { 
+                    key: `${task.id || index}`, 
+                    className: `px-6 py-4 hover:bg-gray-700 transition-colors ${
+                      task.completed ? 'opacity-75 bg-gray-750' : ''
+                    }`
+                  },
+                    React.createElement('div', { className: 'grid grid-cols-12 gap-4 items-center' },
+                      // Status Column (Checkbox)
+                      React.createElement('div', { className: 'col-span-1 flex justify-center' },
+                        React.createElement('div', {
+                          onClick: () => handleCompleteTask(task.id, task.clientId, task.isGeneralTask),
+                          className: `w-6 h-6 border-2 rounded cursor-pointer flex items-center justify-center transition-colors ${
+                            task.completed 
+                              ? 'bg-green-600 border-green-600 text-white' 
+                              : 'border-gray-400 hover:border-gray-300'
+                          }`
+                        },
+                          task.completed ? React.createElement('span', { 
+                            className: 'text-xs font-bold text-white' 
+                          }, '✓') : null
+                        )
+                      ),
                       
-                      // Task Description
-                      (task.description || task.notes) && React.createElement('p', { 
-                        className: `text-sm text-gray-300 mb-3 leading-relaxed ${task.completed ? 'opacity-75' : ''}` 
-                      }, task.description && task.description.startsWith('Voice-created task: ') 
-                          ? '🎤 ' + task.description.replace('Voice-created task: ', '') 
-                          : task.description || task.notes),
+                      // Task Column
+                      React.createElement('div', { className: 'col-span-4' },
+                        React.createElement('h3', { 
+                          className: `font-semibold text-sm mb-1 ${task.completed ? 'line-through text-gray-400' : 'text-white'}` 
+                        }, task.title || task.text),
+                        (task.description || task.notes) && React.createElement('p', { 
+                          className: `text-xs text-gray-300 leading-relaxed ${task.completed ? 'opacity-75' : ''}` 
+                        }, task.description && task.description.startsWith('Voice-created task: ') 
+                            ? '🎤 ' + task.description.replace('Voice-created task: ', '') 
+                            : task.description || task.notes),
+                        task.createdAt && React.createElement('p', { 
+                          className: 'text-xs text-gray-500 mt-1' 
+                        }, `Created: ${new Date(task.createdAt).toLocaleDateString()}`)
+                      ),
                       
-                      // Task Metadata
-                      React.createElement('div', { className: 'flex flex-wrap items-center gap-2 mb-2' },
-                        // Client Name
-                        React.createElement('span', { className: 'text-sm text-gray-400' },
-                          `👤 ${task.clientName}`
-                        ),
-                        
-                        // Task Type
+                      // Client Column
+                      React.createElement('div', { className: 'col-span-2' },
+                        React.createElement('p', { className: 'text-sm font-medium text-gray-200' }, task.clientName),
+                        task.isGeneralTask && React.createElement('span', { 
+                          className: 'text-xs bg-blue-600 px-2 py-1 rounded mt-1 inline-block' 
+                        }, 'General Task')
+                      ),
+                      
+                      // Type & Priority Column
+                      React.createElement('div', { className: 'col-span-2 space-y-1' },
                         task.type && React.createElement('span', {
-                          className: `px-2 py-1 rounded text-xs ${
+                          className: `px-2 py-1 rounded text-xs inline-block ${
                             task.type === 'showing' ? 'bg-blue-600' :
                             task.type === 'follow_up' ? 'bg-green-600' :
                             task.type === 'listing' ? 'bg-purple-600' :
@@ -2441,55 +2495,32 @@
                           task.type === 'appointment' ? '📅 Appointment' :
                           task.type === 'marketing' ? '📸 Marketing' : '⚡ General'
                         ),
-                        
-                        // Due Date
-                        task.dueDate && React.createElement('span', { 
-                          className: `text-xs px-2 py-1 rounded ${
+                        React.createElement('span', { 
+                          className: `px-2 py-1 rounded text-xs inline-block ${
+                            task.priority === 'high' ? 'bg-red-600' :
+                            task.priority === 'medium' ? 'bg-yellow-600' : 'bg-green-600'
+                          }`
+                        }, (task.priority || 'low').toUpperCase())
+                      ),
+                      
+                      // Due Date Column
+                      React.createElement('div', { className: 'col-span-2' },
+                        task.dueDate ? React.createElement('span', { 
+                          className: `text-sm px-2 py-1 rounded ${
                             new Date(task.dueDate) < new Date() && !task.completed 
                               ? 'bg-red-900 text-red-200' 
-                              : 'bg-gray-700 text-gray-300'
+                              : 'text-gray-300'
                           }`
-                        }, `📅 Due: ${new Date(task.dueDate).toLocaleDateString()}${task.time ? ` at ${task.time}` : ''}`),
-                        
-                        // Created Date
-                        task.createdAt && React.createElement('span', { 
-                          className: 'text-xs text-gray-500'
-                        }, `Created: ${new Date(task.createdAt).toLocaleDateString()}`)
-                      )
-                    ),
-                    
-                    // Priority, Status and Action Buttons
-                    React.createElement('div', { className: 'flex flex-col items-end space-y-2' },
-                      React.createElement('span', { 
-                        className: `px-3 py-1 rounded text-xs font-medium ${
-                          task.priority === 'high' ? 'bg-red-600 text-red-100' :
-                          task.priority === 'medium' ? 'bg-yellow-600 text-yellow-100' : 
-                          'bg-green-600 text-green-100'
-                        }`
-                      }, 
-                        task.priority === 'high' ? '🔴 High Priority' :
-                        task.priority === 'medium' ? '🟡 Medium Priority' : '🟢 Low Priority'
+                        }, new Date(task.dueDate).toLocaleDateString()) :
+                        React.createElement('span', { className: 'text-gray-500 text-sm' }, 'No due date')
                       ),
-                      React.createElement('span', { 
-                        className: `px-3 py-1 rounded text-sm ${
-                          task.completed ? 'bg-green-600 text-green-100' : 'bg-yellow-600 text-yellow-100'
-                        }`
-                      }, task.completed ? '✅ Completed' : '⏳ Pending'),
                       
-                      // Action Buttons
-                      React.createElement('div', { className: 'flex space-x-2 mt-2' },
+                      // Actions Column
+                      React.createElement('div', { className: 'col-span-1 flex justify-center' },
                         React.createElement('button', {
-                          onClick: () => handleCompleteTask(task.id, task.clientId),
-                          className: `px-3 py-1 rounded text-xs transition-colors ${
-                            task.completed 
-                              ? 'bg-yellow-600 hover:bg-yellow-700 text-yellow-100' 
-                              : 'bg-green-600 hover:bg-green-700 text-green-100'
-                          }`
-                        }, task.completed ? '↩️ Reopen' : '✅ Complete'),
-                        React.createElement('button', {
-                          onClick: () => handleDeleteTask(task.id, task.clientId),
-                          className: 'px-3 py-1 rounded text-xs bg-red-600 hover:bg-red-700 text-red-100 transition-colors'
-                        }, '🗑️ Delete')
+                          onClick: () => handleDeleteTask(task.id, task.clientId, task.isGeneralTask),
+                          className: 'p-1 rounded text-xs bg-red-600 hover:bg-red-700 text-red-100 transition-colors'
+                        }, '🗑️')
                       )
                     )
                   )
@@ -2943,6 +2974,10 @@
           const properties = client.propertiesOfInterest || [];
           const tasks = client.todos || [];
           const pendingTasks = tasks.filter(task => !task.completed);
+          // For overview, show recent tasks (both pending and recently completed)
+          const recentTasks = tasks
+            .sort((a, b) => new Date(b.createdAt || b.created_at || '2024-01-01') - new Date(a.createdAt || a.created_at || '2024-01-01'))
+            .slice(0, 5); // Show up to 5 recent tasks
 
           return React.createElement('div', { className: 'space-y-6' },
             // Client Header with Quick Actions
@@ -3143,19 +3178,34 @@
             // Tasks Overview
             React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
               React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-yellow-300 flex items-center justify-between' }, 
-                React.createElement('span', null, `✓ Tasks (${pendingTasks.length} pending)`),
+                React.createElement('span', null, `✓ Tasks (${pendingTasks.length} pending, ${tasks.filter(t => t.completed).length} completed)`),
                 React.createElement('button', {
-                  onClick: () => setShowAddTask(true),
+                  onClick: () => {
+                    setTaskFormData({
+                      title: '',
+                      description: '',
+                      type: 'general',
+                      priority: 'medium',
+                      dueDate: '',
+                      time: '',
+                      clientId: client.id,
+                      clientName: `${client.firstName || client.first_name} ${client.lastName || client.last_name}`,
+                      status: 'pending'
+                    });
+                    setShowVoiceTaskModal(true);
+                  },
                   className: 'text-xs bg-yellow-600 px-3 py-1 rounded hover:bg-yellow-700'
                 }, '+ Add')
               ),
-              pendingTasks.length === 0 ? 
-                React.createElement('p', { className: 'text-gray-400 text-center py-4' }, 'No pending tasks') :
+              recentTasks.length === 0 ? 
+                React.createElement('p', { className: 'text-gray-400 text-center py-4' }, 'No tasks yet') :
                 React.createElement('div', { className: 'space-y-2' },
-                  pendingTasks.slice(0, 3).map((task, index) =>
+                  recentTasks.map((task, index) =>
                     React.createElement('div', { 
                       key: index, 
-                      className: 'bg-gray-600 p-3 rounded flex items-center justify-between'
+                      className: `p-3 rounded flex items-center justify-between ${
+                        task.completed ? 'bg-gray-700 opacity-75' : 'bg-gray-600'
+                      }`
                     },
                       React.createElement('div', { className: 'flex items-center space-x-3' },
                         React.createElement('div', {
@@ -3182,10 +3232,14 @@
                               : 'border-gray-400 hover:border-gray-300'
                           }`
                         },
-                          task.completed && React.createElement('span', { className: 'text-xs font-bold' }, '✓')
+                          task.completed ? React.createElement('span', { 
+                            className: 'text-xs font-bold text-white' 
+                          }, '✓') : null
                         ),
                         React.createElement('div', null,
-                          React.createElement('p', { className: 'font-semibold text-sm' }, task.text || task.title),
+                          React.createElement('p', { 
+                            className: `font-semibold text-sm ${task.completed ? 'line-through text-gray-400' : ''}` 
+                          }, task.text || task.title),
                           (task.description || task.notes) && React.createElement('p', { 
                             className: 'text-xs text-gray-300 mt-1' 
                           }, task.description && task.description.startsWith('Voice-created task: ') 
@@ -3517,7 +3571,9 @@
                             : 'border-gray-400 hover:border-gray-300'
                         }`
                       },
-                        task.completed && React.createElement('span', { className: 'text-xs font-bold' }, '✓')
+                        task.completed ? React.createElement('span', { 
+                          className: 'text-xs font-bold text-white' 
+                        }, '✓') : null
                       ),
                       React.createElement('div', null,
                         React.createElement('p', { 
