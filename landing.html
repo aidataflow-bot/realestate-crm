@@ -440,108 +440,94 @@
                                         title: 'Beverly Hills Buyer',
                                         budget: '$1.2M',
                                         status: 'Active',
-                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=SarahChen&backgroundColor=c0aede&hair=short01,short02&hairColor=724133&eyes=variant01&eyebrows=variant01&mouth=happy01&nose=variant01&beard=false'
+                                        photo: 'https://ui-avatars.com/api/?name=Sarah+Chen&background=c0aede&color=2d3748&size=48&rounded=true'
                                     },
                                     {
                                         name: 'Mike Johnson', 
                                         title: 'Downtown Seller',
                                         budget: '$850K',
                                         status: 'Contract',
-                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=MikeJohnson&backgroundColor=ffdfbf&hair=short03,short04&hairColor=2c1b18&eyes=variant02&eyebrows=variant02&mouth=serious01&nose=variant02&beard=goatee01'
+                                        photo: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=ffdfbf&color=2d3748&size=48&rounded=true'
                                     },
                                     {
                                         name: 'Emily Rodriguez',
                                         title: 'West Side Investor',
                                         budget: '$950K', 
                                         status: 'Viewing',
-                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=EmilyRodriguez&backgroundColor=ffd5dc&hair=long01,long02&hairColor=724133&eyes=variant03&eyebrows=variant03&mouth=happy02&nose=variant01&beard=false'
+                                        photo: 'https://ui-avatars.com/api/?name=Emily+Rodriguez&background=ffd5dc&color=2d3748&size=48&rounded=true'
                                     },
                                     {
                                         name: 'David Kim',
                                         title: 'Luxury Buyer',
                                         budget: '$2.1M', 
                                         status: 'Active',
-                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=DavidKim&backgroundColor=b6e5d8&hair=short05,short06&hairColor=0e0e0e&eyes=variant04&eyebrows=variant04&mouth=serious02&nose=variant03&beard=mustache01'
+                                        photo: 'https://ui-avatars.com/api/?name=David+Kim&background=b6e5d8&color=2d3748&size=48&rounded=true'
                                     },
                                     {
                                         name: 'Lisa Martinez',
                                         title: 'Commercial Investor',
                                         budget: '$1.8M', 
                                         status: 'Negotiating',
-                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=LisaMartinez&backgroundColor=a7f3d0&hair=long03,long04&hairColor=2c1b18&eyes=variant05&eyebrows=variant05&mouth=happy03&nose=variant02&beard=false'
+                                        photo: 'https://ui-avatars.com/api/?name=Lisa+Martinez&background=a7f3d0&color=2d3748&size=48&rounded=true'
                                     },
                                     {
                                         name: 'Robert Wilson',
                                         title: 'First-Time Buyer',
                                         budget: '$650K', 
                                         status: 'Searching',
-                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=RobertWilson&backgroundColor=e0e7ff&hair=short07,short08&hairColor=724133&eyes=variant06&eyebrows=variant06&mouth=serious03&nose=variant03&beard=full01'
+                                        photo: 'https://ui-avatars.com/api/?name=Robert+Wilson&background=e0e7ff&color=2d3748&size=48&rounded=true'
                                     }
                                 ].map((client, i) =>
                                     React.createElement('div', { 
                                         key: i, 
-                                        className: 'group bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-red-400 transition-all duration-300 hover:scale-105 hover:shadow-xl'
+                                        className: 'group bg-gray-800 rounded-lg border border-gray-700 hover:border-red-400 transition-all duration-300 hover:scale-105 hover:shadow-xl p-6'
                                     },
-                                        // Client photo (smaller, as bonus element)
+                                        // Header with small avatar and status
                                         React.createElement('div', { 
-                                            className: 'relative h-32 overflow-hidden bg-gray-700'
+                                            className: 'flex items-center justify-between mb-4'
                                         },
+                                            // Small circular avatar
                                             React.createElement('img', {
                                                 src: client.photo,
                                                 alt: client.name,
-                                                className: 'w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 opacity-80'
+                                                className: 'w-12 h-12 rounded-full border-2 border-gray-600 group-hover:border-red-400 transition-colors'
                                             }),
                                             
-                                            // Status indicator on photo
+                                            // Status indicator (top right)
                                             React.createElement('div', { 
-                                                className: `absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold ${
+                                                className: `px-3 py-1 rounded-full text-xs font-semibold ${
                                                     client.status === 'Active' ? 'bg-green-600 text-green-100' :
                                                     client.status === 'Contract' ? 'bg-blue-600 text-blue-100' :
                                                     client.status === 'Negotiating' ? 'bg-orange-600 text-orange-100' :
                                                     client.status === 'Viewing' ? 'bg-purple-600 text-purple-100' :
                                                     'bg-gray-600 text-gray-100'
                                                 }`
-                                            }, client.status),
-                                            
-                                            // Subtle gradient overlay
-                                            React.createElement('div', { 
-                                                className: 'absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent opacity-30'
-                                            })
+                                            }, client.status)
                                         ),
                                         
-                                        // Main client info (prominent at bottom)
+                                        // Client info
                                         React.createElement('div', { 
-                                            className: 'p-4 space-y-3'
+                                            className: 'space-y-3'
                                         },
-                                            // Client name (most prominent)
+                                            // Client name 
                                             React.createElement('h5', { 
-                                                className: 'font-bold text-base text-white group-hover:text-red-300 transition-colors' 
+                                                className: 'font-semibold text-lg text-white group-hover:text-red-300 transition-colors' 
                                             }, client.name),
                                             
-                                            // Client title/role (smaller)
+                                            // Client title/role
                                             React.createElement('p', { 
-                                                className: 'text-xs text-gray-400 font-medium' 
+                                                className: 'text-sm text-gray-400 font-normal' 
                                             }, client.title),
                                             
-                                            // Budget info (prominent with color)
+                                            // Budget info
                                             React.createElement('div', { 
-                                                className: 'flex justify-between items-center'
+                                                className: 'pt-2 border-t border-gray-700'
                                             },
-                                                React.createElement('div', null,
-                                                    React.createElement('p', { className: 'text-green-400 font-bold text-base' }, client.budget),
-                                                    React.createElement('p', { className: 'text-xs text-gray-400' }, 'Budget Range')
-                                                ),
-                                                React.createElement('div', { className: 'text-right' },
-                                                    React.createElement('p', { className: 'text-xs text-gray-400 mb-1' }, 'Status'),
-                                                    React.createElement('div', { 
-                                                        className: `inline-block px-2 py-1 rounded text-xs font-semibold ${
-                                                            client.status === 'Active' ? 'bg-green-600 text-green-100' :
-                                                            client.status === 'Contract' ? 'bg-blue-600 text-blue-100' :
-                                                            client.status === 'Negotiating' ? 'bg-orange-600 text-orange-100' :
-                                                            client.status === 'Viewing' ? 'bg-purple-600 text-purple-100' :
-                                                            'bg-gray-600 text-gray-100'
-                                                        }`
-                                                    }, client.status)
+                                                React.createElement('div', { className: 'flex justify-between items-center' },
+                                                    React.createElement('div', null,
+                                                        React.createElement('p', { className: 'text-xs text-gray-400 mb-1' }, 'Budget Range'),
+                                                        React.createElement('p', { className: 'text-green-400 font-bold text-lg' }, client.budget)
+                                                    )
                                                 )
                                             )
                                         )
