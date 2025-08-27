@@ -346,22 +346,16 @@
           checkAPIHealth();
         }, []);
         
-        // Load clients on authentication
+        // Load user-specific clients on authentication
         useEffect(() => {
           if (user) {
-            console.log('🚀 User authenticated, loading clients...');
-            // If API fails, use demo data
-            loadClients().then(clientsFromAPI => {
-              if (!clientsFromAPI || clientsFromAPI.length === 0) {
-                console.log('📝 No API data, loading demo clients...');
-                loadDemoClients();
-              }
-            }).catch(error => {
-              console.log('❌ API error, loading demo clients...', error);
-              loadDemoClients();
-            });
+            console.log('🚀 User authenticated, loading user-specific clients...');
+            console.log('👤 Current user:', user.email, 'Account type:', user.accountType);
+            
+            // Load user-specific client data
+            loadUserClients(user);
           }
-        }, [user, loadClients]);
+        }, [user]);
 
         // Phase 4.1: Voice Task Creation System
         const startVoiceTaskCreation = () => {
@@ -718,8 +712,8 @@
             
             if (taskData.clientId && taskData.clientId !== 'rodrigo-admin') {
               // Update specific client tasks
-              setClients(prevClients => 
-                prevClients.map(client => {
+              setClients(prevClients => {
+                const updatedClients = prevClients.map(client => {
                   if (client.id === taskData.clientId) {
                     const updatedTodos = isEditing 
                       ? (client.todos || []).map(task => task.id === taskToSave.id ? taskToSave : task)
@@ -727,8 +721,11 @@
                     return { ...client, todos: updatedTodos };
                   }
                   return client;
-                })
-              );
+                });
+                // Save to user-specific storage
+                saveUserClients(user, updatedClients);
+                return updatedClients;
+              });
               
               // Update selected client if it's the same one
               if (selectedClient && selectedClient.id === taskData.clientId) {
@@ -777,22 +774,71 @@
             
             // Add to specific client
             const updatedTask = { ...task, clientId, assignedAt: new Date().toISOString() };
-            setClients(prevClients => 
-              prevClients.map(client => 
+            setClients(prevClients => {
+              const updatedClients = prevClients.map(client => 
                 client.id === clientId 
                   ? { ...client, todos: [...(client.todos || []), updatedTask] }
                   : client
-              )
-            );
+              );
+              // Save to user-specific storage
+              saveUserClients(user, updatedClients);
+              return updatedClients;
+            });
             
             setVoiceStatus(`✅ Task assigned to client successfully!`);
             setTimeout(() => setVoiceStatus(''), 3000);
           }
         };
 
-        // Load demo clients for testing
-        const loadDemoClients = () => {
-          console.log('📝 Loading demo clients for testing...');
+        // Get user-specific localStorage key
+        const getUserClientKey = (user) => {
+          if (user.accountType === 'admin' || user.email === 'rodrigo@realtor.com') {
+            return 'cf360_admin_clients'; // Admin gets the original demo clients
+          }
+          return `cf360_clients_${user.email}`; // Beta users get their own isolated data
+        };
+
+        // Load user-specific clients
+        const loadUserClients = (user) => {
+          console.log('📝 Loading user-specific clients for:', user.email);
+          const clientKey = getUserClientKey(user);
+          
+          try {
+            const storedClients = localStorage.getItem(clientKey);
+            if (storedClients) {
+              const parsedClients = JSON.parse(storedClients);
+              setClients(parsedClients);
+              console.log(`✅ Loaded ${parsedClients.length} clients for ${user.email}`);
+              return;
+            }
+          } catch (error) {
+            console.error('❌ Error loading user clients:', error);
+          }
+
+          // For admin users, load demo clients as before
+          if (user.accountType === 'admin' || user.email === 'rodrigo@realtor.com') {
+            loadDemoClientsForAdmin();
+          } else {
+            // For beta users, start with empty client list
+            console.log('🆕 New beta user - starting with empty client list');
+            setClients([]);
+          }
+        };
+
+        // Save clients to user-specific storage
+        const saveUserClients = (user, clientsToSave) => {
+          const clientKey = getUserClientKey(user);
+          try {
+            localStorage.setItem(clientKey, JSON.stringify(clientsToSave));
+            console.log(`💾 Saved ${clientsToSave.length} clients for ${user.email}`);
+          } catch (error) {
+            console.error('❌ Error saving user clients:', error);
+          }
+        };
+
+        // Load demo clients only for admin (keep original demo data for admin testing)
+        const loadDemoClientsForAdmin = () => {
+          console.log('📝 Loading demo clients for admin user...');
           const demoClients = [
             {
               id: 'demo-1',
@@ -993,7 +1039,10 @@
           ];
           
           setClients(demoClients);
-          console.log('✅ Demo clients loaded successfully!', demoClients);
+          // Save demo clients to admin storage
+          const adminKey = getUserClientKey({ accountType: 'admin', email: 'rodrigo@realtor.com' });
+          localStorage.setItem(adminKey, JSON.stringify(demoClients));
+          console.log('✅ Demo clients loaded successfully for admin!', demoClients);
         };
 
         // Property Management Functions
@@ -1063,26 +1112,71 @@
           }
         };
         
+        // User Registration System
+        const registerUser = (userData) => {
+          console.log('📝 Registering new user:', userData.email);
+          
+          // Get existing users from localStorage
+          const existingUsers = JSON.parse(localStorage.getItem('cf360_users') || '[]');
+          
+          // Check if user already exists
+          if (existingUsers.some(u => u.email === userData.email)) {
+            throw new Error('User already exists with this email');
+          }
+          
+          // Add new user with unique ID and timestamps
+          const newUser = {
+            id: 'user-' + Date.now(),
+            ...userData,
+            registeredAt: new Date().toISOString(),
+            accountType: 'beta',
+            isActive: true
+          };
+          
+          existingUsers.push(newUser);
+          localStorage.setItem('cf360_users', JSON.stringify(existingUsers));
+          
+          console.log('✅ User registered successfully:', newUser.email);
+          return newUser;
+        };
+
         const login = async (email, password) => {
+          console.log('🔐 Attempting login for:', email);
+          
+          // Admin account (original)
           if (email === 'rodrigo@realtor.com' && password === 'admin123') {
-            setUser({ firstName: 'Rodrigo', lastName: 'Admin', email });
-            console.log('🔐 User logged in, setting session storage...');
-            sessionStorage.setItem('cf360_user', JSON.stringify({ firstName: 'Rodrigo', lastName: 'Admin', email }));
+            const adminUser = { firstName: 'Rodrigo', lastName: 'Admin', email, accountType: 'admin' };
+            setUser(adminUser);
+            console.log('🔐 Admin logged in, setting session storage...');
+            sessionStorage.setItem('cf360_user', JSON.stringify(adminUser));
             
-            // Try to load clients, fallback to demo if fails
-            try {
-              const clientsFromAPI = await loadClients();
-              if (!clientsFromAPI || clientsFromAPI.length === 0) {
-                console.log('📝 No API data, loading demo clients...');
-                loadDemoClients();
-              }
-            } catch (error) {
-              console.log('❌ API failed, loading demo clients...', error);
-              loadDemoClients();
-            }
+            // User-specific clients will be loaded by useEffect
+            setError('');
+            return;
+          }
+          
+          // Registered user accounts
+          const existingUsers = JSON.parse(localStorage.getItem('cf360_users') || '[]');
+          const foundUser = existingUsers.find(u => u.email === email && u.password === password && u.isActive);
+          
+          if (foundUser) {
+            const userData = {
+              id: foundUser.id,
+              firstName: foundUser.firstName,
+              lastName: foundUser.lastName,
+              email: foundUser.email,
+              accountType: foundUser.accountType || 'beta',
+              company: foundUser.company
+            };
+            
+            setUser(userData);
+            console.log('🔐 Registered user logged in:', userData.email);
+            sessionStorage.setItem('cf360_user', JSON.stringify(userData));
+            
+            // User-specific clients will be loaded by useEffect
             setError('');
           } else {
-            setError('Invalid credentials. Use rodrigo@realtor.com / admin123');
+            setError('Invalid credentials. Please check your email and password or sign up for a free account.');
           }
         };
         
@@ -1170,7 +1264,12 @@
               propertiesOfInterest: []
             };
             
-            setClients(prevClients => [enrichedClient, ...prevClients]);
+            setClients(prevClients => {
+              const newClients = [enrichedClient, ...prevClients];
+              // Save to user-specific storage
+              saveUserClients(user, newClients);
+              return newClients;
+            });
             setShowAddClientModal(false);
             setError('');
             
@@ -1205,8 +1304,8 @@
             console.log('✅ Call logged successfully:', callRecord);
             
             // Update the client's call history in local state
-            setClients(prevClients => 
-              prevClients.map(client => 
+            setClients(prevClients => {
+              const updatedClients = prevClients.map(client => 
                 client.id === clientId 
                   ? {
                       ...client,
@@ -1221,8 +1320,11 @@
                       }]
                     }
                   : client
-              )
-            );
+              );
+              // Save to user-specific storage
+              saveUserClients(user, updatedClients);
+              return updatedClients;
+            });
             
             setShowCallModal(null);
             setVoiceStatus('✅ Call logged successfully!');
@@ -2359,8 +2461,8 @@
               )
             );
           } else {
-            setClients(prevClients => 
-              prevClients.map(client => 
+            setClients(prevClients => {
+              const updatedClients = prevClients.map(client => 
                 client.id === clientId 
                   ? {
                       ...client,
@@ -2371,8 +2473,11 @@
                       )
                     }
                   : client
-              )
-            );
+              );
+              // Save to user-specific storage
+              saveUserClients(user, updatedClients);
+              return updatedClients;
+            });
           }
           setVoiceStatus(`✅ Task ${taskId ? 'completed' : 'reopened'} successfully!`);
           setTimeout(() => setVoiceStatus(''), 3000);

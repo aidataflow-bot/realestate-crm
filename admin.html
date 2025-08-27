@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLIENT FLOW 360 - Beta User Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function BetaUserAdmin() {
+            const [users, setUsers] = useState([]);
+            const [lastRefresh, setLastRefresh] = useState(new Date());
+
+            const loadUsers = () => {
+                try {
+                    const storedUsers = localStorage.getItem('cf360_users');
+                    const parsedUsers = storedUsers ? JSON.parse(storedUsers) : [];
+                    setUsers(parsedUsers);
+                    setLastRefresh(new Date());
+                } catch (error) {
+                    console.error('Error loading users:', error);
+                    setUsers([]);
+                }
+            };
+
+            const clearAllUsers = () => {
+                if (window.confirm('⚠️ Are you sure you want to clear ALL beta users? This cannot be undone!')) {
+                    localStorage.removeItem('cf360_users');
+                    setUsers([]);
+                    alert('✅ All beta users have been cleared.');
+                }
+            };
+
+            const exportUsers = () => {
+                const dataStr = JSON.stringify(users, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `cf360_beta_users_${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            useEffect(() => {
+                loadUsers();
+            }, []);
+
+            return React.createElement('div', { className: 'container mx-auto p-8 max-w-6xl' },
+                // Header
+                React.createElement('div', { className: 'mb-8' },
+                    React.createElement('h1', { className: 'text-3xl font-bold text-red-400 mb-2' }, '🎯 CLIENT FLOW 360 - Beta User Admin'),
+                    React.createElement('p', { className: 'text-gray-300' }, 'Manage beta testers and monitor signup activity')
+                ),
+
+                // Stats Card
+                React.createElement('div', { className: 'bg-gray-800 rounded-lg p-6 mb-6' },
+                    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
+                        React.createElement('div', { className: 'text-center' },
+                            React.createElement('div', { className: 'text-2xl font-bold text-green-400' }, users.length),
+                            React.createElement('div', { className: 'text-sm text-gray-400' }, 'Registered Beta Users')
+                        ),
+                        React.createElement('div', { className: 'text-center' },
+                            React.createElement('div', { className: 'text-2xl font-bold text-blue-400' }, Math.max(0, 3 - users.length)),
+                            React.createElement('div', { className: 'text-sm text-gray-400' }, 'Remaining Spots')
+                        ),
+                        React.createElement('div', { className: 'text-center' },
+                            React.createElement('div', { className: 'text-2xl font-bold text-purple-400' }, lastRefresh.toLocaleTimeString()),
+                            React.createElement('div', { className: 'text-sm text-gray-400' }, 'Last Refreshed')
+                        )
+                    )
+                ),
+
+                // Action Buttons
+                React.createElement('div', { className: 'flex flex-wrap gap-4 mb-6' },
+                    React.createElement('button', {
+                        onClick: loadUsers,
+                        className: 'bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold transition-colors'
+                    }, '🔄 Refresh Data'),
+                    
+                    React.createElement('button', {
+                        onClick: exportUsers,
+                        disabled: users.length === 0,
+                        className: 'bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                    }, '📥 Export Users'),
+                    
+                    React.createElement('button', {
+                        onClick: clearAllUsers,
+                        disabled: users.length === 0,
+                        className: 'bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                    }, '🗑️ Clear All Users'),
+
+                    React.createElement('a', {
+                        href: '/landing.html',
+                        className: 'bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-semibold transition-colors inline-block'
+                    }, '🚀 Go to Landing Page')
+                ),
+
+                // Users Table
+                users.length === 0 
+                    ? React.createElement('div', { className: 'bg-gray-800 rounded-lg p-8 text-center' },
+                        React.createElement('div', { className: 'text-6xl mb-4' }, '📭'),
+                        React.createElement('h3', { className: 'text-xl font-semibold mb-2' }, 'No Beta Users Yet'),
+                        React.createElement('p', { className: 'text-gray-400 mb-4' }, 'Users who sign up through the beta system will appear here.'),
+                        React.createElement('a', {
+                            href: '/landing.html',
+                            className: 'bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-semibold transition-colors inline-block'
+                        }, 'Go to Landing Page')
+                    )
+                    : React.createElement('div', { className: 'bg-gray-800 rounded-lg overflow-hidden' },
+                        React.createElement('div', { className: 'overflow-x-auto' },
+                            React.createElement('table', { className: 'w-full' },
+                                React.createElement('thead', { className: 'bg-gray-700' },
+                                    React.createElement('tr', {},
+                                        React.createElement('th', { className: 'px-4 py-3 text-left' }, '#'),
+                                        React.createElement('th', { className: 'px-4 py-3 text-left' }, 'Name'),
+                                        React.createElement('th', { className: 'px-4 py-3 text-left' }, 'Email'),
+                                        React.createElement('th', { className: 'px-4 py-3 text-left' }, 'User Type'),
+                                        React.createElement('th', { className: 'px-4 py-3 text-left' }, 'Registered At'),
+                                        React.createElement('th', { className: 'px-4 py-3 text-left' }, 'User ID')
+                                    )
+                                ),
+                                React.createElement('tbody', {},
+                                    users.map((user, index) => 
+                                        React.createElement('tr', { 
+                                            key: user.id || index, 
+                                            className: 'border-t border-gray-700 hover:bg-gray-750' 
+                                        },
+                                            React.createElement('td', { className: 'px-4 py-3 font-semibold text-blue-400' }, index + 1),
+                                            React.createElement('td', { className: 'px-4 py-3' }, 
+                                                React.createElement('div', { className: 'font-semibold' }, `${user.firstName} ${user.lastName}`),
+                                                React.createElement('div', { className: 'text-sm text-gray-400' }, 'Beta Tester')
+                                            ),
+                                            React.createElement('td', { className: 'px-4 py-3 font-mono text-sm' }, user.email),
+                                            React.createElement('td', { className: 'px-4 py-3' },
+                                                React.createElement('span', { 
+                                                    className: user.userType === 'beta' ? 'bg-green-900 text-green-300 px-2 py-1 rounded text-xs' : 'bg-blue-900 text-blue-300 px-2 py-1 rounded text-xs' 
+                                                }, user.userType?.toUpperCase() || 'BETA')
+                                            ),
+                                            React.createElement('td', { className: 'px-4 py-3 text-sm text-gray-400' }, 
+                                                new Date(user.registeredAt).toLocaleString()
+                                            ),
+                                            React.createElement('td', { className: 'px-4 py-3 font-mono text-xs text-gray-500' }, 
+                                                user.id?.toString() || 'N/A'
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                // Instructions
+                React.createElement('div', { className: 'mt-8 bg-gray-800 rounded-lg p-6' },
+                    React.createElement('h3', { className: 'text-lg font-semibold mb-4 text-red-400' }, '📋 Admin Instructions'),
+                    React.createElement('div', { className: 'space-y-2 text-sm text-gray-300' },
+                        React.createElement('p', {}, '• Users register through the landing page signup system'),
+                        React.createElement('p', {}, '• Data is stored in browser localStorage (key: "cf360_users")'),
+                        React.createElement('p', {}, '• Maximum 3 beta testers allowed'),
+                        React.createElement('p', {}, '• Use "Export Users" to download user data as JSON'),
+                        React.createElement('p', {}, '• "Clear All Users" removes all beta accounts (irreversible)'),
+                        React.createElement('p', {}, '• Refresh this page to see new signups')
+                    )
+                )
+            );
+        }
+
+        ReactDOM.render(React.createElement(BetaUserAdmin), document.getElementById('root'));
+    </script>
+</body>
+</html>
