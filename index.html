@@ -6,8 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="build-hash" content="1756269000" />
-    <title>CLIENT FLOW 360 - Netflix Style Real Estate CRM with Database v2.4 - PRODUCTION_READY</title>
+    <meta name="build-hash" content="1756270000" />
+    <title>CLIENT FLOW 360 - Netflix Style Real Estate CRM with Database v2.5 - CLIENT_NAMES_FIXED</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -50,10 +50,10 @@
     <div id="root"></div>
     <script type="module">
       // Complete Netflix-style CRM with CLIENT FLOW 360 branding + Database Integration  
-      // CACHE BUST: BUILD:1756269000 - PRODUCTION READY
+      // CACHE BUST: BUILD:1756270000 - CLIENT NAMES FIXED
       const { useState, useEffect, useCallback } = React;
       
-      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v2.4 - PRODUCTION_READY_1756269000 - FIXED CONNECTION ISSUE...');
+      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v2.5 - CLIENT_NAMES_FIXED_1756270000 - NEW CLIENTS SHOW PROPER NAMES...');
       
       // API Service
       const API = {
@@ -194,6 +194,11 @@
             // Add mock data structure for UI compatibility
             const enrichedClients = clientsData.map(client => ({
               ...client,
+              // Ensure name fields are available in both formats for compatibility
+              firstName: client.first_name || client.firstName,
+              lastName: client.last_name || client.lastName,
+              first_name: client.first_name || client.firstName,
+              last_name: client.last_name || client.lastName,
               role: 'BUYER', // Default for now
               stage: 'ACTIVE', // Default for now  
               city: client.address ? client.address.split(',')[1]?.trim() : 'Los Angeles',
@@ -317,6 +322,11 @@
             // Enrich with UI compatibility data
             const enrichedClient = {
               ...newClient,
+              // Ensure name fields are available in both formats for compatibility
+              firstName: newClient.first_name || newClient.firstName || clientData.firstName,
+              lastName: newClient.last_name || newClient.lastName || clientData.lastName,
+              first_name: newClient.first_name || newClient.firstName || clientData.firstName,
+              last_name: newClient.last_name || newClient.lastName || clientData.lastName,
               role: 'BUYER',
               stage: 'ACTIVE',
               city: clientData.address ? clientData.address.split(',')[1]?.trim() : 'Los Angeles', 
