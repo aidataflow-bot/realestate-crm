@@ -1001,7 +1001,9 @@
               setShowAddClientModal,
               setShowPropertyModal,
               startVoiceRecognition,
-              isListening
+              isListening,
+              startVoiceTaskCreation,
+              isListeningForTask
             }),
             
             currentView === 'dashboard' && React.createElement(DashboardView, { clients }),
@@ -1298,7 +1300,7 @@
       function ClientsView({ 
         clients, allTags, searchTerm, setSearchTerm, selectedTag, setSelectedTag, 
         setSelectedClient, setShowCallModal, setShowAddClientModal, setShowPropertyModal,
-        startVoiceRecognition, isListening 
+        startVoiceRecognition, isListening, startVoiceTaskCreation, isListeningForTask 
       }) {
         return React.createElement('div', null,
           React.createElement('div', { className: 'flex justify-between items-center mb-6' },
