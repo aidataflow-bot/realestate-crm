@@ -1946,29 +1946,107 @@
           }
         };
 
-        const handleCallClient = async (phoneNumber) => {
+        const [activeCall, setActiveCall] = useState(null);
+        const [callStartTime, setCallStartTime] = useState(null);
+        const [callDuration, setCallDuration] = useState(0);
+        const [showAdvancedCallLog, setShowAdvancedCallLog] = useState(null);
+
+        // Real-time call timer
+        React.useEffect(() => {
+          let interval = null;
+          if (activeCall && callStartTime) {
+            interval = setInterval(() => {
+              const now = new Date().getTime();
+              const duration = Math.floor((now - callStartTime) / 1000);
+              setCallDuration(duration);
+            }, 1000);
+          } else {
+            clearInterval(interval);
+          }
+          return () => clearInterval(interval);
+        }, [activeCall, callStartTime]);
+
+        const handleCallClient = async (phoneNumber, clientId = null) => {
           try {
-            // Simulate making a call and auto-logging it
-            console.log(`📞 Calling ${phoneNumber}...`);
+            // Start the call
+            console.log(`📞 Starting call to ${phoneNumber}...`);
             
-            // Auto-create call log with future follow-up
             const callData = {
-              client_id: client.id,
-              call_type: 'outbound',
-              duration: 0, // Will be filled when call ends
-              notes: `Called ${phoneNumber} from 360° view`,
-              outcome: 'Connected', // Default
-              follow_up_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // +7 days
+              phoneNumber,
+              clientId: clientId || client?.id,
+              clientName: client ? `${client.firstName || client.first_name} ${client.lastName || client.last_name}` : 'Unknown Client'
             };
             
-            // In real implementation, this would integrate with phone system
-            // await API.calls.create(callData);
+            setActiveCall(callData);
+            setCallStartTime(new Date().getTime());
+            setCallDuration(0);
+            setShowAdvancedCallLog(callData);
             
-            alert(`📞 Calling ${phoneNumber}...\n\n✅ Call logged automatically!\n📅 Follow-up scheduled for ${callData.follow_up_date}`);
+            // Show user feedback
+            setVoiceStatus(`📞 Call started to ${phoneNumber}... Timer running!`);
             
           } catch (error) {
             console.error('Failed to initiate call:', error);
-            alert('❌ Failed to make call. Please try again.');
+            setVoiceStatus('❌ Failed to make call. Please try again.');
+          }
+        };
+
+        const handleEndCall = async (outcome, notes, followUpDays = 7, callCategory = 'general') => {
+          try {
+            if (!activeCall) return;
+            
+            const finalDuration = Math.floor(callDuration / 60); // Convert to minutes
+            const followUpDate = followUpDays > 0 ? 
+              new Date(Date.now() + followUpDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : 
+              null;
+
+            const callRecord = {
+              id: 'call-' + Date.now(),
+              client_id: activeCall.clientId,
+              phoneNumber: activeCall.phoneNumber,
+              call_type: 'outbound',
+              duration: finalDuration,
+              durationSeconds: callDuration,
+              notes: notes || `Called ${activeCall.phoneNumber}`,
+              outcome,
+              category: callCategory,
+              follow_up_date: followUpDate,
+              followUpDate: followUpDate,
+              createdAt: new Date().toISOString(),
+              startTime: new Date(callStartTime).toISOString(),
+              endTime: new Date().toISOString()
+            };
+
+            // Add call to client's call history
+            if (selectedClient && activeCall.clientId === selectedClient.id) {
+              selectedClient.calls = [...(selectedClient.calls || []), callRecord];
+            }
+
+            // Add to all clients if we can find the client
+            setClients(prevClients => 
+              prevClients.map(client => 
+                client.id === activeCall.clientId 
+                  ? { ...client, calls: [...(client.calls || []), callRecord] }
+                  : client
+              )
+            );
+
+            // Reset call state
+            setActiveCall(null);
+            setCallStartTime(null);
+            setCallDuration(0);
+            setShowAdvancedCallLog(null);
+            
+            // Show success message
+            setVoiceStatus(`✅ Call logged! Duration: ${finalDuration}m ${callDuration % 60}s${followUpDate ? ` | Follow-up: ${followUpDate}` : ''}`);
+            setTimeout(() => setVoiceStatus(''), 5000);
+
+            console.log('✅ Call logged successfully:', callRecord);
+            
+          } catch (error) {
+            console.error('Failed to log call:', error);
+            setVoiceStatus('❌ Failed to log call');
+            setTimeout(() => setVoiceStatus(''), 3000);
           }
         };
 
@@ -2140,6 +2218,15 @@
                       React.createElement('span', { className: 'ml-2 text-yellow-200' }, 
                         `Next callback: ${new Date(nextCallbackDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
                       )
+                    ),
+
+                    // Active Call Indicator
+                    activeCall && React.createElement('p', { className: 'flex items-center mt-2 bg-green-600 bg-opacity-50 px-3 py-2 rounded animate-pulse' },
+                      '📞 ',
+                      React.createElement('span', { className: 'ml-2 text-green-200 font-semibold' }, 
+                        `CALL IN PROGRESS • ${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, '0')}`
+                      ),
+                      React.createElement('span', { className: 'ml-2 text-xs bg-red-500 px-2 py-1 rounded animate-pulse' }, 'LIVE')
                     )
                   )
                 ),
@@ -2728,7 +2815,20 @@
               activeTab === 'properties' && renderPropertiesTab(),
               activeTab === 'tasks' && renderTasksTab(),
               activeTab === 'activity' && renderActivityTab()
-            )
+            ),
+
+            // Advanced Call Log Modal
+            showAdvancedCallLog && React.createElement(AdvancedCallLogModal, {
+              callData: showAdvancedCallLog,
+              callDuration: callDuration,
+              onEndCall: handleEndCall,
+              onClose: () => {
+                setActiveCall(null);
+                setCallStartTime(null);
+                setCallDuration(0);
+                setShowAdvancedCallLog(null);
+              }
+            })
           )
         );
       }
@@ -2973,6 +3073,177 @@
               onClick: onClose,
               className: 'w-full bg-gray-600 text-white p-3 rounded hover:bg-gray-700'
             }, 'Close')
+          )
+        );
+      }
+
+      // Advanced Call Log Modal Component
+      function AdvancedCallLogModal({ callData, callDuration, onEndCall, onClose }) {
+        const [outcome, setOutcome] = useState('Connected');
+        const [notes, setNotes] = useState('');
+        const [followUpDays, setFollowUpDays] = useState(7);
+        const [callCategory, setCallCategory] = useState('general');
+        const [quickNoteTemplate, setQuickNoteTemplate] = useState('');
+
+        const formatTime = (seconds) => {
+          const mins = Math.floor(seconds / 60);
+          const secs = seconds % 60;
+          return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        };
+
+        const callOutcomes = [
+          { value: 'Connected', label: '✅ Connected', color: 'bg-green-600' },
+          { value: 'Voicemail', label: '📧 Voicemail Left', color: 'bg-blue-600' },
+          { value: 'No Answer', label: '📵 No Answer', color: 'bg-yellow-600' },
+          { value: 'Busy', label: '📞 Busy Line', color: 'bg-orange-600' },
+          { value: 'Wrong Number', label: '❌ Wrong Number', color: 'bg-red-600' },
+          { value: 'Call Back Later', label: '⏰ Call Back Later', color: 'bg-purple-600' },
+          { value: 'Not Interested', label: '🚫 Not Interested', color: 'bg-gray-600' },
+          { value: 'Appointment Set', label: '📅 Appointment Set', color: 'bg-indigo-600' }
+        ];
+
+        const quickNotes = [
+          'Discussed property options and budget',
+          'Scheduled property viewing',
+          'Provided market update and pricing',
+          'Followed up on previous inquiry',
+          'Discussed financing options',
+          'Answered questions about the area',
+          'Set appointment for next week',
+          'Will call back with more information'
+        ];
+
+        const handleSubmit = () => {
+          const finalNotes = notes || quickNoteTemplate || `Called ${callData?.phoneNumber}`;
+          onEndCall(outcome, finalNotes, followUpDays, callCategory);
+          onClose();
+        };
+
+        if (!callData) return null;
+
+        return React.createElement('div', { 
+          className: 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4',
+          onClick: onClose
+        },
+          React.createElement('div', { 
+            className: 'bg-gray-800 rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto',
+            onClick: (e) => e.stopPropagation()
+          },
+            // Header with Live Timer
+            React.createElement('div', { className: 'bg-gradient-to-r from-green-600 to-blue-600 p-6 rounded-t-lg text-white' },
+              React.createElement('div', { className: 'flex justify-between items-center' },
+                React.createElement('div', null,
+                  React.createElement('h3', { className: 'text-xl font-bold' }, '📞 Active Call'),
+                  React.createElement('p', { className: 'text-sm opacity-90' }, 
+                    `${callData.clientName} • ${callData.phoneNumber}`
+                  )
+                ),
+                React.createElement('div', { className: 'text-right' },
+                  React.createElement('div', { className: 'text-3xl font-mono font-bold animate-pulse' }, 
+                    formatTime(callDuration)
+                  ),
+                  React.createElement('div', { className: 'text-xs opacity-75' }, 'Duration')
+                )
+              )
+            ),
+
+            React.createElement('div', { className: 'p-6 space-y-6' },
+              // Call Outcome Selection
+              React.createElement('div', null,
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-3' }, 'Call Outcome *'),
+                React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+                  callOutcomes.map(outcomeOption =>
+                    React.createElement('button', {
+                      key: outcomeOption.value,
+                      type: 'button',
+                      onClick: () => setOutcome(outcomeOption.value),
+                      className: `p-3 rounded-lg border-2 transition-all text-left ${
+                        outcome === outcomeOption.value
+                          ? `${outcomeOption.color} border-white text-white`
+                          : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                      }`
+                    },
+                      React.createElement('div', { className: 'font-semibold text-sm' }, outcomeOption.label)
+                    )
+                  )
+                )
+              ),
+
+              // Quick Notes Templates
+              React.createElement('div', null,
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 'Quick Notes (Optional)'),
+                React.createElement('div', { className: 'grid grid-cols-1 gap-2 mb-3' },
+                  quickNotes.slice(0, 4).map((note, index) =>
+                    React.createElement('button', {
+                      key: index,
+                      type: 'button',
+                      onClick: () => setQuickNoteTemplate(note),
+                      className: `p-2 text-left text-sm rounded bg-gray-700 hover:bg-gray-600 border ${
+                        quickNoteTemplate === note ? 'border-blue-500 bg-blue-900' : 'border-gray-600'
+                      }`
+                    }, note)
+                  )
+                )
+              ),
+
+              // Custom Notes
+              React.createElement('div', null,
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 'Custom Notes'),
+                React.createElement('textarea', {
+                  value: notes,
+                  onChange: (e) => setNotes(e.target.value),
+                  placeholder: 'Add detailed notes about this call...',
+                  rows: 3,
+                  className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white placeholder-gray-400'
+                })
+              ),
+
+              // Follow-up and Category
+              React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                React.createElement('div', null,
+                  React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 'Follow-up'),
+                  React.createElement('select', {
+                    value: followUpDays,
+                    onChange: (e) => setFollowUpDays(parseInt(e.target.value)),
+                    className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                  },
+                    React.createElement('option', { value: 0 }, 'No follow-up'),
+                    React.createElement('option', { value: 1 }, 'Tomorrow'),
+                    React.createElement('option', { value: 3 }, 'In 3 days'),
+                    React.createElement('option', { value: 7 }, 'In 1 week'),
+                    React.createElement('option', { value: 14 }, 'In 2 weeks'),
+                    React.createElement('option', { value: 30 }, 'In 1 month')
+                  )
+                ),
+                React.createElement('div', null,
+                  React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 'Category'),
+                  React.createElement('select', {
+                    value: callCategory,
+                    onChange: (e) => setCallCategory(e.target.value),
+                    className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                  },
+                    React.createElement('option', { value: 'general' }, 'General'),
+                    React.createElement('option', { value: 'prospecting' }, 'Prospecting'),
+                    React.createElement('option', { value: 'follow_up' }, 'Follow-up'),
+                    React.createElement('option', { value: 'appointment' }, 'Appointment'),
+                    React.createElement('option', { value: 'closing' }, 'Closing'),
+                    React.createElement('option', { value: 'service' }, 'Service')
+                  )
+                )
+              )
+            ),
+
+            // Action Buttons
+            React.createElement('div', { className: 'bg-gray-700 px-6 py-4 rounded-b-lg flex space-x-3' },
+              React.createElement('button', {
+                onClick: handleSubmit,
+                className: 'flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold'
+              }, '✅ End Call & Log'),
+              React.createElement('button', {
+                onClick: onClose,
+                className: 'flex-1 bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-500 transition-colors'
+              }, '❌ Cancel')
+            )
           )
         );
       }
