@@ -320,19 +320,19 @@
           checkAPIHealth();
         }, []);
         
-        // Auto-login for demo and load clients
+        // Load clients on authentication
         useEffect(() => {
-          console.log('🚀 Auto-login and loading clients...');
-          setUser({ firstName: 'Rodrigo', lastName: 'Admin', email: 'rodrigo@realtor.com' });
-          
-          // If API fails, use demo data
-          loadClients().then(clientsFromAPI => {
-            if (!clientsFromAPI || clientsFromAPI.length === 0) {
-              console.log('📝 No API data, loading demo clients...');
-              loadDemoClients();
-            }
-          });
-        }, [loadClients]);
+          if (user) {
+            console.log('🚀 User authenticated, loading clients...');
+            // If API fails, use demo data
+            loadClients().then(clientsFromAPI => {
+              if (!clientsFromAPI || clientsFromAPI.length === 0) {
+                console.log('📝 No API data, loading demo clients...');
+                loadDemoClients();
+              }
+            });
+          }
+        }, [user, loadClients]);
 
         // Phase 4.1: Voice Task Creation System
         const startVoiceTaskCreation = () => {
