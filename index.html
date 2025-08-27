@@ -3187,11 +3187,21 @@
               return updatedClients;
             });
             
-            // Close modal first
+            // Store client name before potential state changes
+            const clientName = `${client.firstName || client.first_name} ${client.lastName || client.last_name}`;
+            
+            // Force refresh of selected client state to prevent showing deleted client
+            if (setSelectedClient) {
+              setSelectedClient(null);
+            }
+            
+            // Close modal immediately after state update
             onClose();
             
-            // Show success message
-            alert(`✅ Client ${client.firstName || client.first_name} ${client.lastName || client.last_name} has been deleted successfully!`);
+            // Show success message after modal is closed to prevent confusion
+            setTimeout(() => {
+              alert(`✅ Client ${clientName} has been deleted successfully!`);
+            }, 100);
             
           } catch (error) {
             console.error('Failed to delete client:', error);
