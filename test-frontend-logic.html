@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend API Test</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body style="background: #111; color: white; font-family: Arial;">
+    <h1>CLIENT FLOW 360 - API Test</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        console.log('🧪 Testing Frontend API Logic...');
+        
+        const results = document.getElementById('test-results');
+        
+        async function testAPIs() {
+            results.innerHTML = '<p>🔄 Testing APIs...</p>';
+            
+            try {
+                // Test Health API
+                console.log('1️⃣ Testing /api/health...');
+                const healthResponse = await axios.get('/api/health');
+                console.log('✅ Health Response:', healthResponse.data);
+                
+                results.innerHTML += `<p>✅ Health API: ${JSON.stringify(healthResponse.data)}</p>`;
+                
+                // Test storage status
+                const storage = healthResponse.data.storage;
+                console.log('📊 Storage Status:', storage);
+                results.innerHTML += `<p>📊 Storage: ${storage}</p>`;
+                
+                // Test if "Supabase Connected" would show correctly
+                const dbStatus = storage || 'undefined';
+                console.log('🔍 DB Status Display:', dbStatus);
+                results.innerHTML += `<p>🔍 DB Display: "DB: ${dbStatus}"</p>`;
+                
+                // Test Clients API
+                console.log('2️⃣ Testing /api/clients...');
+                const clientsResponse = await axios.get('/api/clients');
+                console.log('✅ Clients Response:', clientsResponse.data);
+                
+                results.innerHTML += `<p>✅ Clients API: Found ${clientsResponse.data.length} clients</p>`;
+                
+                if (clientsResponse.data.length > 0) {
+                    clientsResponse.data.forEach((client, index) => {
+                        const name = `${client.first_name || 'Unknown'} ${client.last_name || 'Client'}`;
+                        console.log(`👤 Client ${index + 1}:`, name);
+                        results.innerHTML += `<p>👤 Client ${index + 1}: ${name}</p>`;
+                    });
+                }
+                
+                // Test the exact logic from the frontend
+                console.log('3️⃣ Testing Frontend Logic...');
+                const apiHealth = healthResponse.data;
+                const displayText = apiHealth ? `DB: ${apiHealth.storage}` : 'DB: Connecting...';
+                console.log('🎯 Frontend Display Text:', displayText);
+                results.innerHTML += `<p>🎯 Frontend Would Show: "${displayText}"</p>`;
+                
+                // Check if there's an issue with the condition
+                const isHealthOk = apiHealth && apiHealth.status === 'ok';
+                console.log('✅ Health Check Passes:', isHealthOk);
+                results.innerHTML += `<p>✅ Health Status OK: ${isHealthOk}</p>`;
+                
+            } catch (error) {
+                console.error('❌ API Test Failed:', error);
+                results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        testAPIs();
+    </script>
+</body>
+</html>
