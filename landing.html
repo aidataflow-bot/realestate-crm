@@ -440,42 +440,42 @@
                                         title: 'Beverly Hills Buyer',
                                         budget: '$1.2M',
                                         status: 'Active',
-                                        photo: 'https://randomuser.me/api/portraits/women/44.jpg'
+                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=SarahChen&backgroundColor=c0aede&hair=short01,short02&hairColor=724133&eyes=variant01&eyebrows=variant01&mouth=happy01&nose=variant01&beard=false'
                                     },
                                     {
                                         name: 'Mike Johnson', 
                                         title: 'Downtown Seller',
                                         budget: '$850K',
                                         status: 'Contract',
-                                        photo: 'https://randomuser.me/api/portraits/men/32.jpg'
+                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=MikeJohnson&backgroundColor=ffdfbf&hair=short03,short04&hairColor=2c1b18&eyes=variant02&eyebrows=variant02&mouth=serious01&nose=variant02&beard=goatee01'
                                     },
                                     {
                                         name: 'Emily Rodriguez',
                                         title: 'West Side Investor',
                                         budget: '$950K', 
                                         status: 'Viewing',
-                                        photo: 'https://randomuser.me/api/portraits/women/68.jpg'
+                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=EmilyRodriguez&backgroundColor=ffd5dc&hair=long01,long02&hairColor=724133&eyes=variant03&eyebrows=variant03&mouth=happy02&nose=variant01&beard=false'
                                     },
                                     {
                                         name: 'David Kim',
                                         title: 'Luxury Buyer',
                                         budget: '$2.1M', 
                                         status: 'Active',
-                                        photo: 'https://randomuser.me/api/portraits/men/22.jpg'
+                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=DavidKim&backgroundColor=b6e5d8&hair=short05,short06&hairColor=0e0e0e&eyes=variant04&eyebrows=variant04&mouth=serious02&nose=variant03&beard=mustache01'
                                     },
                                     {
                                         name: 'Lisa Martinez',
                                         title: 'Commercial Investor',
                                         budget: '$1.8M', 
                                         status: 'Negotiating',
-                                        photo: 'https://randomuser.me/api/portraits/women/32.jpg'
+                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=LisaMartinez&backgroundColor=a7f3d0&hair=long03,long04&hairColor=2c1b18&eyes=variant05&eyebrows=variant05&mouth=happy03&nose=variant02&beard=false'
                                     },
                                     {
                                         name: 'Robert Wilson',
                                         title: 'First-Time Buyer',
                                         budget: '$650K', 
                                         status: 'Searching',
-                                        photo: 'https://randomuser.me/api/portraits/men/54.jpg'
+                                        photo: 'https://api.dicebear.com/7.x/personas/svg?seed=RobertWilson&backgroundColor=e0e7ff&hair=short07,short08&hairColor=724133&eyes=variant06&eyebrows=variant06&mouth=serious03&nose=variant03&beard=full01'
                                     }
                                 ].map((client, i) =>
                                     React.createElement('div', { 
@@ -515,12 +515,12 @@
                                         },
                                             // Client name (most prominent)
                                             React.createElement('h5', { 
-                                                className: 'font-bold text-lg text-white group-hover:text-red-300 transition-colors' 
+                                                className: 'font-bold text-base text-white group-hover:text-red-300 transition-colors' 
                                             }, client.name),
                                             
-                                            // Client title/role
+                                            // Client title/role (smaller)
                                             React.createElement('p', { 
-                                                className: 'text-sm text-gray-300 font-medium' 
+                                                className: 'text-xs text-gray-400 font-medium' 
                                             }, client.title),
                                             
                                             // Budget info (prominent with color)
@@ -528,7 +528,7 @@
                                                 className: 'flex justify-between items-center'
                                             },
                                                 React.createElement('div', null,
-                                                    React.createElement('p', { className: 'text-green-400 font-bold text-lg' }, client.budget),
+                                                    React.createElement('p', { className: 'text-green-400 font-bold text-base' }, client.budget),
                                                     React.createElement('p', { className: 'text-xs text-gray-400' }, 'Budget Range')
                                                 ),
                                                 React.createElement('div', { className: 'text-right' },
