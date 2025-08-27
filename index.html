@@ -3381,16 +3381,19 @@
                               return newClients;
                             });
                             
-                            // Force re-render by updating selectedClient
-                            if (selectedClient && selectedClient.id === client.id) {
+                            // Force re-render by updating selectedClient if it exists
+                            if (setSelectedClient && client.id) {
                               setSelectedClient(prev => {
-                                const updatedTodos = (prev.todos || []).map(t => {
-                                  const isMatch = t.id && task.id ? 
-                                    t.id === task.id : 
-                                    (t.text === task.text && t.dueDate === task.dueDate);
-                                  return isMatch ? updatedTask : t;
-                                });
-                                return { ...prev, todos: updatedTodos };
+                                if (prev && prev.id === client.id) {
+                                  const updatedTodos = (prev.todos || []).map(t => {
+                                    const isMatch = t.id && task.id ? 
+                                      t.id === task.id : 
+                                      (t.text === task.text && t.dueDate === task.dueDate);
+                                    return isMatch ? updatedTask : t;
+                                  });
+                                  return { ...prev, todos: updatedTodos };
+                                }
+                                return prev;
                               });
                             }
                           },
