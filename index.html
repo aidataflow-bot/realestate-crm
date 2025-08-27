@@ -64,13 +64,10 @@
         return true;
       }
 
-      // Check authentication on page load (TEMPORARILY DISABLED FOR DEBUG)
-      console.log('🧪 DEBUG: Bypassing authentication check for debugging modal issue...');
-      sessionStorage.setItem('cf360_authenticated', 'true');
-      sessionStorage.setItem('cf360_user', JSON.stringify({ firstName: 'Debug', lastName: 'User', email: 'debug@test.com' }));
-      // if (!checkAuthentication()) {
-      //   throw new Error('Authentication required');
-      // }
+      // Check authentication on page load
+      if (!checkAuthentication()) {
+        throw new Error('Authentication required');
+      }
       
       console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v4.0 - PROPERTY_MANAGEMENT_1756274000 - COMPREHENSIVE PROPERTY SYSTEM...');
       
@@ -3109,8 +3106,8 @@
           const lastCall = sortedCalls[0];
           const nextCallbackDate = lastCall?.followUpDate || lastCall?.follow_up_date;
 
-          // Get properties and tasks for full overview - use selectedClient for most up-to-date data
-          const currentClient = selectedClient || client;
+          // Get properties and tasks for full overview - use client data passed to modal
+          const currentClient = client;
           const properties = currentClient.propertiesOfInterest || [];
           const tasks = currentClient.todos || [];
           const pendingTasks = tasks.filter(task => !task.completed);
@@ -3384,16 +3381,19 @@
                               return newClients;
                             });
                             
-                            // Force re-render by updating selectedClient
-                            if (selectedClient && selectedClient.id === client.id) {
+                            // Force re-render by updating selectedClient if it exists
+                            if (setSelectedClient && client.id) {
                               setSelectedClient(prev => {
-                                const updatedTodos = (prev.todos || []).map(t => {
-                                  const isMatch = t.id && task.id ? 
-                                    t.id === task.id : 
-                                    (t.text === task.text && t.dueDate === task.dueDate);
-                                  return isMatch ? updatedTask : t;
-                                });
-                                return { ...prev, todos: updatedTodos };
+                                if (prev && prev.id === client.id) {
+                                  const updatedTodos = (prev.todos || []).map(t => {
+                                    const isMatch = t.id && task.id ? 
+                                      t.id === task.id : 
+                                      (t.text === task.text && t.dueDate === task.dueDate);
+                                    return isMatch ? updatedTask : t;
+                                  });
+                                  return { ...prev, todos: updatedTodos };
+                                }
+                                return prev;
                               });
                             }
                           },
