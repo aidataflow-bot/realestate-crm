@@ -109,9 +109,15 @@
           
           create: async (clientData) => {
             console.log('📡 Creating new client via API...', clientData);
-            const response = await axios.post(`${API.baseURL}/clients`, clientData);
-            console.log('✅ Client created successfully:', response.data);
-            return response.data;
+            try {
+              const response = await axios.post(`${API.baseURL}/create-client`, clientData);
+              console.log('✅ Client created successfully:', response.data);
+              return response.data;
+            } catch (error) {
+              console.error('❌ Client creation failed:', error);
+              console.error('❌ Error response:', error.response?.data);
+              throw error;
+            }
           },
           
           update: async (id, clientData) => {
