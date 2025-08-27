@@ -330,6 +330,9 @@
                 console.log('📝 No API data, loading demo clients...');
                 loadDemoClients();
               }
+            }).catch(error => {
+              console.log('❌ API error, loading demo clients...', error);
+              loadDemoClients();
             });
           }
         }, [user, loadClients]);
@@ -1037,7 +1040,20 @@
         const login = async (email, password) => {
           if (email === 'rodrigo@realtor.com' && password === 'admin123') {
             setUser({ firstName: 'Rodrigo', lastName: 'Admin', email });
-            await loadClients();
+            console.log('🔐 User logged in, setting session storage...');
+            sessionStorage.setItem('cf360_user', JSON.stringify({ firstName: 'Rodrigo', lastName: 'Admin', email }));
+            
+            // Try to load clients, fallback to demo if fails
+            try {
+              const clientsFromAPI = await loadClients();
+              if (!clientsFromAPI || clientsFromAPI.length === 0) {
+                console.log('📝 No API data, loading demo clients...');
+                loadDemoClients();
+              }
+            } catch (error) {
+              console.log('❌ API failed, loading demo clients...', error);
+              loadDemoClients();
+            }
             setError('');
           } else {
             setError('Invalid credentials. Use rodrigo@realtor.com / admin123');
