@@ -3650,20 +3650,30 @@
                       React.createElement('div', {
                         onClick: () => {
                           // Handle task completion toggle
+                          const updatedCompleted = !task.completed;
+                          const updatedTask = { ...task, completed: updatedCompleted, completedAt: new Date().toISOString() };
+                          
+                          // Update clients array
                           setClients(prevClients => 
                             prevClients.map(c => 
                               c.id === client.id 
                                 ? {
                                     ...c,
                                     todos: (c.todos || []).map(t => 
-                                      t.id === task.id 
-                                        ? { ...t, completed: !t.completed, completedAt: new Date().toISOString() }
-                                        : t
+                                      t.id === task.id ? updatedTask : t
                                     )
                                   }
                                 : c
                             )
                           );
+                          
+                          // Update selectedClient to reflect changes in modal
+                          setSelectedClient(prev => ({
+                            ...prev,
+                            todos: (prev.todos || []).map(t => 
+                              t.id === task.id ? updatedTask : t
+                            )
+                          }));
                         },
                         className: `w-5 h-5 border-2 rounded cursor-pointer flex items-center justify-center transition-colors ${
                           task.completed 
