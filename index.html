@@ -807,6 +807,7 @@
 
           // Modals
           selectedClient && React.createElement(ClientDetailModal, {
+            key: `client-modal-${selectedClient.id}-${selectedClient.calls?.length || 0}`,
             client: selectedClient,
             onClose: () => setSelectedClient(null),
             handleAddProperty,
@@ -821,7 +822,11 @@
             setPropertyFormData,
             showAddProperty,
             setShowAddProperty,
-            setVoiceStatus
+            setVoiceStatus,
+            // Add call logging props
+            clients,
+            setClients,
+            setSelectedClient
           }),
 
           showCallModal && React.createElement(CallLogModal, {
@@ -1897,7 +1902,11 @@
         setPropertyFormData,
         showAddProperty,
         setShowAddProperty,
-        setVoiceStatus
+        setVoiceStatus,
+        // Call logging props
+        clients,
+        setClients,
+        setSelectedClient
       }) {
         const [activeTab, setActiveTab] = useState('overview');
         const [isEditing, setIsEditing] = useState(false);
@@ -2017,19 +2026,31 @@
               endTime: new Date().toISOString()
             };
 
-            // Add call to client's call history
-            if (selectedClient && activeCall.clientId === selectedClient.id) {
-              selectedClient.calls = [...(selectedClient.calls || []), callRecord];
+            // Update clients array with new call record
+            if (setClients) {
+              setClients(prevClients => 
+                prevClients.map(clientItem => {
+                  if (clientItem.id === activeCall.clientId) {
+                    const updatedClient = { 
+                      ...clientItem, 
+                      calls: [...(clientItem.calls || []), callRecord] 
+                    };
+                    
+                    // Also update the selected client to trigger re-render
+                    if (setSelectedClient && client.id === activeCall.clientId) {
+                      setSelectedClient(updatedClient);
+                    }
+                    
+                    return updatedClient;
+                  }
+                  return clientItem;
+                })
+              );
             }
 
-            // Add to all clients if we can find the client
-            setClients(prevClients => 
-              prevClients.map(client => 
-                client.id === activeCall.clientId 
-                  ? { ...client, calls: [...(client.calls || []), callRecord] }
-                  : client
-              )
-            );
+            console.log('✅ Call record created:', callRecord);
+            console.log('✅ Updating client ID:', activeCall.clientId);
+            console.log('✅ Current client calls:', client.calls?.length || 0);
 
             // Reset call state
             setActiveCall(null);
@@ -2037,11 +2058,25 @@
             setCallDuration(0);
             setShowAdvancedCallLog(null);
             
-            // Show success message
-            setVoiceStatus(`✅ Call logged! Duration: ${finalDuration}m ${callDuration % 60}s${followUpDate ? ` | Follow-up: ${followUpDate}` : ''}`);
-            setTimeout(() => setVoiceStatus(''), 5000);
+            // Show success message with detailed info
+            const successMsg = `✅ Call logged! Duration: ${finalDuration}m ${callDuration % 60}s | Outcome: ${outcome}${followUpDate ? ` | Follow-up: ${followUpDate}` : ''}`;
+            setVoiceStatus(successMsg);
+            
+            // Also show browser alert to confirm logging
+            setTimeout(() => {
+              alert(`📞 Call Successfully Logged!\n\n` +
+                    `Client: ${activeCall?.clientName}\n` +
+                    `Phone: ${activeCall.phoneNumber}\n` +
+                    `Duration: ${finalDuration}m ${callDuration % 60}s\n` +
+                    `Outcome: ${outcome}\n` +
+                    `Notes: ${notes || 'No additional notes'}\n` +
+                    `${followUpDate ? `Follow-up: ${followUpDate}` : 'No follow-up scheduled'}\n\n` +
+                    `✅ Call has been added to client history and activity timeline.`);
+              setVoiceStatus('');
+            }, 1000);
 
             console.log('✅ Call logged successfully:', callRecord);
+            console.log('✅ Updated client should have calls:', client.calls?.length + 1 || 1);
             
           } catch (error) {
             console.error('Failed to log call:', error);
@@ -2076,6 +2111,10 @@
         };
 
         const renderOverviewTab = () => {
+          // Debug logging for call data
+          console.log('🔍 Rendering overview tab for client:', client.id);
+          console.log('🔍 Client calls:', client.calls?.length || 0, client.calls);
+          
           if (isEditing) {
             return React.createElement('div', { className: 'space-y-4' },
               React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
@@ -2227,7 +2266,53 @@
                         `CALL IN PROGRESS • ${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, '0')}`
                       ),
                       React.createElement('span', { className: 'ml-2 text-xs bg-red-500 px-2 py-1 rounded animate-pulse' }, 'LIVE')
-                    )
+                    ),
+
+                    // Debug Test Button (temporary)
+                    React.createElement('button', {
+                      onClick: () => {
+                        const testCall = {
+                          id: 'test-call-' + Date.now(),
+                          phoneNumber: client.phone,
+                          duration: 5,
+                          durationSeconds: 300,
+                          notes: 'Test call logged from debug button',
+                          outcome: 'Connected',
+                          category: 'general',
+                          createdAt: new Date().toISOString(),
+                          client_id: client.id
+                        };
+                        
+                        if (setClients) {
+                          console.log('🧪 TEST: Adding test call to client:', client.id);
+                          console.log('🧪 TEST: Test call data:', testCall);
+                          
+                          setClients(prevClients => 
+                            prevClients.map(clientItem => {
+                              if (clientItem.id === client.id) {
+                                const updatedClient = { 
+                                  ...clientItem, 
+                                  calls: [...(clientItem.calls || []), testCall] 
+                                };
+                                console.log('🧪 TEST: Updated client calls:', updatedClient.calls);
+                                
+                                // Force re-render by updating selected client
+                                if (setSelectedClient) {
+                                  setSelectedClient(updatedClient);
+                                }
+                                
+                                return updatedClient;
+                              }
+                              return clientItem;
+                            })
+                          );
+                          
+                          setVoiceStatus('🧪 Test call added! Check call history.');
+                          setTimeout(() => setVoiceStatus(''), 3000);
+                        }
+                      },
+                      className: 'mt-2 text-xs bg-yellow-600 px-2 py-1 rounded hover:bg-yellow-700'
+                    }, '🧪 Add Test Call')
                   )
                 ),
                 React.createElement('div', { className: 'text-right' },
@@ -2702,6 +2787,10 @@
         };
 
         const renderActivityTab = () => {
+          // Debug logging for activity data
+          console.log('🔍 Rendering activity tab for client:', client.id);
+          console.log('🔍 Client calls for activity:', client.calls?.length || 0, client.calls);
+          
           const allActivity = [
             ...(client.calls || []).map(call => ({
               type: 'call',
