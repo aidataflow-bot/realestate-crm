@@ -1258,7 +1258,8 @@
               calls: [],
               transactions: [],
               todos: [],
-              propertiesOfInterest: []
+              propertiesOfInterest: clientData.propertiesOfInterest || [],
+              currentAddress: clientData.currentAddress || null
             };
             
             setClients(prevClients => {
@@ -3111,16 +3112,21 @@
         const handleDeleteClient = async () => {
           try {
             setLoading(true);
-            // Here you would call your API to delete the client
             console.log('Deleting client:', client.id);
-            // await API.clients.delete(client.id);
             
-            // Close modal and show success
+            // Remove client from state
+            setClients(prevClients => {
+              const updatedClients = prevClients.filter(c => c.id !== client.id);
+              // Save updated list to user-specific storage
+              saveUserClients(user, updatedClients);
+              return updatedClients;
+            });
+            
+            // Close modal first
             onClose();
-            alert(`✅ Client ${client.firstName || client.first_name} ${client.lastName || client.last_name} has been deleted successfully!`);
             
-            // In real implementation, you'd also refresh the client list
-            // window.location.reload(); // or better: call a refresh function
+            // Show success message
+            alert(`✅ Client ${client.firstName || client.first_name} ${client.lastName || client.last_name} has been deleted successfully!`);
             
           } catch (error) {
             console.error('Failed to delete client:', error);
@@ -3299,9 +3305,15 @@
                     (client.birthday || client.birthDate) && React.createElement('p', { className: 'flex items-center' }, 
                       '🎂 Birth Date: ', 
                       React.createElement('span', { className: 'ml-2' }, 
-                        new Date(client.birthday || client.birthDate).toLocaleDateString('en-US', { 
-                          month: 'long', day: 'numeric', year: 'numeric' 
-                        })
+                        (() => {
+                          const dateStr = client.birthday || client.birthDate;
+                          // Fix timezone issue by parsing date parts manually
+                          const [year, month, day] = dateStr.split('-');
+                          const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                          return localDate.toLocaleDateString('en-US', { 
+                            month: 'long', day: 'numeric', year: 'numeric' 
+                          });
+                        })()
                       )
                     ),
                     
