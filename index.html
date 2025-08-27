@@ -1284,7 +1284,7 @@
 
           // Modals
           selectedClient && React.createElement(ClientDetailModal, {
-            key: `client-modal-${selectedClient.id}-${selectedClient.calls?.length || 0}`,
+            key: `client-modal-${selectedClient.id}-${selectedClient.calls?.length || 0}-${selectedClient.todos?.length || 0}-${JSON.stringify(selectedClient.todos?.map(t => t.completed) || [])}`,
             client: selectedClient,
             onClose: () => setSelectedClient(null),
             handleAddProperty,
@@ -3305,23 +3305,29 @@
                             
                             console.log('🔄 Updating task in overview:', updatedTask);
                             
+                            // Show visual feedback
+                            setVoiceStatus(updatedCompleted ? `✅ Task "${task.text || task.title}" completed!` : `🔄 Task "${task.text || task.title}" reopened!`);
+                            setTimeout(() => setVoiceStatus(''), 3000);
+                            
                             // Update clients array
                             setClients(prevClients => {
                               const newClients = prevClients.map(c => {
                                 if (c.id === client.id) {
                                   const updatedTodos = (c.todos || []).map((t, tIndex) => {
-                                    console.log('🔍 Comparing task IDs:', t.id, 'vs', task.id);
+                                    console.log('🔍 Overview comparing task IDs:', t.id, 'vs', task.id);
                                     // Use ID if available, otherwise fall back to text and index comparison
                                     const isMatch = t.id && task.id ? 
                                       t.id === task.id : 
                                       (t.text === task.text && t.dueDate === task.dueDate);
+                                    console.log('🎯 Overview match result:', isMatch, 'for task:', t.text);
                                     return isMatch ? updatedTask : t;
                                   });
-                                  console.log('📝 Updated todos for client:', updatedTodos);
+                                  console.log('📝 Overview updated todos for client:', updatedTodos);
                                   return { ...c, todos: updatedTodos };
                                 }
                                 return c;
                               });
+                              console.log('🔄 Overview - Updated clients array:', newClients);
                               return newClients;
                             });
                             
