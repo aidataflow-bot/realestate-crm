@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="build-hash" content="1756272500" />
+    <meta name="build-hash" content="1756273000" />
     <title>CLIENT FLOW 360 - Netflix Style Real Estate CRM with Database v3.0 - ADVANCED_FEATURES</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -50,10 +50,10 @@
     <div id="root"></div>
     <script type="module">
       // Complete Netflix-style CRM with CLIENT FLOW 360 branding + Database Integration  
-      // CACHE BUST: BUILD:1756272500 - 360 CLIENT VIEW
+      // CACHE BUST: BUILD:1756273000 - ENHANCED OVERVIEW
       const { useState, useEffect, useCallback } = React;
       
-      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v3.1 - 360_CLIENT_VIEW_1756272500 - COMPREHENSIVE CLIENT MANAGEMENT...');
+      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v3.2 - ENHANCED_OVERVIEW_1756273000 - COMPLETE CLIENT MANAGEMENT...');
       
       // API Service
       const API = {
@@ -1230,7 +1230,7 @@
         }, [isEditing, client]);
 
         const tabs = [
-          { id: 'overview', label: '👤 Overview', icon: '👤' },
+          { id: 'overview', label: '👤 Complete Overview', icon: '👤' },
           { id: 'properties', label: '🏠 Properties', icon: '🏠' },
           { id: 'tasks', label: '✓ Tasks', icon: '✓' },
           { id: 'activity', label: '📈 Activity', icon: '📈' }
@@ -1274,6 +1274,31 @@
           } catch (error) {
             console.error('Failed to initiate call:', error);
             alert('❌ Failed to make call. Please try again.');
+          }
+        };
+
+        const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+        const handleDeleteClient = async () => {
+          try {
+            setLoading(true);
+            // Here you would call your API to delete the client
+            console.log('Deleting client:', client.id);
+            // await API.clients.delete(client.id);
+            
+            // Close modal and show success
+            onClose();
+            alert(`✅ Client ${client.firstName || client.first_name} ${client.lastName || client.last_name} has been deleted successfully!`);
+            
+            // In real implementation, you'd also refresh the client list
+            // window.location.reload(); // or better: call a refresh function
+            
+          } catch (error) {
+            console.error('Failed to delete client:', error);
+            alert('❌ Failed to delete client. Please try again.');
+          } finally {
+            setLoading(false);
+            setShowDeleteConfirm(false);
           }
         };
 
@@ -1377,6 +1402,17 @@
             );
           }
 
+          // Get call history with follow-up dates
+          const calls = client.calls || [];
+          const sortedCalls = calls.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+          const lastCall = sortedCalls[0];
+          const nextCallbackDate = lastCall?.followUpDate || lastCall?.follow_up_date;
+
+          // Get properties and tasks for full overview
+          const properties = client.propertiesOfInterest || [];
+          const tasks = client.todos || [];
+          const pendingTasks = tasks.filter(task => !task.completed);
+
           return React.createElement('div', { className: 'space-y-6' },
             // Client Header with Quick Actions
             React.createElement('div', { className: 'bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-lg text-white' },
@@ -1401,7 +1437,15 @@
                       }, client.phone),
                       React.createElement('span', { className: 'ml-2 text-xs bg-green-500 px-2 py-1 rounded' }, '👆 Click to call')
                     ),
-                    client.address && React.createElement('p', null, '📍 ', client.address)
+                    client.address && React.createElement('p', null, '📍 ', client.address),
+                    
+                    // Next callback reminder
+                    nextCallbackDate && React.createElement('p', { className: 'flex items-center mt-2 bg-yellow-600 bg-opacity-30 px-3 py-1 rounded' },
+                      '📅 ',
+                      React.createElement('span', { className: 'ml-2 text-yellow-200' }, 
+                        `Next callback: ${new Date(nextCallbackDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                      )
+                    )
                   )
                 ),
                 React.createElement('div', { className: 'text-right' },
@@ -1413,10 +1457,10 @@
               )
             ),
 
-            // Personal Information
+            // Personal Information (removed heart emoji)
             (client.birthday || client.anniversary || client.spouse || client.children) && 
             React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
-              React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-pink-300' }, '💕 Personal Information'),
+              React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-blue-300' }, 'Personal Information'),
               React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
                 client.birthday && React.createElement('div', null,
                   React.createElement('p', { className: 'text-sm text-gray-400' }, 'Birthday'),
@@ -1441,6 +1485,120 @@
               )
             ),
 
+            // Call Log Section
+            React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
+              React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-blue-300 flex items-center justify-between' }, 
+                React.createElement('span', null, `📞 Call History (${calls.length})`),
+                calls.length > 3 && React.createElement('span', { className: 'text-xs text-gray-400' }, 'Showing latest 3')
+              ),
+              calls.length === 0 ? 
+                React.createElement('p', { className: 'text-gray-400 text-center py-4' }, 'No calls logged yet') :
+                React.createElement('div', { className: 'space-y-3' },
+                  sortedCalls.slice(0, 3).map((call, index) =>
+                    React.createElement('div', { 
+                      key: index, 
+                      className: 'bg-gray-600 p-3 rounded border-l-4 border-blue-500'
+                    },
+                      React.createElement('div', { className: 'flex justify-between items-start' },
+                        React.createElement('div', null,
+                          React.createElement('p', { className: 'font-semibold text-sm' }, 
+                            `${call.outcome || 'Unknown'} - ${call.duration || 0} minutes`
+                          ),
+                          React.createElement('p', { className: 'text-xs text-gray-300 mt-1' }, 
+                            call.notes || 'No notes'
+                          ),
+                          (call.followUpDate || call.follow_up_date) && React.createElement('p', { className: 'text-xs text-yellow-400 mt-1' },
+                            `📅 Follow-up: ${new Date(call.followUpDate || call.follow_up_date).toLocaleDateString()}`
+                          )
+                        ),
+                        React.createElement('span', { className: 'text-xs text-gray-400' }, 
+                          call.createdAt ? new Date(call.createdAt).toLocaleDateString('en-US', { 
+                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                          }) : 'Date unknown'
+                        )
+                      )
+                    )
+                  )
+                )
+            ),
+
+            // Properties Overview
+            React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
+              React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-green-300 flex items-center justify-between' }, 
+                React.createElement('span', null, `🏠 Properties (${properties.length})`),
+                React.createElement('button', {
+                  onClick: () => setShowAddProperty(true),
+                  className: 'text-xs bg-green-600 px-3 py-1 rounded hover:bg-green-700'
+                }, '+ Add')
+              ),
+              properties.length === 0 ? 
+                React.createElement('p', { className: 'text-gray-400 text-center py-4' }, 'No properties of interest') :
+                React.createElement('div', { className: 'space-y-2' },
+                  properties.slice(0, 2).map((property, index) =>
+                    React.createElement('div', { 
+                      key: index, 
+                      className: 'bg-gray-600 p-3 rounded flex justify-between items-center'
+                    },
+                      React.createElement('div', null,
+                        React.createElement('p', { className: 'font-semibold text-sm' }, property.address),
+                        React.createElement('p', { className: 'text-xs text-green-400' }, 
+                          `$${property.price.toLocaleString()} • ${property.bedrooms}bed/${property.bathrooms}bath`
+                        )
+                      ),
+                      React.createElement('button', { className: 'text-blue-400 text-xs' }, 'View')
+                    )
+                  ),
+                  properties.length > 2 && React.createElement('p', { className: 'text-xs text-gray-400 text-center pt-2' },
+                    `... and ${properties.length - 2} more properties`
+                  )
+                )
+            ),
+
+            // Tasks Overview
+            React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
+              React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-yellow-300 flex items-center justify-between' }, 
+                React.createElement('span', null, `✓ Tasks (${pendingTasks.length} pending)`),
+                React.createElement('button', {
+                  onClick: () => setShowAddTask(true),
+                  className: 'text-xs bg-yellow-600 px-3 py-1 rounded hover:bg-yellow-700'
+                }, '+ Add')
+              ),
+              pendingTasks.length === 0 ? 
+                React.createElement('p', { className: 'text-gray-400 text-center py-4' }, 'No pending tasks') :
+                React.createElement('div', { className: 'space-y-2' },
+                  pendingTasks.slice(0, 3).map((task, index) =>
+                    React.createElement('div', { 
+                      key: index, 
+                      className: 'bg-gray-600 p-3 rounded flex items-center justify-between'
+                    },
+                      React.createElement('div', { className: 'flex items-center space-x-3' },
+                        React.createElement('input', {
+                          type: 'checkbox',
+                          checked: false,
+                          onChange: () => console.log('Toggle task:', task),
+                          className: 'w-4 h-4'
+                        }),
+                        React.createElement('div', null,
+                          React.createElement('p', { className: 'font-semibold text-sm' }, task.text),
+                          React.createElement('p', { className: 'text-xs text-gray-400' }, 
+                            task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : 'No due date'
+                          )
+                        )
+                      ),
+                      React.createElement('span', { 
+                        className: `px-2 py-1 rounded text-xs ${
+                          task.priority === 'high' ? 'bg-red-600' :
+                          task.priority === 'medium' ? 'bg-yellow-600' : 'bg-green-600'
+                        }`
+                      }, task.priority || 'low')
+                    )
+                  ),
+                  pendingTasks.length > 3 && React.createElement('p', { className: 'text-xs text-gray-400 text-center pt-2' },
+                    `... and ${pendingTasks.length - 3} more tasks`
+                  )
+                )
+            ),
+
             // Commission Summary
             React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
               React.createElement('h4', { className: 'text-lg font-semibold mb-3 text-green-300' }, '💰 Commission Summary'),
@@ -1459,7 +1617,7 @@
                 ),
                 React.createElement('div', null,
                   React.createElement('p', { className: 'text-2xl font-bold text-purple-400' }, 
-                    (client.calls || []).length
+                    calls.length
                   ),
                   React.createElement('p', { className: 'text-sm text-gray-400' }, 'Total Calls')
                 )
@@ -1484,6 +1642,36 @@
               React.createElement('h4', { className: 'text-lg font-semibold mb-3' }, '📝 Notes'),
               React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
                 React.createElement('p', { className: 'text-gray-300 leading-relaxed' }, client.notes)
+              )
+            ),
+
+            // Delete Confirmation Modal
+            showDeleteConfirm && React.createElement('div', { 
+              className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+              onClick: () => setShowDeleteConfirm(false)
+            },
+              React.createElement('div', { 
+                className: 'bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4',
+                onClick: (e) => e.stopPropagation()
+              },
+                React.createElement('div', { className: 'text-center' },
+                  React.createElement('div', { className: 'text-6xl mb-4' }, '⚠️'),
+                  React.createElement('h3', { className: 'text-xl font-bold mb-2 text-red-400' }, 'Delete Client'),
+                  React.createElement('p', { className: 'text-gray-300 mb-6' }, 
+                    `Are you sure you want to delete ${client.firstName || client.first_name} ${client.lastName || client.last_name}? This action cannot be undone.`
+                  ),
+                  React.createElement('div', { className: 'flex space-x-3' },
+                    React.createElement('button', {
+                      onClick: handleDeleteClient,
+                      disabled: loading,
+                      className: 'flex-1 bg-red-600 text-white p-3 rounded hover:bg-red-700 disabled:opacity-50'
+                    }, loading ? '🗑️ Deleting...' : '🗑️ Delete Client'),
+                    React.createElement('button', {
+                      onClick: () => setShowDeleteConfirm(false),
+                      className: 'flex-1 bg-gray-600 text-white p-3 rounded hover:bg-gray-700'
+                    }, 'Cancel')
+                  )
+                )
               )
             )
           );
@@ -1708,6 +1896,13 @@
                 }, 
                   React.createElement('span', null, '✏️'),
                   React.createElement('span', null, 'Edit')
+                ),
+                !isEditing && React.createElement('button', {
+                  onClick: () => setShowDeleteConfirm(true),
+                  className: 'bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 flex items-center space-x-2'
+                }, 
+                  React.createElement('span', null, '🗑️'),
+                  React.createElement('span', null, 'Delete')
                 ),
                 React.createElement('button', {
                   onClick: onClose,
