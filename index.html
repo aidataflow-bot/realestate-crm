@@ -789,7 +789,7 @@
 
         // Get user-specific localStorage key
         const getUserClientKey = (user) => {
-          if (user.accountType === 'admin' || user.email === 'rodrigo@realtor.com') {
+          if (user.accountType === 'admin' || user.email === 'rodrigo@clientflow360.com') {
             return 'cf360_admin_clients'; // Admin gets the original demo clients
           }
           return `cf360_clients_${user.email}`; // Beta users get their own isolated data
@@ -804,8 +804,37 @@
             const storedClients = localStorage.getItem(clientKey);
             if (storedClients) {
               const parsedClients = JSON.parse(storedClients);
-              setClients(parsedClients);
-              console.log(`✅ Loaded ${parsedClients.length} clients for ${user.email}`);
+              
+              // CRITICAL FIX: Validate and restore missing client IDs
+              const validatedClients = parsedClients.map((client, index) => {
+                if (!client.id) {
+                  // Generate a fallback ID if missing
+                  const fallbackId = `client-${Date.now()}-${index}`;
+                  console.warn(`⚠️ Client missing ID, assigning fallback:`, {
+                    clientName: `${client.firstName || client.first_name} ${client.lastName || client.last_name}`,
+                    fallbackId: fallbackId
+                  });
+                  return { ...client, id: fallbackId };
+                }
+                return client;
+              });
+              
+              // Log client validation results
+              console.log('✅ Client validation completed:', {
+                totalClients: validatedClients.length,
+                clientsWithIds: validatedClients.filter(c => c.id).length,
+                clientDetails: validatedClients.map(c => ({
+                  id: c.id,
+                  name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}`
+                }))
+              });
+              
+              setClients(validatedClients);
+              
+              // Re-save the validated clients to fix any ID issues
+              saveUserClients(user, validatedClients);
+              
+              console.log(`✅ Loaded ${validatedClients.length} clients for ${user.email}`);
               return;
             }
           } catch (error) {
@@ -813,7 +842,7 @@
           }
 
           // For admin users, load demo clients as before
-          if (user.accountType === 'admin' || user.email === 'rodrigo@realtor.com') {
+          if (user.accountType === 'admin' || user.email === 'rodrigo@clientflow360.com') {
             loadDemoClientsForAdmin();
           } else {
             // For beta users, start with empty client list
@@ -1035,11 +1064,26 @@
             }
           ];
           
-          setClients(demoClients);
-          // Save demo clients to admin storage
-          const adminKey = getUserClientKey({ accountType: 'admin', email: 'rodrigo@realtor.com' });
-          localStorage.setItem(adminKey, JSON.stringify(demoClients));
-          console.log('✅ Demo clients loaded successfully for admin!', demoClients);
+          // CRITICAL FIX: Validate demo clients have IDs
+          const validatedDemoClients = demoClients.map((client, index) => {
+            if (!client.id) {
+              console.error('❌ CRITICAL ERROR: Demo client missing ID!', client);
+              // Generate emergency fallback ID
+              client.id = `demo-emergency-${index + 1}`;
+            }
+            return client;
+          });
+          
+          console.log('🔍 Demo clients ID validation:', {
+            totalClients: validatedDemoClients.length,
+            clientIds: validatedDemoClients.map(c => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }))
+          });
+          
+          setClients(validatedDemoClients);
+          // Save demo clients to admin storage with correct email
+          const adminKey = getUserClientKey({ accountType: 'admin', email: 'rodrigo@clientflow360.com' });
+          localStorage.setItem(adminKey, JSON.stringify(validatedDemoClients));
+          console.log('✅ Demo clients loaded successfully for admin!', validatedDemoClients);
         };
 
         // Property Management Functions
@@ -1241,9 +1285,17 @@
               };
             }
             
+            // CRITICAL FIX: Ensure client always has an ID
+            if (!newClient.id) {
+              console.warn('⚠️ New client missing ID, generating fallback...');
+              newClient.id = 'client-' + Date.now();
+            }
+            
             // Enrich with UI compatibility data
             const enrichedClient = {
               ...newClient,
+              // Ensure ID is always present
+              id: newClient.id,
               // Ensure name fields are available in both formats for compatibility
               firstName: newClient.first_name || newClient.firstName || clientData.firstName,
               lastName: newClient.last_name || newClient.lastName || clientData.lastName,
@@ -1261,6 +1313,17 @@
               propertiesOfInterest: clientData.propertiesOfInterest || [],
               currentAddress: clientData.currentAddress || null
             };
+            
+            // Final ID validation
+            if (!enrichedClient.id) {
+              console.error('❌ CRITICAL ERROR: Enriched client still missing ID!');
+              enrichedClient.id = 'emergency-client-' + Date.now();
+            }
+            
+            console.log('✅ New client with validated ID:', {
+              id: enrichedClient.id,
+              name: `${enrichedClient.firstName} ${enrichedClient.lastName}`
+            });
             
             setClients(prevClients => {
               const newClients = [enrichedClient, ...prevClients];
