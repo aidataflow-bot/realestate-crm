@@ -2473,13 +2473,16 @@
         });
 
         return React.createElement('div', null,
-          React.createElement('div', { className: 'flex justify-between items-center mb-6' },
-            React.createElement('h2', { className: 'text-3xl font-bold' }, 'Tasks'),
-            React.createElement('div', { className: 'flex space-x-4' },
+          // Mobile-Responsive Task Header
+          React.createElement('div', { className: 'flex flex-col space-y-4 mb-6' },
+            React.createElement('h2', { className: 'text-2xl sm:text-3xl font-bold' }, 'Tasks'),
+            
+            // Action Buttons Row
+            React.createElement('div', { className: 'flex flex-col sm:flex-row gap-3 sm:gap-4' },
               // Add Manual Task Button
               React.createElement('button', {
                 onClick: handleAddTask,
-                className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors flex items-center space-x-2'
+                className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors flex items-center justify-center space-x-2'
               },
                 React.createElement('span', null, '➕'),
                 React.createElement('span', null, 'Add Task')
@@ -2488,7 +2491,7 @@
               React.createElement('button', {
                 onClick: startVoiceTaskCreation,
                 disabled: isListeningForTask,
-                className: `px-4 py-2 rounded transition-colors flex items-center space-x-2 ${
+                className: `px-4 py-2 rounded transition-colors flex items-center justify-center space-x-2 ${
                   isListeningForTask 
                     ? 'bg-red-600 text-white cursor-not-allowed' 
                     : 'bg-purple-600 text-white hover:bg-purple-700'
@@ -2496,29 +2499,33 @@
               },
                 React.createElement('span', null, isListeningForTask ? '🎙️' : '🎤'),
                 React.createElement('span', null, isListeningForTask ? 'Listening...' : 'Voice Task')
-              ),
+              )
+            ),
+            
+            // Filter and Sort Row
+            React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4' },
               // Filter Dropdown
               React.createElement('select', {
                 value: filterBy,
                 onChange: (e) => setFilterBy(e.target.value),
-                className: 'bg-gray-700 text-white px-3 py-2 rounded border border-gray-600'
+                className: 'w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600'
               },
-                React.createElement('option', { value: 'all' }, 'All Tasks'),
-                React.createElement('option', { value: 'pending' }, 'Pending'),
-                React.createElement('option', { value: 'completed' }, 'Completed'),
-                React.createElement('option', { value: 'overdue' }, 'Overdue'),
-                React.createElement('option', { value: 'due-today' }, 'Due Today')
+                React.createElement('option', { value: 'all' }, '📋 All Tasks'),
+                React.createElement('option', { value: 'pending' }, '⏳ Pending'),
+                React.createElement('option', { value: 'completed' }, '✅ Completed'),
+                React.createElement('option', { value: 'overdue' }, '🚨 Overdue'),
+                React.createElement('option', { value: 'due-today' }, '📅 Due Today')
               ),
               // Sort Dropdown
               React.createElement('select', {
                 value: sortBy,
                 onChange: (e) => setSortBy(e.target.value),
-                className: 'bg-gray-700 text-white px-3 py-2 rounded border border-gray-600'
+                className: 'w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600'
               },
-                React.createElement('option', { value: 'dueDate' }, 'Sort by Due Date'),
-                React.createElement('option', { value: 'priority' }, 'Sort by Priority'),
-                React.createElement('option', { value: 'client' }, 'Sort by Client'),
-                React.createElement('option', { value: 'created' }, 'Sort by Created Date')
+                React.createElement('option', { value: 'dueDate' }, '📅 Sort by Due Date'),
+                React.createElement('option', { value: 'priority' }, '⚡ Sort by Priority'),
+                React.createElement('option', { value: 'client' }, '👤 Sort by Client'),
+                React.createElement('option', { value: 'created' }, '🕒 Sort by Created Date')
               )
             )
           ),
