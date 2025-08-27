@@ -2817,10 +2817,10 @@
         }, [isEditing, client]);
 
         const tabs = [
-          { id: 'overview', label: '👤 Complete Overview', icon: '👤' },
-          { id: 'properties', label: '🏠 Properties', icon: '🏠' },
-          { id: 'tasks', label: '✓ Tasks', icon: '✓' },
-          { id: 'activity', label: '📈 Activity', icon: '📈' }
+          { id: 'overview', label: 'Complete Overview', icon: '👤' },
+          { id: 'properties', label: 'Properties', icon: '🏠' },
+          { id: 'tasks', label: 'Tasks', icon: '✓' },
+          { id: 'activity', label: 'Activity', icon: '📈' }
         ];
 
         const handleSaveEdit = async () => {
@@ -3025,7 +3025,7 @@
           console.log('🔍 Client calls:', client.calls?.length || 0, client.calls);
           
           if (isEditing) {
-            return React.createElement('div', { className: 'space-y-4' },
+            return React.createElement('div', { className: 'w-full space-y-4' },
               React.createElement('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4' },
                 React.createElement('input', {
                   type: 'text',
@@ -3139,7 +3139,7 @@
             .sort((a, b) => new Date(b.createdAt || b.created_at || '2024-01-01') - new Date(a.createdAt || a.created_at || '2024-01-01'))
             .slice(0, 5); // Show up to 5 recent tasks
 
-          return React.createElement('div', { className: 'space-y-4 sm:space-y-6' },
+          return React.createElement('div', { className: 'w-full space-y-4' },
             // Client Header with Quick Actions - Mobile Responsive
             React.createElement('div', { className: 'bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6 rounded-lg text-white' },
               React.createElement('div', { className: 'flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0' },
@@ -3560,7 +3560,7 @@
         const renderPropertiesTab = () => {
           const properties = client.propertiesOfInterest || [];
           
-          return React.createElement('div', { className: 'space-y-4' },
+          return React.createElement('div', { className: 'w-full space-y-4' },
             React.createElement('div', { className: 'flex justify-between items-center' },
               React.createElement('h4', { className: 'text-lg font-semibold' }, `🏠 Properties (${properties.length})`),
               React.createElement('button', {
@@ -3721,7 +3721,7 @@
         const renderTasksTab = () => {
           const tasks = client.todos || [];
           
-          return React.createElement('div', { className: 'space-y-4' },
+          return React.createElement('div', { className: 'w-full space-y-4' },
             React.createElement('div', { className: 'flex justify-between items-center' },
               React.createElement('h4', { className: 'text-lg font-semibold' }, `✓ Tasks (${tasks.length})`),
               React.createElement('div', { className: 'flex space-x-2' },
@@ -3911,7 +3911,7 @@
             // Add other activity types as needed
           ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-          return React.createElement('div', { className: 'space-y-4' },
+          return React.createElement('div', { className: 'w-full space-y-4' },
             React.createElement('h4', { className: 'text-lg font-semibold mb-4' }, `📈 Activity Timeline (${allActivity.length})`),
             
             allActivity.length === 0 ? 
