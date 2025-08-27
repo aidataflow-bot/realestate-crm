@@ -3122,29 +3122,42 @@
             console.log('🔍 Client to delete:', {
               id: client.id,
               name: `${client.firstName || client.first_name} ${client.lastName || client.last_name}`,
-              idType: typeof client.id
+              idType: typeof client.id,
+              idValue: client.id,
+              idLength: client.id?.toString().length
             });
+            
+            // Normalize and validate the target client ID
+            const targetId = client.id?.toString().trim();
+            if (!targetId || targetId === 'undefined' || targetId === 'null') {
+              console.error('❌ CRITICAL ERROR: Client ID is invalid!', { originalId: client.id, normalizedId: targetId });
+              alert('❌ Cannot delete client: Invalid client ID');
+              setLoading(false);
+              setShowDeleteConfirm(false);
+              return;
+            }
+            
+            console.log('🔄 Normalized target ID:', { original: client.id, normalized: targetId });
             
             // Remove client from state with enhanced safety checks
             setClients(prevClients => {
               console.log('📊 BEFORE DELETE - Total clients:', prevClients.length);
-              console.log('📋 All client IDs before delete:', prevClients.map(c => ({ id: c.id, name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}`, type: typeof c.id })));
-              
-              // Safety check - ensure client ID exists
-              if (!client.id) {
-                console.error('❌ CRITICAL ERROR: Client ID is undefined/null!');
-                alert('❌ Cannot delete client: Invalid client ID');
-                return prevClients; // Don't modify array if ID is invalid
-              }
+              console.log('📋 All client IDs before delete:', prevClients.map(c => ({ 
+                id: c.id, 
+                normalizedId: c.id?.toString().trim(),
+                name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}`, 
+                type: typeof c.id 
+              })));
               
               // Find the client to confirm it exists (with enhanced ID matching)
               const clientToDelete = prevClients.find(c => {
-                const match = c.id === client.id;
+                const arrayId = c.id?.toString().trim();
+                const match = arrayId === targetId;
                 console.log('🔍 Searching for client:', {
                   arrayClientId: c.id,
-                  arrayClientIdType: typeof c.id,
+                  arrayClientIdNormalized: arrayId,
                   targetId: client.id,
-                  targetIdType: typeof client.id,
+                  targetIdNormalized: targetId,
                   matches: match,
                   clientName: `${c.firstName || c.first_name} ${c.lastName || c.last_name}`
                 });
@@ -3154,8 +3167,14 @@
               if (!clientToDelete) {
                 console.error('❌ CRITICAL ERROR: Client not found in array!', {
                   searchingFor: client.id,
+                  searchingForNormalized: targetId,
                   searchingForType: typeof client.id,
-                  availableIds: prevClients.map(c => ({ id: c.id, type: typeof c.id, name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}` }))
+                  availableIds: prevClients.map(c => ({ 
+                    id: c.id, 
+                    normalized: c.id?.toString().trim(),
+                    type: typeof c.id, 
+                    name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}` 
+                  }))
                 });
                 alert('❌ Cannot delete client: Client not found in array. Check console for details.');
                 return prevClients; // Don't modify array if client not found
@@ -3168,16 +3187,19 @@
               
               // Perform the filter operation with detailed ID comparison logging
               const updatedClients = prevClients.filter(c => {
-                const shouldKeep = c.id !== client.id;
+                const arrayId = c.id?.toString().trim();
+                const shouldKeep = arrayId !== targetId;
                 
                 // Enhanced debugging for ID comparison
-                console.log('🔍 ID Comparison:', {
+                console.log('🔍 ENHANCED ID Comparison:', {
                   clientArrayId: c.id,
+                  clientArrayIdNormalized: arrayId,
                   clientArrayIdType: typeof c.id,
                   targetClientId: client.id,
+                  targetClientIdNormalized: targetId,
                   targetClientIdType: typeof client.id,
-                  areEqual: c.id === client.id,
-                  areStrictEqual: c.id !== client.id,
+                  normalizedMatch: arrayId === targetId,
+                  originalMatch: c.id === client.id,
                   shouldKeep: shouldKeep,
                   clientName: `${c.firstName || c.first_name} ${c.lastName || c.last_name}`
                 });
@@ -3185,8 +3207,10 @@
                 if (!shouldKeep) {
                   console.log('🗑️ REMOVING CLIENT:', { 
                     id: c.id, 
+                    normalizedId: arrayId,
                     name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}`,
-                    idMatch: c.id === client.id 
+                    normalizedIdMatch: arrayId === targetId,
+                    originalIdMatch: c.id === client.id 
                   });
                 }
                 
@@ -3194,7 +3218,11 @@
               });
               
               console.log('📊 AFTER DELETE - Total clients:', updatedClients.length);
-              console.log('📋 Remaining client IDs:', updatedClients.map(c => ({ id: c.id, name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}` })));
+              console.log('📋 Remaining client IDs:', updatedClients.map(c => ({ 
+                id: c.id, 
+                normalized: c.id?.toString().trim(),
+                name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}` 
+              })));
               
               // Safety check - ensure we only removed one client
               const deletedCount = prevClients.length - updatedClients.length;
@@ -3203,7 +3231,9 @@
                   expected: 1,
                   actual: deletedCount,
                   beforeCount: prevClients.length,
-                  afterCount: updatedClients.length
+                  afterCount: updatedClients.length,
+                  targetId: targetId,
+                  originalTargetId: client.id
                 });
                 alert(`❌ Delete operation failed: ${deletedCount} clients would be deleted instead of 1. Operation cancelled.`);
                 return prevClients; // Cancel the operation
