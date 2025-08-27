@@ -10,7 +10,10 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         .gradient-bg {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+        .red-gradient {
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
         }
         .card-hover {
             transition: all 0.3s ease;
@@ -88,7 +91,7 @@
                     className: 'bg-gray-800 rounded-xl p-8 max-w-md w-full animate-fade-in'
                 },
                     React.createElement('div', { className: 'flex justify-between items-center mb-6' },
-                        React.createElement('h2', { className: 'text-2xl font-bold text-blue-300' },
+                        React.createElement('h2', { className: 'text-2xl font-bold text-red-300' },
                             isLogin ? 'Welcome Back' : 'Create Account'
                         ),
                         React.createElement('button', {
@@ -147,20 +150,20 @@
                         React.createElement('button', {
                             type: 'submit',
                             disabled: loading,
-                            className: 'w-full bg-blue-600 text-white py-3 rounded font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50'
+                            className: 'w-full bg-red-600 text-white py-3 rounded font-semibold hover:bg-red-700 transition-colors disabled:opacity-50'
                         }, loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')),
 
                         React.createElement('div', { className: 'text-center pt-4' },
                             React.createElement('button', {
                                 type: 'button',
                                 onClick: () => setIsLogin(!isLogin),
-                                className: 'text-blue-300 hover:text-blue-200 text-sm'
+                                className: 'text-red-300 hover:text-red-200 text-sm'
                             }, isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in")
                         )
                     ),
 
                     isLogin && React.createElement('div', { className: 'mt-6 p-4 bg-gray-700 rounded text-sm' },
-                        React.createElement('p', { className: 'text-yellow-300 mb-2' }, '🎯 Demo Access:'),
+                        React.createElement('p', { className: 'text-red-300 mb-2' }, '🎯 Demo Access:'),
                         React.createElement('p', null, 'Email: rodrigo@clientflow360.com'),
                         React.createElement('p', null, 'Password: demo123')
                     )
@@ -172,7 +175,7 @@
         function DashboardPreview() {
             return React.createElement('div', { className: 'bg-gray-800 rounded-xl p-6 animate-slide-up' },
                 React.createElement('div', { className: 'flex items-center justify-between mb-6' },
-                    React.createElement('h3', { className: 'text-xl font-bold text-blue-300' }, '🏠 CLIENT FLOW 360 Dashboard'),
+                    React.createElement('h3', { className: 'text-xl font-bold text-red-300' }, '🏠 CLIENT FLOW 360 Dashboard'),
                     React.createElement('div', { className: 'flex space-x-2' },
                         React.createElement('div', { className: 'w-3 h-3 bg-red-500 rounded-full' }),
                         React.createElement('div', { className: 'w-3 h-3 bg-yellow-500 rounded-full' }),
@@ -182,7 +185,7 @@
 
                 // Stats Cards
                 React.createElement('div', { className: 'grid grid-cols-4 gap-4 mb-6' },
-                    React.createElement('div', { className: 'bg-blue-600 p-4 rounded-lg text-center' },
+                    React.createElement('div', { className: 'bg-red-600 p-4 rounded-lg text-center' },
                         React.createElement('div', { className: 'text-2xl font-bold' }, '47'),
                         React.createElement('div', { className: 'text-sm opacity-80' }, 'Active Clients')
                     ),
@@ -202,7 +205,7 @@
 
                 // Sample Client List
                 React.createElement('div', { className: 'bg-gray-700 rounded-lg p-4' },
-                    React.createElement('h4', { className: 'font-semibold mb-4 text-blue-300' }, 'Recent Clients'),
+                    React.createElement('h4', { className: 'font-semibold mb-4 text-red-300' }, 'Recent Clients'),
                     React.createElement('div', { className: 'space-y-3' },
                         ['Sarah Chen', 'Mike Johnson', 'Emily Rodriguez'].map((name, i) =>
                             React.createElement('div', { 
@@ -260,7 +263,11 @@
                 React.createElement('header', { className: 'gradient-bg py-6 px-4' },
                     React.createElement('div', { className: 'max-w-6xl mx-auto flex items-center justify-between' },
                         React.createElement('div', { className: 'flex items-center space-x-3' },
-                            React.createElement('div', { className: 'text-3xl' }, '🏠'),
+                            React.createElement('img', { 
+                                src: 'https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96',
+                                alt: 'CLIENT FLOW 360',
+                                className: 'h-10 w-auto'
+                            }),
                             React.createElement('h1', { className: 'text-2xl font-bold' }, 'CLIENT FLOW 360')
                         ),
                         React.createElement('nav', { className: 'hidden md:flex items-center space-x-8' },
@@ -287,11 +294,11 @@
                         React.createElement('div', { className: 'flex flex-col sm:flex-row gap-4 justify-center animate-slide-up' },
                             React.createElement('button', {
                                 onClick: () => setShowAuth(true),
-                                className: 'bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors card-hover'
+                                className: 'bg-white text-red-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors card-hover'
                             }, '🚀 Start Free Trial'),
                             React.createElement('button', {
                                 onClick: () => document.getElementById('demo').scrollIntoView({ behavior: 'smooth' }),
-                                className: 'border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors'
+                                className: 'border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-red-600 transition-colors'
                             }, '👀 See Demo')
                         )
                     )
@@ -301,7 +308,7 @@
                 React.createElement('section', { id: 'features', className: 'py-20 px-4 bg-gray-800' },
                     React.createElement('div', { className: 'max-w-6xl mx-auto' },
                         React.createElement('div', { className: 'text-center mb-16' },
-                            React.createElement('h3', { className: 'text-4xl font-bold mb-4 text-blue-300' }, 'Powerful Features'),
+                            React.createElement('h3', { className: 'text-4xl font-bold mb-4 text-red-300' }, 'Powerful Features'),
                             React.createElement('p', { className: 'text-xl text-gray-300' }, 'Everything you need to manage your real estate business')
                         ),
                         React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8' },
@@ -318,7 +325,7 @@
                                     className: 'bg-gray-700 p-6 rounded-xl card-hover animate-fade-in'
                                 },
                                     React.createElement('div', { className: 'text-4xl mb-4' }, feature.icon),
-                                    React.createElement('h4', { className: 'text-xl font-bold mb-3 text-blue-300' }, feature.title),
+                                    React.createElement('h4', { className: 'text-xl font-bold mb-3 text-red-300' }, feature.title),
                                     React.createElement('p', { className: 'text-gray-300' }, feature.desc)
                                 )
                             )
@@ -330,7 +337,7 @@
                 React.createElement('section', { id: 'demo', className: 'py-20 px-4 bg-gray-900' },
                     React.createElement('div', { className: 'max-w-6xl mx-auto' },
                         React.createElement('div', { className: 'text-center mb-12' },
-                            React.createElement('h3', { className: 'text-4xl font-bold mb-4 text-blue-300' }, 'See It In Action'),
+                            React.createElement('h3', { className: 'text-4xl font-bold mb-4 text-red-300' }, 'See It In Action'),
                             React.createElement('p', { className: 'text-xl text-gray-300' }, 'Experience the Netflix-style interface designed for real estate professionals')
                         ),
                         React.createElement(DashboardPreview)
@@ -346,7 +353,7 @@
                         ),
                         React.createElement('button', {
                             onClick: () => setShowAuth(true),
-                            className: 'bg-white text-blue-600 px-12 py-4 rounded-lg font-bold text-xl hover:bg-gray-100 transition-colors card-hover'
+                            className: 'bg-white text-red-600 px-12 py-4 rounded-lg font-bold text-xl hover:bg-gray-100 transition-colors card-hover'
                         }, '🎯 Get Started Today')
                     )
                 ),
@@ -355,7 +362,11 @@
                 React.createElement('footer', { className: 'bg-gray-800 py-12 px-4' },
                     React.createElement('div', { className: 'max-w-6xl mx-auto text-center' },
                         React.createElement('div', { className: 'flex items-center justify-center space-x-3 mb-4' },
-                            React.createElement('div', { className: 'text-2xl' }, '🏠'),
+                            React.createElement('img', { 
+                                src: 'https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96',
+                                alt: 'CLIENT FLOW 360',
+                                className: 'h-8 w-auto'
+                            }),
                             React.createElement('h4', { className: 'text-xl font-bold' }, 'CLIENT FLOW 360')
                         ),
                         React.createElement('p', { className: 'text-gray-400 mb-6' }, 

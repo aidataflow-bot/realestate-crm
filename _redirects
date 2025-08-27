@@ -1,0 +1,5 @@
+# Cloudflare Pages redirects for SPA routing
+/           /landing.html   200
+/index.html /index.html     200
+/landing.html /landing.html 200
+/*          /landing.html   200
