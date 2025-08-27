@@ -1486,7 +1486,10 @@
             setShowVoiceTaskModal,
             taskFormData,
             setTaskFormData,
-            saveTask
+            saveTask,
+            // Add user and storage functions for client delete
+            user,
+            saveUserClients
           }),
 
           showCallModal && React.createElement(CallLogModal, {
@@ -2902,7 +2905,10 @@
         setShowVoiceTaskModal,
         taskFormData,
         setTaskFormData,
-        saveTask
+        saveTask,
+        // User and storage functions for client delete
+        user,
+        saveUserClients
       }) {
         const [activeTab, setActiveTab] = useState('overview');
         const [isEditing, setIsEditing] = useState(false);
@@ -3306,13 +3312,26 @@
                       '🎂 Birth Date: ', 
                       React.createElement('span', { className: 'ml-2' }, 
                         (() => {
-                          const dateStr = client.birthday || client.birthDate;
-                          // Fix timezone issue by parsing date parts manually
-                          const [year, month, day] = dateStr.split('-');
-                          const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                          return localDate.toLocaleDateString('en-US', { 
-                            month: 'long', day: 'numeric', year: 'numeric' 
-                          });
+                          try {
+                            const dateStr = client.birthday || client.birthDate;
+                            if (!dateStr) return 'Not provided';
+                            
+                            // Fix timezone issue by parsing date parts manually
+                            const dateParts = dateStr.split('-');
+                            if (dateParts.length !== 3) return dateStr; // Return original if not in expected format
+                            
+                            const [year, month, day] = dateParts;
+                            const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                            
+                            if (isNaN(localDate.getTime())) return dateStr; // Return original if invalid date
+                            
+                            return localDate.toLocaleDateString('en-US', { 
+                              month: 'long', day: 'numeric', year: 'numeric' 
+                            });
+                          } catch (error) {
+                            console.error('Date parsing error:', error);
+                            return client.birthday || client.birthDate || 'Invalid date';
+                          }
                         })()
                       )
                     ),
@@ -4349,8 +4368,11 @@
           state: '',
           zipCode: '',
           
-          // Property Interest
-          propertyAddressInterest: '',
+          // Property Interest (Structured)
+          propStreet: '',
+          propCity: '',
+          propState: '',
+          propZipCode: '',
           
           // Personal Information
           birthDate: '',
@@ -4383,8 +4405,14 @@
               state: formData.state,
               zipCode: formData.zipCode
             },
-            propertiesOfInterest: formData.propertyAddressInterest ? [{
-              address: formData.propertyAddressInterest,
+            propertiesOfInterest: (formData.propStreet || formData.propCity || formData.propState || formData.propZipCode) ? [{
+              address: [formData.propStreet, formData.propCity, formData.propState, formData.propZipCode]
+                .filter(part => part.trim())
+                .join(', '),
+              street: formData.propStreet,
+              city: formData.propCity,
+              state: formData.propState,
+              zipCode: formData.propZipCode,
               addedAt: new Date().toISOString()
             }] : []
           });
@@ -4502,13 +4530,37 @@
               // Property Interest Section
               React.createElement('div', { className: 'bg-gray-700 p-4 rounded-lg' },
                 React.createElement('h3', { className: 'text-lg font-semibold text-purple-400 mb-4' }, '🎯 Property Interest'),
-                React.createElement('textarea', {
-                  placeholder: 'Property Address of Interest (optional)',
-                  value: formData.propertyAddressInterest,
-                  onChange: (e) => handleChange('propertyAddressInterest', e.target.value),
-                  rows: 2,
-                  className: 'w-full p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-300'
-                })
+                React.createElement('p', { className: 'text-sm text-gray-300 mb-4' }, 'Enter details about the property your client is interested in (optional):'),
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'Street Address',
+                    value: formData.propStreet,
+                    onChange: (e) => handleChange('propStreet', e.target.value),
+                    className: 'md:col-span-2 p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-300'
+                  }),
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'City',
+                    value: formData.propCity,
+                    onChange: (e) => handleChange('propCity', e.target.value),
+                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-300'
+                  }),
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'State/Province',
+                    value: formData.propState,
+                    onChange: (e) => handleChange('propState', e.target.value),
+                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-300'
+                  }),
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'Zip/Postal Code',
+                    value: formData.propZipCode,
+                    onChange: (e) => handleChange('propZipCode', e.target.value),
+                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-300'
+                  })
+                )
               ),
 
               // Personal Information Section
