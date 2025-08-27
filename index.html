@@ -6,8 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="build-hash" content="1756248676" />
-    <title>CLIENT FLOW 360 - Netflix Style Real Estate CRM with Database v2.1 - NEW_SETTINGS_DEPLOY</title>
+    <meta name="build-hash" content="1756269000" />
+    <title>CLIENT FLOW 360 - Netflix Style Real Estate CRM with Database v2.4 - PRODUCTION_READY</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -49,11 +49,11 @@
   <body>
     <div id="root"></div>
     <script type="module">
-      // Complete Netflix-style CRM with CLIENT FLOW 360 branding + Database Integration
-      // CACHE BUST: BUILD:1756248676 - FORCE PRODUCTION REFRESH
+      // Complete Netflix-style CRM with CLIENT FLOW 360 branding + Database Integration  
+      // CACHE BUST: BUILD:1756269000 - PRODUCTION READY
       const { useState, useEffect, useCallback } = React;
       
-      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v2.1 - API_HOTFIX_1756248676 - PRODUCTION REFRESH...');
+      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v2.4 - PRODUCTION_READY_1756269000 - FIXED CONNECTION ISSUE...');
       
       // API Service
       const API = {
@@ -221,13 +221,24 @@
           const checkAPIHealth = async () => {
             try {
               console.log('🔍 Checking API health...');
+              console.log('📡 API base URL:', API.baseURL);
               const health = await API.health();
+              console.log('✅ Health check response:', health);
+              console.log('🎯 Setting apiHealth state to:', health);
               setApiHealth(health);
               console.log('✅ API connection successful:', health);
             } catch (error) {
               console.error('❌ API connection failed:', error);
+              console.error('❌ Error details:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                stack: error.stack
+              });
               setError('Database connection failed. Using demo mode.');
-              setApiHealth({ status: 'error', storage: 'Offline' });
+              const offlineHealth = { status: 'error', storage: 'Offline' };
+              console.log('🔴 Setting offline health state:', offlineHealth);
+              setApiHealth(offlineHealth);
             }
           };
           
@@ -406,11 +417,11 @@
                 className: 'text-2xl font-bold text-red-500',
                 style: { fontFamily: 'Arial, sans-serif', letterSpacing: '-0.5px' }
               }, 'CLIENT FLOW 360'),
-              apiHealth && React.createElement('div', { 
+              React.createElement('div', { 
                 className: `text-xs px-2 py-1 rounded ${
-                  apiHealth.status === 'ok' ? 'bg-green-600 text-green-100' : 'bg-red-600 text-red-100'
+                  apiHealth && apiHealth.status === 'ok' ? 'bg-green-600 text-green-100' : 'bg-red-600 text-red-100'
                 }`
-              }, `DB: ${apiHealth.storage}`)
+              }, apiHealth ? `DB: ${apiHealth.storage}` : 'DB: Connecting...')
             ),
             React.createElement('div', { className: 'flex items-center space-x-4' },
               React.createElement('span', { className: 'text-sm' }, `Welcome, ${user.firstName}!`),
