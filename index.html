@@ -234,7 +234,24 @@
         const [user, setUser] = useState(() => {
           try {
             const userData = sessionStorage.getItem('cf360_user');
-            return userData ? JSON.parse(userData) : null;
+            if (userData) {
+              const parsedUser = JSON.parse(userData);
+              
+              // CRITICAL FIX: Convert userType to accountType for beta users
+              if (parsedUser.userType && !parsedUser.accountType) {
+                console.log('🔄 Converting userType to accountType for compatibility:', {
+                  email: parsedUser.email,
+                  userType: parsedUser.userType,
+                  convertingTo: parsedUser.userType === 'demo' ? 'admin' : parsedUser.userType
+                });
+                
+                // Convert demo users to admin, keep beta as beta
+                parsedUser.accountType = parsedUser.userType === 'demo' ? 'admin' : parsedUser.userType;
+              }
+              
+              return parsedUser;
+            }
+            return null;
           } catch {
             return null;
           }
