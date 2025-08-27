@@ -798,16 +798,24 @@
               ],
               todos: [
                 {
+                  id: 'task-sarah-1',
                   text: 'Schedule Beverly Hills property tour',
+                  title: 'Schedule Beverly Hills property tour',
                   completed: false,
                   dueDate: '2024-12-28',
-                  priority: 'high'
+                  priority: 'high',
+                  type: 'showing',
+                  createdAt: '2024-12-20T10:00:00Z'
                 },
                 {
+                  id: 'task-sarah-2',
                   text: 'Send market analysis report',
+                  title: 'Send market analysis report',
                   completed: false, 
                   dueDate: '2024-12-30',
-                  priority: 'medium'
+                  priority: 'medium',
+                  type: 'documentation',
+                  createdAt: '2024-12-21T14:30:00Z'
                 }
               ],
               propertiesOfInterest: [
@@ -863,10 +871,14 @@
               transactions: [],
               todos: [
                 {
+                  id: 'task-marcus-1',
                   text: 'Research ocean view condos in Santa Monica',
+                  title: 'Research ocean view condos in Santa Monica',
                   completed: false,
                   dueDate: '2024-12-26',
-                  priority: 'high'
+                  priority: 'high',
+                  type: 'listing',
+                  createdAt: '2024-12-19T16:45:00Z'
                 }
               ],
               propertiesOfInterest: [
@@ -904,16 +916,24 @@
               transactions: [],
               todos: [
                 {
+                  id: 'task-jennifer-1',
                   text: 'Find mid-century modern homes in West Hollywood',
+                  title: 'Find mid-century modern homes in West Hollywood',
                   completed: true,
                   dueDate: '2024-12-20',
-                  priority: 'medium'
+                  priority: 'medium',
+                  type: 'listing',
+                  createdAt: '2024-12-15T09:30:00Z'
                 },
                 {
+                  id: 'task-jennifer-2',
                   text: 'Schedule architecture tour',
+                  title: 'Schedule architecture tour',
                   completed: false,
                   dueDate: '2024-12-29',
-                  priority: 'low'
+                  priority: 'low',
+                  type: 'showing',
+                  createdAt: '2024-12-22T11:15:00Z'
                 }
               ],
               propertiesOfInterest: []
@@ -3289,9 +3309,13 @@
                             setClients(prevClients => {
                               const newClients = prevClients.map(c => {
                                 if (c.id === client.id) {
-                                  const updatedTodos = (c.todos || []).map(t => {
+                                  const updatedTodos = (c.todos || []).map((t, tIndex) => {
                                     console.log('🔍 Comparing task IDs:', t.id, 'vs', task.id);
-                                    return t.id === task.id ? updatedTask : t;
+                                    // Use ID if available, otherwise fall back to text and index comparison
+                                    const isMatch = t.id && task.id ? 
+                                      t.id === task.id : 
+                                      (t.text === task.text && t.dueDate === task.dueDate);
+                                    return isMatch ? updatedTask : t;
                                   });
                                   console.log('📝 Updated todos for client:', updatedTodos);
                                   return { ...c, todos: updatedTodos };
@@ -3304,9 +3328,12 @@
                             // Force re-render by updating selectedClient
                             if (selectedClient && selectedClient.id === client.id) {
                               setSelectedClient(prev => {
-                                const updatedTodos = (prev.todos || []).map(t => 
-                                  t.id === task.id ? updatedTask : t
-                                );
+                                const updatedTodos = (prev.todos || []).map(t => {
+                                  const isMatch = t.id && task.id ? 
+                                    t.id === task.id : 
+                                    (t.text === task.text && t.dueDate === task.dueDate);
+                                  return isMatch ? updatedTask : t;
+                                });
                                 return { ...prev, todos: updatedTodos };
                               });
                             }
@@ -3669,8 +3696,12 @@
                             const newClients = prevClients.map(c => {
                               if (c.id === client.id) {
                                 const updatedTodos = (c.todos || []).map(t => {
-                                  console.log('🔍 Modal comparing task IDs:', t.id, 'vs', task.id, 'Match:', t.id === task.id);
-                                  return t.id === task.id ? updatedTask : t;
+                                  console.log('🔍 Modal comparing task IDs:', t.id, 'vs', task.id);
+                                  const isMatch = t.id && task.id ? 
+                                    t.id === task.id : 
+                                    (t.text === task.text && t.dueDate === task.dueDate);
+                                  console.log('🎯 Modal match result:', isMatch);
+                                  return isMatch ? updatedTask : t;
                                 });
                                 console.log('📝 Modal updated todos:', updatedTodos);
                                 return { ...c, todos: updatedTodos };
@@ -3684,7 +3715,10 @@
                           setSelectedClient(prev => {
                             const updatedTodos = (prev.todos || []).map(t => {
                               console.log('🔍 SelectedClient comparing:', t.id, 'vs', task.id);
-                              return t.id === task.id ? updatedTask : t;
+                              const isMatch = t.id && task.id ? 
+                                t.id === task.id : 
+                                (t.text === task.text && t.dueDate === task.dueDate);
+                              return isMatch ? updatedTask : t;
                             });
                             return { ...prev, todos: updatedTodos };
                           });
