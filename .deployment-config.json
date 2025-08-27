@@ -1,0 +1,32 @@
+{
+  "deployment": {
+    "platform": "vercel",
+    "auto_github_deploy": true,
+    "github_repo": "aidataflow-bot/realestate-crm",
+    "primary_branch": "main",
+    "development_branch": "genspark_ai_developer",
+    "auto_create_pr": true,
+    "squash_commits": true,
+    "cloudflare_project_name": "client-flow-360-crm"
+  },
+  "project": {
+    "name": "CLIENT FLOW 360 CRM",
+    "version": "2.1",
+    "build_output": "./",
+    "entry_file": "index.html",
+    "routing_file": "_redirects"
+  },
+  "authentication": {
+    "primary_email": "rodrigo@clientflow360.com",
+    "backup_email": "rodrigo@realtor.com",
+    "password": "admin123"
+  },
+  "features": {
+    "properties_tab_fixed": true,
+    "realtymole_api": true,
+    "demo_mode": true,
+    "voice_recognition": true
+  },
+  "last_updated": "2025-08-27T22:10:00Z",
+  "status": "production_ready"
+}
