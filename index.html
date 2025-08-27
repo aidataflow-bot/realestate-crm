@@ -341,51 +341,9 @@
               }
             }
             
-            // Default demo clients if no saved data
-            const demoClients = [
-              {
-                id: 'demo-1',
-                firstName: 'Sarah',
-                lastName: 'Johnson',
-                first_name: 'Sarah',
-                last_name: 'Johnson',
-                email: 'sarah.johnson@email.com',
-                phone: '(555) 123-4567',
-                role: 'BUYER',
-                stage: 'ACTIVE',
-                city: 'Los Angeles',
-                state: 'CA',
-                tags: ['First Time Buyer', 'High Priority'],
-                lifetimeNetCommission: 15000,
-                calls: [],
-                transactions: [],
-                todos: [],
-                propertiesOfInterest: []
-              },
-              {
-                id: 'demo-2',
-                firstName: 'Michael',
-                lastName: 'Chen',
-                first_name: 'Michael',
-                last_name: 'Chen',
-                email: 'michael.chen@email.com',
-                phone: '(555) 987-6543',
-                role: 'SELLER',
-                stage: 'ACTIVE',
-                city: 'San Francisco',
-                state: 'CA',
-                tags: ['Luxury', 'Repeat Client'],
-                lifetimeNetCommission: 25000,
-                calls: [],
-                transactions: [],
-                todos: [],
-                propertiesOfInterest: []
-              }
-            ];
-            
-            setClients(demoClients);
-            saveUserClients(user, demoClients);
-            console.log('✅ Loaded default demo clients');
+            // No saved data found - start with empty client list
+            console.log('📝 No saved clients found, starting with empty list');
+            setClients([]);
           } catch (error) {
             console.error('❌ Failed to load demo clients:', error);
             setClients([]);
@@ -1207,7 +1165,9 @@
               startVoiceRecognition,
               isListening,
               startVoiceTaskCreation,
-              isListeningForTask
+              isListeningForTask,
+              user,
+              saveUserClients
             }),
             
             currentView === 'dashboard' && React.createElement(DashboardView, { clients }),
@@ -1528,19 +1488,65 @@
       function ClientsView({ 
         clients, setClients, allTags, searchTerm, setSearchTerm, selectedTag, setSelectedTag, 
         setSelectedClient, setShowCallModal, setShowAddClientModal, setShowPropertyModal,
-        startVoiceRecognition, isListening, startVoiceTaskCreation, isListeningForTask 
+        startVoiceRecognition, isListening, startVoiceTaskCreation, isListeningForTask, 
+        user, saveUserClients
       }) {
+        const [selectedClients, setSelectedClients] = useState([]);
+        const [selectAll, setSelectAll] = useState(false);
+        
+        // Filter out demo clients from user data separation
+        const userClients = clients.filter(client => 
+          !client.isDemo && !client.id.includes('demo-') && !client.id.includes('beta-')
+        );
+        
+        // Handle bulk selection
+        const handleSelectAll = () => {
+          if (selectAll) {
+            setSelectedClients([]);
+          } else {
+            setSelectedClients(userClients.map(client => client.id));
+          }
+          setSelectAll(!selectAll);
+        };
+        
+        const handleSelectClient = (clientId) => {
+          setSelectedClients(prev => 
+            prev.includes(clientId) 
+              ? prev.filter(id => id !== clientId)
+              : [...prev, clientId]
+          );
+        };
+        
+        // Bulk delete function
+        const handleBulkDelete = () => {
+          if (selectedClients.length === 0) return;
+          
+          const confirmMessage = `Are you sure you want to delete ${selectedClients.length} client(s)? This action cannot be undone.`;
+          if (confirm(confirmMessage)) {
+            const updatedClients = clients.filter(client => !selectedClients.includes(client.id));
+            setClients(updatedClients);
+            saveUserClients(user, updatedClients);
+            setSelectedClients([]);
+            setSelectAll(false);
+            console.log(`✅ Deleted ${selectedClients.length} clients`);
+          }
+        };
         return React.createElement('div', null,
           React.createElement('div', { className: 'flex justify-between items-center mb-6' },
             React.createElement('div', null,
               React.createElement('h2', { className: 'text-3xl font-bold mb-1' }, 'My Clients'),
-              React.createElement('p', { className: 'text-gray-400' }, `${clients.length} active clients in your portfolio`)
+              React.createElement('p', { className: 'text-gray-400' }, `${userClients.length} active clients in your portfolio`)
             ),
             React.createElement('div', { className: 'flex space-x-3' },
               React.createElement('button', {
                 onClick: () => setShowAddClientModal(true),
                 className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors'
               }, '+ Add Client'),
+
+              selectedClients.length > 0 && React.createElement('button', {
+                onClick: handleBulkDelete,
+                className: 'bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors'
+              }, `🗑️ Delete ${selectedClients.length}`),
 
               React.createElement('button', {
                 onClick: startVoiceTaskCreation,
@@ -1551,6 +1557,26 @@
                     : 'bg-purple-600 text-white hover:bg-purple-700'
                 }`
               }, isListeningForTask ? '🎤 Task Listening...' : '📝 Voice Task')
+            )
+          ),
+
+          // Bulk Selection Controls
+          userClients.length > 0 && React.createElement('div', { className: 'mb-4 p-3 bg-gray-800 rounded flex items-center justify-between' },
+            React.createElement('label', { className: 'flex items-center space-x-2 cursor-pointer' },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: selectAll,
+                onChange: handleSelectAll,
+                className: 'rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500'
+              }),
+              React.createElement('span', { className: 'text-sm font-medium' }, 
+                selectAll ? 'Deselect All' : 'Select All'
+              )
+            ),
+            React.createElement('div', { className: 'text-sm text-gray-400' },
+              selectedClients.length > 0 
+                ? `${selectedClients.length} client(s) selected`
+                : 'No clients selected'
             )
           ),
 
@@ -1578,24 +1604,24 @@
           // Stats
           React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4 mb-6' },
             React.createElement('div', { className: 'bg-gray-800 p-4 rounded' },
-              React.createElement('div', { className: 'text-2xl font-bold text-green-400' }, clients.length),
+              React.createElement('div', { className: 'text-2xl font-bold text-green-400' }, userClients.length),
               React.createElement('div', { className: 'text-gray-400' }, 'Total Clients')
             ),
             React.createElement('div', { className: 'bg-gray-800 p-4 rounded' },
               React.createElement('div', { className: 'text-2xl font-bold text-blue-400' }, 
-                clients.filter(c => c.stage === 'ACTIVE').length
+                userClients.filter(c => c.stage === 'ACTIVE').length
               ),
               React.createElement('div', { className: 'text-gray-400' }, 'Active Deals')
             ),
             React.createElement('div', { className: 'bg-gray-800 p-4 rounded' },
               React.createElement('div', { className: 'text-2xl font-bold text-yellow-400' }, 
-                `$${clients.reduce((sum, c) => sum + (c.lifetimeNetCommission || 0), 0).toLocaleString()}`
+                `$${userClients.reduce((sum, c) => sum + (c.lifetimeNetCommission || 0), 0).toLocaleString()}`
               ),
               React.createElement('div', { className: 'text-gray-400' }, 'Total Commission')
             ),
             React.createElement('div', { className: 'bg-gray-800 p-4 rounded' },
               React.createElement('div', { className: 'text-2xl font-bold text-purple-400' }, 
-                clients.reduce((sum, c) => sum + (c.calls ? c.calls.length : 0), 0)
+                userClients.reduce((sum, c) => sum + (c.calls ? c.calls.length : 0), 0)
               ),
               React.createElement('div', { className: 'text-gray-400' }, 'Total Calls')
             )
@@ -1606,26 +1632,29 @@
             className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 pb-20 px-2 sm:px-0',
             style: { minHeight: '400px' } // Ensure space for hover overlays
           },
-            clients.map(client => React.createElement(ClientCard, {
+            userClients.map(client => React.createElement(ClientCard, {
               key: client.id,
               client,
               onViewDetails: () => setSelectedClient(client),
               onLogCall: () => setShowCallModal(client),
-              onManageProperties: () => setShowPropertyModal(client)
+              onManageProperties: () => setShowPropertyModal(client),
+              isSelected: selectedClients.includes(client.id),
+              onSelect: handleSelectClient,
+              showCheckbox: true
             }))
           ),
 
-          clients.length === 0 && React.createElement('div', { 
+          userClients.length === 0 && React.createElement('div', { 
             className: 'text-center py-12 text-gray-400'
           }, 
             React.createElement('p', { className: 'text-xl mb-2' }, 'No clients found'),
-            React.createElement('p', null, 'Try adjusting your search or filters')
+            React.createElement('p', null, 'Try adjusting your search or filters, or add your first client!')
           )
         );
       }
 
       // Client Card Component - Netflix Movie Tile Style
-      function ClientCard({ client, onViewDetails, onLogCall, onManageProperties }) {
+      function ClientCard({ client, onViewDetails, onLogCall, onManageProperties, isSelected, onSelect, showCheckbox }) {
         const clientName = `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`;
         const initials = `${(client.firstName || client.first_name || 'A')[0]}${(client.lastName || client.last_name || 'A')[0]}`;
         
@@ -1673,10 +1702,29 @@
         const gradient = gradients[gradientIndex];
 
         return React.createElement('div', { 
-          className: 'relative group cursor-pointer transform transition-all duration-300 hover:scale-105',
-          onClick: onViewDetails,
+          className: `relative group cursor-pointer transform transition-all duration-300 hover:scale-105 ${isSelected ? 'ring-4 ring-red-500' : ''}`,
+          onClick: (e) => {
+            if (showCheckbox && onSelect) {
+              e.preventDefault();
+              onSelect(client.id);
+            } else {
+              onViewDetails();
+            }
+          },
           style: { aspectRatio: '16/9' }
         },
+          // Selection checkbox (top-left corner)
+          showCheckbox && React.createElement('div', { 
+            className: 'absolute top-3 left-3 z-10',
+            onClick: (e) => e.stopPropagation()
+          },
+            React.createElement('input', {
+              type: 'checkbox',
+              checked: isSelected,
+              onChange: () => onSelect(client.id),
+              className: 'w-5 h-5 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500'
+            })
+          ),
           // Main Netflix-style tile
           React.createElement('div', { 
             className: `relative w-full h-full bg-gradient-to-br ${gradient} rounded-lg overflow-hidden shadow-xl`
@@ -4859,7 +4907,7 @@
         );
       }
 
-      // Add Client Modal Component
+      // Add Client Modal Component  
       function AddClientModal({ onClose, onAdd }) {
         const [formData, setFormData] = useState({
           firstName: '',
@@ -4872,15 +4920,29 @@
           spouse: '',
           children: '',
           notes: '',
-          tags: ''
+          tags: '',
+          budget: '',
+          propertyType: 'house',
+          stage: 'LEAD',
+          source: 'referral'
         });
 
         const handleSubmit = (e) => {
           e.preventDefault();
-          onAdd({
+          const newClient = {
             ...formData,
-            tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-          });
+            id: 'client-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+            tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+            createdAt: new Date().toISOString(),
+            isDemo: false,
+            budget: parseInt(formData.budget) || null,
+            lifetimeNetCommission: 0,
+            calls: [],
+            propertiesOfInterest: [],
+            todos: [],
+            transactions: []
+          };
+          onAdd(newClient);
         };
 
         const handleChange = (field, value) => {
@@ -4892,7 +4954,7 @@
           onClick: onClose
         },
           React.createElement('div', { 
-            className: 'bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto',
+            className: 'bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto',
             onClick: (e) => e.stopPropagation()
           },
             React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Add New Client'),
@@ -4971,6 +5033,51 @@
                   onChange: (e) => handleChange('children', e.target.value),
                   className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
                 })
+              ),
+              
+              // Real Estate Specific Fields
+              React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+                React.createElement('input', {
+                  type: 'number',
+                  placeholder: 'Budget ($)',
+                  value: formData.budget,
+                  onChange: (e) => handleChange('budget', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                }),
+                React.createElement('select', {
+                  value: formData.propertyType,
+                  onChange: (e) => handleChange('propertyType', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                },
+                  React.createElement('option', { value: 'house' }, 'House'),
+                  React.createElement('option', { value: 'condo' }, 'Condo'),
+                  React.createElement('option', { value: 'apartment' }, 'Apartment'),
+                  React.createElement('option', { value: 'townhouse' }, 'Townhouse'),
+                  React.createElement('option', { value: 'commercial' }, 'Commercial')
+                )
+              ),
+              React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+                React.createElement('select', {
+                  value: formData.stage,
+                  onChange: (e) => handleChange('stage', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                },
+                  React.createElement('option', { value: 'LEAD' }, 'Lead'),
+                  React.createElement('option', { value: 'ACTIVE' }, 'Active'),
+                  React.createElement('option', { value: 'PENDING' }, 'Pending'),
+                  React.createElement('option', { value: 'CLOSED' }, 'Closed')
+                ),
+                React.createElement('select', {
+                  value: formData.source,
+                  onChange: (e) => handleChange('source', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                },
+                  React.createElement('option', { value: 'referral' }, 'Referral'),
+                  React.createElement('option', { value: 'website' }, 'Website'),
+                  React.createElement('option', { value: 'social' }, 'Social Media'),
+                  React.createElement('option', { value: 'coldcall' }, 'Cold Call'),
+                  React.createElement('option', { value: 'advertisement' }, 'Advertisement')
+                )
               ),
               React.createElement('input', {
                 type: 'text',
