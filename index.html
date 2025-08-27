@@ -1979,12 +1979,18 @@
           try {
             // Start the call
             console.log(`📞 Starting call to ${phoneNumber}...`);
+            console.log('📞 Client object:', client);
+            console.log('📞 Client ID:', client?.id);
+            console.log('📞 Passed clientId:', clientId);
             
+            const finalClientId = clientId || client?.id;
             const callData = {
               phoneNumber,
-              clientId: clientId || client?.id,
+              clientId: finalClientId,
               clientName: client ? `${client.firstName || client.first_name} ${client.lastName || client.last_name}` : 'Unknown Client'
             };
+            
+            console.log('📞 Final call data:', callData);
             
             setActiveCall(callData);
             setCallStartTime(new Date().getTime());
@@ -2002,7 +2008,15 @@
 
         const handleEndCall = async (outcome, notes, followUpDays = 7, callCategory = 'general') => {
           try {
-            if (!activeCall) return;
+            console.log('🎯 handleEndCall called with:', { outcome, notes, followUpDays, callCategory });
+            console.log('🎯 activeCall:', activeCall);
+            console.log('🎯 callStartTime:', callStartTime);
+            console.log('🎯 callDuration:', callDuration);
+            
+            if (!activeCall) {
+              console.log('❌ No active call - exiting handleEndCall');
+              return;
+            }
             
             const finalDuration = Math.floor(callDuration / 60); // Convert to minutes
             const followUpDate = followUpDays > 0 ? 
@@ -2028,24 +2042,36 @@
 
             // Update clients array with new call record
             if (setClients) {
-              setClients(prevClients => 
-                prevClients.map(clientItem => {
+              console.log('🔄 Updating clients array with new call record...');
+              console.log('🔄 Looking for client ID:', activeCall.clientId);
+              
+              setClients(prevClients => {
+                console.log('🔄 Previous clients:', prevClients.length);
+                const updatedClients = prevClients.map(clientItem => {
+                  console.log('🔄 Checking client:', clientItem.id, 'vs', activeCall.clientId);
                   if (clientItem.id === activeCall.clientId) {
                     const updatedClient = { 
                       ...clientItem, 
                       calls: [...(clientItem.calls || []), callRecord] 
                     };
+                    console.log('✅ Found matching client, updating calls from', clientItem.calls?.length || 0, 'to', updatedClient.calls.length);
                     
                     // Also update the selected client to trigger re-render
                     if (setSelectedClient && client.id === activeCall.clientId) {
+                      console.log('✅ Also updating selectedClient');
                       setSelectedClient(updatedClient);
                     }
                     
                     return updatedClient;
                   }
                   return clientItem;
-                })
-              );
+                });
+                
+                console.log('🔄 Updated clients array returned');
+                return updatedClients;
+              });
+            } else {
+              console.log('❌ setClients function not available!');
             }
 
             console.log('✅ Call record created:', callRecord);
@@ -3204,6 +3230,13 @@
 
         const handleSubmit = () => {
           const finalNotes = notes || quickNoteTemplate || `Called ${callData?.phoneNumber}`;
+          console.log('📞 AdvancedCallLogModal handleSubmit called');
+          console.log('📞 Call data:', callData);
+          console.log('📞 Outcome:', outcome);
+          console.log('📞 Notes:', finalNotes);
+          console.log('📞 Follow-up days:', followUpDays);
+          console.log('📞 Category:', callCategory);
+          
           onEndCall(outcome, finalNotes, followUpDays, callCategory);
           onClose();
         };
