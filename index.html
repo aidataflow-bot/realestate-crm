@@ -505,6 +505,36 @@
               dueDate = nextWeek.toISOString().split('T')[0];
             } else if (transcript.toLowerCase().includes('today')) {
               dueDate = today.toISOString().split('T')[0];
+            } else {
+              // Enhanced natural language date parsing
+              const monthNames = {
+                'january': 0, 'jan': 0, 'february': 1, 'feb': 1, 'march': 2, 'mar': 2,
+                'april': 3, 'apr': 3, 'may': 4, 'june': 5, 'jun': 5, 'july': 6, 'jul': 6,
+                'august': 7, 'aug': 7, 'september': 8, 'sep': 8, 'sept': 8, 'october': 9, 'oct': 9,
+                'november': 10, 'nov': 10, 'december': 11, 'dec': 11
+              };
+              
+              // Try to match patterns like "August 29th", "Aug 29", "August 29"
+              const dateRegex = /(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|sept|october|oct|november|nov|december|dec)\s+(\d{1,2})(?:st|nd|rd|th)?/i;
+              const match = transcript.match(dateRegex);
+              
+              if (match) {
+                const monthName = match[1].toLowerCase();
+                const day = parseInt(match[2]);
+                const monthIndex = monthNames[monthName];
+                
+                if (monthIndex !== undefined && day >= 1 && day <= 31) {
+                  const targetDate = new Date(today.getFullYear(), monthIndex, day);
+                  
+                  // If the date is in the past, assume next year
+                  if (targetDate < today) {
+                    targetDate.setFullYear(today.getFullYear() + 1);
+                  }
+                  
+                  dueDate = targetDate.toISOString().split('T')[0];
+                  console.log(`📅 Parsed date: ${monthName} ${day} -> ${dueDate}`);
+                }
+              }
             }
             
             // Extract time if mentioned
@@ -615,38 +645,55 @@
           }
         };
         
-        // Save task to client or general tasks
+        // Save task to client or general tasks (handles both create and update)
         const saveTask = (taskData) => {
           try {
-            const newTask = {
-              id: 'task-' + Date.now(),
+            const isEditing = taskData.isEditing && taskData.id;
+            
+            const taskToSave = {
               ...taskData,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
+              id: isEditing ? taskData.id : 'task-' + Date.now(),
+              createdAt: isEditing ? taskData.createdAt : new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              completed: taskData.status === 'completed'
             };
             
-            console.log('💾 Saving task:', newTask);
+            // Remove editing flags
+            delete taskToSave.isEditing;
+            delete taskToSave.isGeneralTask;
             
-            if (taskData.clientId) {
-              // Add to specific client
+            console.log(isEditing ? '✏️ Updating task:' : '💾 Creating task:', taskToSave);
+            
+            if (taskData.clientId && taskData.clientId !== 'rodrigo-admin') {
+              // Update specific client tasks
               setClients(prevClients => 
-                prevClients.map(client => 
-                  client.id === taskData.clientId 
-                    ? { ...client, todos: [...(client.todos || []), newTask] }
-                    : client
-                )
+                prevClients.map(client => {
+                  if (client.id === taskData.clientId) {
+                    const updatedTodos = isEditing 
+                      ? (client.todos || []).map(task => task.id === taskToSave.id ? taskToSave : task)
+                      : [...(client.todos || []), taskToSave];
+                    return { ...client, todos: updatedTodos };
+                  }
+                  return client;
+                })
               );
               
               // Update selected client if it's the same one
               if (selectedClient && selectedClient.id === taskData.clientId) {
-                setSelectedClient(prev => ({
-                  ...prev,
-                  todos: [...(prev.todos || []), newTask]
-                }));
+                setSelectedClient(prev => {
+                  const updatedTodos = isEditing 
+                    ? (prev.todos || []).map(task => task.id === taskToSave.id ? taskToSave : task)
+                    : [...(prev.todos || []), taskToSave];
+                  return { ...prev, todos: updatedTodos };
+                });
               }
             } else {
-              // Add to general tasks (no client assigned)
-              setGeneralTasks(prevTasks => [...prevTasks, newTask]);
+              // Update general tasks (Rodrigo's tasks)
+              setGeneralTasks(prevTasks => 
+                isEditing 
+                  ? prevTasks.map(task => task.id === taskToSave.id ? taskToSave : task)
+                  : [...prevTasks, taskToSave]
+              );
             }
             
             // Close modals and reset form
@@ -2516,7 +2563,27 @@
                       ),
                       
                       // Actions Column
-                      React.createElement('div', { className: 'col-span-1 flex justify-center' },
+                      React.createElement('div', { className: 'col-span-1 flex justify-center space-x-1' },
+                        React.createElement('button', {
+                          onClick: () => {
+                            setTaskFormData({
+                              id: task.id,
+                              title: task.title || task.text,
+                              description: task.description || task.notes || '',
+                              type: task.type || 'general',
+                              priority: task.priority || 'medium',
+                              dueDate: task.dueDate || '',
+                              time: task.time || '',
+                              clientId: task.clientId,
+                              clientName: task.clientName,
+                              status: task.completed ? 'completed' : 'pending',
+                              isEditing: true,
+                              isGeneralTask: task.isGeneralTask
+                            });
+                            setShowVoiceTaskModal(true);
+                          },
+                          className: 'p-1 rounded text-xs bg-blue-600 hover:bg-blue-700 text-blue-100 transition-colors'
+                        }, '✏️'),
                         React.createElement('button', {
                           onClick: () => handleDeleteTask(task.id, task.clientId, task.isGeneralTask),
                           className: 'p-1 rounded text-xs bg-red-600 hover:bg-red-700 text-red-100 transition-colors'
@@ -3210,21 +3277,33 @@
                       React.createElement('div', { className: 'flex items-center space-x-3' },
                         React.createElement('div', {
                           onClick: () => {
-                            // Find and update the task in the clients array
+                            // Update the task completion status
+                            const updatedCompleted = !task.completed;
+                            const updatedTask = { ...task, completed: updatedCompleted, completedAt: new Date().toISOString() };
+                            
+                            // Update clients array
                             setClients(prevClients => 
                               prevClients.map(c => 
                                 c.id === client.id 
                                   ? {
                                       ...c,
                                       todos: (c.todos || []).map(t => 
-                                        t.id === task.id 
-                                          ? { ...t, completed: !t.completed, completedAt: new Date().toISOString() }
-                                          : t
+                                        t.id === task.id ? updatedTask : t
                                       )
                                     }
                                   : c
                               )
                             );
+                            
+                            // Also update selectedClient if it matches
+                            if (selectedClient && selectedClient.id === client.id) {
+                              setSelectedClient(prev => ({
+                                ...prev,
+                                todos: (prev.todos || []).map(t => 
+                                  t.id === task.id ? updatedTask : t
+                                )
+                              }));
+                            }
                           },
                           className: `w-5 h-5 border-2 rounded cursor-pointer flex items-center justify-center transition-colors ${
                             task.completed 
@@ -3250,12 +3329,33 @@
                           )
                         )
                       ),
-                      React.createElement('span', { 
-                        className: `px-2 py-1 rounded text-xs ${
-                          task.priority === 'high' ? 'bg-red-600' :
-                          task.priority === 'medium' ? 'bg-yellow-600' : 'bg-green-600'
-                        }`
-                      }, task.priority || 'low')
+                      React.createElement('div', { className: 'flex items-center space-x-2' },
+                        React.createElement('span', { 
+                          className: `px-2 py-1 rounded text-xs ${
+                            task.priority === 'high' ? 'bg-red-600' :
+                            task.priority === 'medium' ? 'bg-yellow-600' : 'bg-green-600'
+                          }`
+                        }, task.priority || 'low'),
+                        React.createElement('button', {
+                          onClick: () => {
+                            setTaskFormData({
+                              id: task.id,
+                              title: task.text || task.title,
+                              description: task.description || task.notes || '',
+                              type: task.type || 'general',
+                              priority: task.priority || 'medium',
+                              dueDate: task.dueDate || '',
+                              time: task.time || '',
+                              clientId: client.id,
+                              clientName: `${client.firstName || client.first_name} ${client.lastName || client.last_name}`,
+                              status: task.completed ? 'completed' : 'pending',
+                              isEditing: true
+                            });
+                            setShowVoiceTaskModal(true);
+                          },
+                          className: 'text-xs bg-blue-600 px-2 py-1 rounded hover:bg-blue-700 text-white'
+                        }, '✏️')
+                      )
                     )
                   ),
                   pendingTasks.length > 3 && React.createElement('p', { className: 'text-xs text-gray-400 text-center pt-2' },
@@ -4436,9 +4536,13 @@
             React.createElement('div', { className: 'bg-gradient-to-r from-purple-600 to-blue-600 p-6 rounded-t-lg text-white' },
               React.createElement('div', { className: 'flex justify-between items-center' },
                 React.createElement('div', null,
-                  React.createElement('h3', { className: 'text-xl font-bold' }, '📝 Voice Task Creator'),
+                  React.createElement('h3', { className: 'text-xl font-bold' }, 
+                    formData.isEditing ? '✏️ Edit Task' : '📝 Voice Task Creator'
+                  ),
                   React.createElement('p', { className: 'text-sm opacity-90' }, 
-                    'Review and customize your voice-created task'
+                    formData.isEditing 
+                      ? 'Modify task details and settings'
+                      : 'Review and customize your voice-created task'
                   )
                 ),
                 React.createElement('button', {
@@ -4559,7 +4663,7 @@
                 React.createElement('button', {
                   type: 'submit',
                   className: 'flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold'
-                }, '✅ Create Task'),
+                }, formData.isEditing ? '✅ Update Task' : '✅ Create Task'),
                 React.createElement('button', {
                   type: 'button',
                   onClick: onClose,
