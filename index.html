@@ -1857,6 +1857,17 @@
         const clientName = `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`;
         const initials = `${(client.firstName || client.first_name || 'A')[0]}${(client.lastName || client.last_name || 'A')[0]}`;
         
+        // Debug client data when card is rendered
+        React.useEffect(() => {
+          console.log('🃏 ClientCard rendered with client:', {
+            clientId: client.id,
+            clientName: clientName,
+            clientObject: client,
+            hasId: 'id' in (client || {}),
+            idType: typeof client?.id
+          });
+        }, [client]);
+        
         // Birthday calculations
         const getBirthdayInfo = (birthdayStr) => {
           if (!birthdayStr) return null;
@@ -1984,7 +1995,17 @@
           },
             React.createElement('div', { className: 'flex space-x-3' },
               React.createElement('button', {
-                onClick: (e) => { e.stopPropagation(); onViewDetails(); },
+                onClick: (e) => { 
+                  e.stopPropagation(); 
+                  console.log('🔘 View Details clicked for client:', {
+                    clientId: client.id,
+                    clientName: clientName,
+                    clientObject: client,
+                    hasId: 'id' in (client || {}),
+                    idType: typeof client?.id
+                  });
+                  onViewDetails(); 
+                },
                 className: 'bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-gray-200 transition-colors flex items-center space-x-2'
               }, 
                 React.createElement('span', null, '▶'),
@@ -2910,6 +2931,17 @@
         user,
         saveUserClients
       }) {
+        // Debug client data received by modal
+        React.useEffect(() => {
+          console.log('🔍 ClientDetailModal received client:', {
+            client: client,
+            clientId: client?.id,
+            clientIdType: typeof client?.id,
+            clientName: client ? `${client.firstName || client.first_name} ${client.lastName || client.last_name}` : 'No client',
+            clientKeys: client ? Object.keys(client) : 'No client object'
+          });
+        }, [client]);
+        
         const [activeTab, setActiveTab] = useState('overview');
         const [isEditing, setIsEditing] = useState(false);
         const [editData, setEditData] = useState({});
@@ -3127,11 +3159,31 @@
               idLength: client.id?.toString().length
             });
             
+            // Enhanced debugging for client object structure
+            console.log('🔍 DETAILED CLIENT ANALYSIS:', {
+              clientObject: client,
+              clientObjectType: typeof client,
+              clientIsNull: client === null,
+              clientIsUndefined: client === undefined,
+              clientKeys: client ? Object.keys(client) : 'No client',
+              clientId: client?.id,
+              clientIdExists: 'id' in (client || {}),
+              clientIdValue: client?.id,
+              clientIdType: typeof client?.id,
+              clientStringified: JSON.stringify(client, null, 2)
+            });
+            
             // Normalize and validate the target client ID
-            const targetId = client.id?.toString().trim();
-            if (!targetId || targetId === 'undefined' || targetId === 'null') {
-              console.error('❌ CRITICAL ERROR: Client ID is invalid!', { originalId: client.id, normalizedId: targetId });
-              alert('❌ Cannot delete client: Invalid client ID');
+            const targetId = client?.id?.toString().trim();
+            if (!client || !client.id || !targetId || targetId === 'undefined' || targetId === 'null') {
+              console.error('❌ CRITICAL ERROR: Client or Client ID is invalid!', { 
+                clientExists: !!client,
+                originalId: client?.id, 
+                normalizedId: targetId,
+                clientObject: client,
+                errorSource: !client ? 'No client object' : !client.id ? 'Client missing ID property' : 'Invalid ID value'
+              });
+              alert(`❌ Cannot delete client: ${!client ? 'No client object received' : !client.id ? 'Client missing ID property' : 'Invalid client ID'}`);
               setLoading(false);
               setShowDeleteConfirm(false);
               return;
