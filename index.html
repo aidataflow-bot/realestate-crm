@@ -812,7 +812,7 @@
           return `cf360_clients_${user.email}`; // Beta users get their own isolated data
         };
 
-        // Load user-specific clients
+        // Load user-specific clients with aggressive data repair
         const loadUserClients = (user) => {
           console.log('📝 Loading user-specific clients for:', user.email);
           const clientKey = getUserClientKey(user);
@@ -822,40 +822,118 @@
             if (storedClients) {
               const parsedClients = JSON.parse(storedClients);
               
-              // CRITICAL FIX: Validate and restore missing client IDs
-              const validatedClients = parsedClients.map((client, index) => {
-                if (!client.id) {
-                  // Generate a fallback ID if missing
-                  const fallbackId = `client-${Date.now()}-${index}`;
-                  console.warn(`⚠️ Client missing ID, assigning fallback:`, {
-                    clientName: `${client.firstName || client.first_name} ${client.lastName || client.last_name}`,
-                    fallbackId: fallbackId
-                  });
-                  return { ...client, id: fallbackId };
-                }
-                return client;
-              });
-              
-              // Log client validation results
-              console.log('✅ Client validation completed:', {
-                totalClients: validatedClients.length,
-                clientsWithIds: validatedClients.filter(c => c.id).length,
-                clientDetails: validatedClients.map(c => ({
+              console.log('🔍 LEGACY DATA ANALYSIS - Raw stored clients:', {
+                totalClients: parsedClients.length,
+                rawData: parsedClients.map(c => ({
+                  hasId: !!c.id,
                   id: c.id,
-                  name: `${c.firstName || c.first_name} ${c.lastName || c.last_name}`
+                  idType: typeof c.id,
+                  name: `${c.firstName || c.first_name || 'Unknown'} ${c.lastName || c.last_name || 'Client'}`,
+                  keys: Object.keys(c || {})
                 }))
               });
               
-              setClients(validatedClients);
+              // AGGRESSIVE DATA REPAIR: Comprehensive client data migration
+              const repairedClients = parsedClients.map((client, index) => {
+                let repairedClient = { ...client };
+                let repairs = [];
+                
+                // 1. Fix missing or invalid ID
+                if (!repairedClient.id || typeof repairedClient.id !== 'string' || repairedClient.id.trim() === '') {
+                  const newId = `repaired-client-${Date.now()}-${index}`;
+                  repairedClient.id = newId;
+                  repairs.push(`ID: null -> ${newId}`);
+                }
+                
+                // 2. Ensure name fields exist in both formats
+                if (!repairedClient.firstName && repairedClient.first_name) {
+                  repairedClient.firstName = repairedClient.first_name;
+                  repairs.push('firstName: added from first_name');
+                }
+                if (!repairedClient.lastName && repairedClient.last_name) {
+                  repairedClient.lastName = repairedClient.last_name;
+                  repairs.push('lastName: added from last_name');
+                }
+                if (!repairedClient.first_name && repairedClient.firstName) {
+                  repairedClient.first_name = repairedClient.firstName;
+                  repairs.push('first_name: added from firstName');
+                }
+                if (!repairedClient.last_name && repairedClient.lastName) {
+                  repairedClient.last_name = repairedClient.lastName;
+                  repairs.push('last_name: added from lastName');
+                }
+                
+                // 3. Ensure required fields exist
+                if (!repairedClient.email) {
+                  repairedClient.email = `client${index}@example.com`;
+                  repairs.push('email: added placeholder');
+                }
+                if (!repairedClient.phone) {
+                  repairedClient.phone = '(555) 000-0000';
+                  repairs.push('phone: added placeholder');
+                }
+                
+                // 4. Ensure array fields are arrays
+                if (!Array.isArray(repairedClient.calls)) {
+                  repairedClient.calls = [];
+                  repairs.push('calls: converted to array');
+                }
+                if (!Array.isArray(repairedClient.todos)) {
+                  repairedClient.todos = [];
+                  repairs.push('todos: converted to array');
+                }
+                if (!Array.isArray(repairedClient.transactions)) {
+                  repairedClient.transactions = [];
+                  repairs.push('transactions: converted to array');
+                }
+                if (!Array.isArray(repairedClient.tags)) {
+                  repairedClient.tags = [];
+                  repairs.push('tags: converted to array');
+                }
+                
+                // 5. Ensure numeric fields
+                if (typeof repairedClient.lifetimeNetCommission !== 'number') {
+                  repairedClient.lifetimeNetCommission = 0;
+                  repairs.push('lifetimeNetCommission: set to 0');
+                }
+                
+                if (repairs.length > 0) {
+                  console.log(`🔧 REPAIRED CLIENT DATA:`, {
+                    client: `${repairedClient.firstName} ${repairedClient.lastName}`,
+                    id: repairedClient.id,
+                    repairs: repairs
+                  });
+                }
+                
+                return repairedClient;
+              });
               
-              // Re-save the validated clients to fix any ID issues
-              saveUserClients(user, validatedClients);
+              // Log repair results
+              console.log('✅ LEGACY DATA REPAIR COMPLETED:', {
+                totalClients: repairedClients.length,
+                clientsWithValidIds: repairedClients.filter(c => c.id && typeof c.id === 'string').length,
+                repairedClients: repairedClients.map(c => ({
+                  id: c.id,
+                  name: `${c.firstName} ${c.lastName}`,
+                  hasValidId: !!c.id && typeof c.id === 'string'
+                }))
+              });
               
-              console.log(`✅ Loaded ${validatedClients.length} clients for ${user.email}`);
+              setClients(repairedClients);
+              
+              // FORCE RE-SAVE the repaired data to fix localStorage corruption
+              console.log('💾 FORCE SAVING repaired client data...');
+              saveUserClients(user, repairedClients);
+              
+              console.log(`✅ Loaded and repaired ${repairedClients.length} clients for ${user.email}`);
               return;
             }
           } catch (error) {
             console.error('❌ Error loading user clients:', error);
+            // If data is completely corrupted, start fresh
+            console.log('🆘 Data corruption detected, starting with clean slate');
+            setClients([]);
+            return;
           }
 
           // For admin users, load demo clients as before
@@ -1456,6 +1534,20 @@
             ),
             React.createElement('div', { className: 'flex items-center space-x-2 sm:space-x-4 flex-shrink-0' },
               React.createElement('span', { className: 'text-xs sm:text-sm' }, `Welcome, ${user.firstName}!`),
+              
+              // Data Repair Button for Beta Users (only show if they have clients with potential issues)
+              user.accountType === 'beta' && clients.length > 0 && React.createElement('button', {
+                onClick: () => {
+                  if (confirm('🔧 This will repair any corrupted client data. Your clients will be preserved but any data corruption will be fixed. Continue?')) {
+                    console.log('🔧 Manual data repair triggered by user');
+                    loadUserClients(user); // Re-run the repair process
+                    alert('✅ Data repair completed! Any corrupted client data has been fixed.');
+                  }
+                },
+                className: 'bg-yellow-600 px-2 py-1 sm:px-3 sm:py-1 rounded text-xs sm:text-sm hover:bg-yellow-700',
+                title: 'Fix any corrupted client data from legacy versions'
+              }, '🔧 Repair Data'),
+              
               React.createElement('button', {
                 onClick: () => {
                   sessionStorage.removeItem('cf360_authenticated');
@@ -3252,6 +3344,31 @@
               clientIdType: typeof client?.id,
               clientStringified: JSON.stringify(client, null, 2)
             });
+            
+            // LEGACY DATA EMERGENCY FIX: If client still has issues, attempt immediate repair
+            if (client && (!client.id || typeof client.id !== 'string' || client.id.trim() === '')) {
+              console.log('🚨 EMERGENCY CLIENT REPAIR: Client missing valid ID in delete operation');
+              
+              // Try to find this client in the current clients array and get a valid ID
+              const clientIndex = clients.findIndex(c => {
+                // Try to match by name or other properties
+                const nameMatch = `${c.firstName || c.first_name} ${c.lastName || c.last_name}` === 
+                                `${client.firstName || client.first_name} ${client.lastName || client.last_name}`;
+                const emailMatch = c.email === client.email;
+                return nameMatch || emailMatch;
+              });
+              
+              if (clientIndex >= 0 && clients[clientIndex].id) {
+                console.log('🔧 EMERGENCY REPAIR: Found matching client with valid ID');
+                client.id = clients[clientIndex].id;
+              } else {
+                console.error('❌ EMERGENCY REPAIR FAILED: Cannot match client to repair ID');
+                alert('❌ Cannot delete client: Legacy data corruption detected. Please use the "🔧 Repair Data" button in the header to fix your client data, then try deleting again.');
+                setLoading(false);
+                setShowDeleteConfirm(false);
+                return;
+              }
+            }
             
             // Normalize and validate the target client ID
             const targetId = client?.id?.toString().trim();
