@@ -1,9 +1,44 @@
 {
-  "functions": {
-    "api/*.js": {
-      "maxDuration": 30
+  "version": 2,
+  "name": "client-flow-360-crm",
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
     }
-  },
-  "buildCommand": "echo 'Building CLIENT FLOW 360 with delete fix - v1.1'",
-  "devCommand": "echo 'Dev mode'"
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://your-backend-api.com/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "VITE_APP_NAME": "CLIENT FLOW 360 CRM",
+    "VITE_APP_VERSION": "2.1"
+  }
 }
