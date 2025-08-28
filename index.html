@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="1756404000" />
-    <meta name="build-hash" content="1756405000" />
+    <meta http-equiv="Expires" content="1756402899" />
+    <meta name="build-hash" content="1756402899" />
     <title>CLIENT FLOW 360 - Real Estate CRM Platform - v2.4 MLS Bridge Integration</title>
     <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
@@ -72,45 +72,36 @@
   <body>
     <div id="root"></div>
     <script type="module">
-      try {
-        // Complete Netflix-style CRM with CLIENT FLOW 360 branding + Database Integration  
-        // CACHE BUST: BUILD:1756274500 - PROPERTY MANAGEMENT + AUTH FIX - VERSION 2.1
-        console.log('🚀 Initializing CLIENT FLOW 360 CRM v2.4...');
-        
-        // Ensure React is loaded
-        if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-          throw new Error('React libraries not loaded');
-        }
-        
-        const { useState, useEffect, useCallback } = React;
+      // Complete Netflix-style CRM with CLIENT FLOW 360 branding + Database Integration  
+      // CACHE BUST: BUILD:1756274500 - PROPERTY MANAGEMENT + AUTH FIX - VERSION 2.1
+      const { useState, useEffect, useCallback } = React;
 
-      // Authentication Check - No redirect, handle within app
+      // Authentication Check - Redirect to landing if not authenticated
       function checkAuthentication() {
-        const isAuthenticated = sessionStorage.getItem('cf360_authenticated') === 'true';
-        console.log('🔐 Authentication status:', isAuthenticated);
-        return isAuthenticated;
-      }
-      
-      // Get current user info
-      function getCurrentUser() {
-        try {
-          const userStr = sessionStorage.getItem('cf360_user');
-          return userStr ? JSON.parse(userStr) : null;
-        } catch (error) {
-          console.error('Error getting user info:', error);
-          return null;
+        // Prevent redirect loops
+        if (window.location.pathname === '/landing.html') {
+          return false;
         }
+        
+        const isAuthenticated = sessionStorage.getItem('cf360_authenticated') === 'true';
+        if (!isAuthenticated) {
+          console.log('🔐 User not authenticated, redirecting to landing page...');
+          try {
+            window.location.href = './landing.html';
+          } catch (error) {
+            console.error('Redirect error:', error);
+            // Fallback: show guest mode
+            console.log('🔐 Starting in guest mode - authentication required for full functionality');
+            return true; // Allow guest access
+          }
+          return false;
+        }
+        return true;
       }
 
-      // Check authentication on page load - graceful handling
-      try {
-        if (!checkAuthentication()) {
-          console.log('🔐 Authentication check failed, but continuing with app load...');
-          // Don't throw error, let the app handle authentication gracefully
-        }
-      } catch (error) {
-        console.error('🔐 Authentication check error:', error);
-        // Continue loading the app anyway
+      // Check authentication on page load
+      if (!checkAuthentication()) {
+        throw new Error('Authentication required');
       }
       
       console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v4.0 - PROPERTY_MANAGEMENT_1756274000 - COMPREHENSIVE PROPERTY SYSTEM...');
@@ -263,31 +254,15 @@
                   };
                 });
                 
-                // Enhanced client-side filtering for exact address targeting
+                // Client-side filtering for more precise matches
                 if (query.address && query.address.trim()) {
-                  const searchAddress = query.address.toLowerCase().trim();
-                  results = results.filter(prop => {
-                    const propAddress = prop.address.toLowerCase();
-                    const streetPart = (prop.address.split(',')[0] || '').toLowerCase();
-                    
-                    // Exact street address matching with multiple criteria
-                    return propAddress.includes(searchAddress) ||
-                           streetPart.includes(searchAddress) ||
-                           searchAddress.includes(streetPart.replace(/\s+/g, ' ').trim());
-                  });
-                  console.log(`🎯 Street address filtered to ${results.length} properties matching "${query.address}"`);
-                }
-                
-                // Additional precision filtering by city if provided
-                if (query.city && query.city.trim()) {
-                  const searchCity = query.city.toLowerCase().trim();
+                  const searchAddress = query.address.toLowerCase();
                   results = results.filter(prop => 
-                    prop.address.toLowerCase().includes(searchCity)
+                    prop.address.toLowerCase().includes(searchAddress) ||
+                    (prop.address.split(',')[0] || '').toLowerCase().includes(searchAddress)
                   );
-                  console.log(`🏙️ City filtered to ${results.length} properties in "${query.city}"`);
+                  console.log(`🎯 Filtered to ${results.length} properties matching "${query.address}"`);
                 }
-                
-                console.log(`✅ Final targeted results: ${results.length} properties matching complete criteria`);
                 
                 return results;
               }
@@ -4982,12 +4957,9 @@
           lastName: '',
           email: '',
           phone: '',
-          country: 'United States',
           address: '',
-          city: '',
-          state: '',
-          zipCode: '',
           birthday: '',
+          anniversary: '',
           spouse: '',
           children: '',
           notes: '',
@@ -5030,111 +5002,93 @@
           onClick: onClose
         },
           React.createElement('div', { 
-            className: 'bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[95vh] overflow-y-auto',
+            className: 'bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto',
             onClick: (e) => e.stopPropagation()
           },
-            React.createElement('div', { className: 'flex justify-between items-center mb-6' },
-              React.createElement('h2', { className: 'text-2xl font-bold text-white' }, 'Add New Client'),
-              React.createElement('button', {
-                onClick: onClose,
-                className: 'text-gray-400 hover:text-white text-2xl'
-              }, '×')
-            ),
+            React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Add New Client'),
             
-            React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-6' },
-              // Basic Information Section
-              React.createElement('div', { className: 'bg-gray-700 rounded-lg p-5' },
-                React.createElement('div', { className: 'flex items-center mb-4' },
-                  React.createElement('span', { className: 'text-2xl mr-2' }, '📋'),
-                  React.createElement('h3', { className: 'text-lg font-semibold text-green-400' }, 'Basic Information')
-                ),
-                React.createElement('div', { className: 'grid grid-cols-2 gap-4 mb-4' },
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'First Name *',
-                    value: formData.firstName,
-                    onChange: (e) => handleChange('firstName', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400',
-                    required: true
-                  }),
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'Last Name *',
-                    value: formData.lastName,
-                    onChange: (e) => handleChange('lastName', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400',
-                    required: true
-                  })
-                ),
-                React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
-                  React.createElement('input', {
-                    type: 'email',
-                    placeholder: 'Email Address *',
-                    value: formData.email,
-                    onChange: (e) => handleChange('email', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400',
-                    required: true
-                  }),
-                  React.createElement('input', {
-                    type: 'tel',
-                    placeholder: 'Phone Number',
-                    value: formData.phone,
-                    onChange: (e) => handleChange('phone', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400'
-                  })
-                )
+            React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-4' },
+              React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'First Name',
+                  value: formData.firstName,
+                  onChange: (e) => handleChange('firstName', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white',
+                  required: true
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Last Name',
+                  value: formData.lastName,
+                  onChange: (e) => handleChange('lastName', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white',
+                  required: true
+                })
               ),
+              React.createElement('input', {
+                type: 'email',
+                placeholder: 'Email',
+                value: formData.email,
+                onChange: (e) => handleChange('email', e.target.value),
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white',
+                required: true
+              }),
+              React.createElement('input', {
+                type: 'tel',
+                placeholder: 'Phone',
+                value: formData.phone,
+                onChange: (e) => handleChange('phone', e.target.value),
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
+              React.createElement('input', {
+                type: 'text',
+                placeholder: 'Address',
+                value: formData.address,
+                onChange: (e) => handleChange('address', e.target.value),
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
               
-              // Current Address Section
-              React.createElement('div', { className: 'bg-gray-700 rounded-lg p-5' },
-                React.createElement('div', { className: 'flex items-center mb-4' },
-                  React.createElement('span', { className: 'text-2xl mr-2' }, '🏠'),
-                  React.createElement('h3', { className: 'text-lg font-semibold text-blue-400' }, 'Current Address')
-                ),
-                React.createElement('div', { className: 'grid grid-cols-2 gap-4 mb-4' },
-                  React.createElement('select', {
-                    value: formData.country,
-                    onChange: (e) => handleChange('country', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white'
-                  },
-                    React.createElement('option', { value: 'United States' }, 'United States'),
-                    React.createElement('option', { value: 'Canada' }, 'Canada'),
-                    React.createElement('option', { value: 'United Kingdom' }, 'United Kingdom'),
-                    React.createElement('option', { value: 'Australia' }, 'Australia')
-                  ),
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'Street Address',
-                    value: formData.address,
-                    onChange: (e) => handleChange('address', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400'
-                  })
-                ),
-                React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'City',
-                    value: formData.city,
-                    onChange: (e) => handleChange('city', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400'
-                  }),
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'State/Province',
-                    value: formData.state,
-                    onChange: (e) => handleChange('state', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400'
-                  }),
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'Zip/Postal Code',
-                    value: formData.zipCode,
-                    onChange: (e) => handleChange('zipCode', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400'
-                  })
-                )
+              // Personal Information Section
+              React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+                React.createElement('input', {
+                  type: 'date',
+                  placeholder: 'Birthday',
+                  value: formData.birthday,
+                  onChange: (e) => handleChange('birthday', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                }),
+                React.createElement('input', {
+                  type: 'date',
+                  placeholder: 'Anniversary',
+                  value: formData.anniversary,
+                  onChange: (e) => handleChange('anniversary', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                })
               ),
-
+              React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Spouse Name',
+                  value: formData.spouse,
+                  onChange: (e) => handleChange('spouse', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                }),
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Children (e.g. Emma 12, Jake 8)',
+                  value: formData.children,
+                  onChange: (e) => handleChange('children', e.target.value),
+                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                })
+              ),
+              React.createElement('input', {
+                type: 'text',
+                placeholder: 'Tags (comma-separated)',
+                value: formData.tags,
+                onChange: (e) => handleChange('tags', e.target.value),
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
               
               // Property Interest Section
               React.createElement('div', { className: 'bg-slate-700 rounded-lg p-4' },
@@ -5209,8 +5163,8 @@
                   }, '🔍 Search MLS')
                 ),
                 React.createElement('div', { className: 'mb-4' },
-                  React.createElement('p', { className: 'text-gray-300 text-sm mb-3' }, 'Enter complete address details for precise MLS property targeting:'),
-                  React.createElement('p', { className: 'text-green-400 text-xs mb-3' }, '🎯 Enhanced MLS Search - Uses Street + City + State + Zip for exact property matching (no random data)')
+                  React.createElement('p', { className: 'text-gray-300 text-sm mb-3' }, 'Enter details about the property your client is interested in (or use MLS search):'),
+                  React.createElement('p', { className: 'text-yellow-400 text-xs mb-3' }, '🧪 MLS Search uses Bridge API test data. With real credentials, this would search actual MLS listings.')
                 ),
                 React.createElement('input', {
                   type: 'text',
@@ -5243,72 +5197,24 @@
                   })
                 )
               ),
-
-              // Personal Information Section
-              React.createElement('div', { className: 'bg-gray-700 rounded-lg p-5' },
-                React.createElement('div', { className: 'flex items-center mb-4' },
-                  React.createElement('span', { className: 'text-2xl mr-2' }, '👥'),
-                  React.createElement('h3', { className: 'text-lg font-semibold text-yellow-400' }, 'Personal Information')
-                ),
-                React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
-                  React.createElement('div', null,
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-300 mb-2' }, 'Birth Date'),
-                    React.createElement('input', {
-                      type: 'date',
-                      value: formData.birthday,
-                      onChange: (e) => handleChange('birthday', e.target.value),
-                      className: 'w-full p-3 bg-gray-600 rounded border border-gray-500 text-white'
-                    })
-                  ),
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'Spouse/Partner Name',
-                    value: formData.spouse,
-                    onChange: (e) => handleChange('spouse', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400'
-                  }),
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'Children (e.g., Emma 12, Jake 8)',
-                    value: formData.children,
-                    onChange: (e) => handleChange('children', e.target.value),
-                    className: 'p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400'
-                  })
-                )
-              ),
-
-              // CRM Information Section
-              React.createElement('div', { className: 'bg-gray-700 rounded-lg p-5' },
-                React.createElement('div', { className: 'flex items-center mb-4' },
-                  React.createElement('span', { className: 'text-2xl mr-2' }, '📊'),
-                  React.createElement('h3', { className: 'text-lg font-semibold text-orange-400' }, 'CRM Information')
-                ),
-                React.createElement('input', {
-                  type: 'text',
-                  placeholder: 'Tags (comma-separated, e.g., VIP, Luxury, First-time buyer)',
-                  value: formData.tags,
-                  onChange: (e) => handleChange('tags', e.target.value),
-                  className: 'w-full p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400 mb-4'
-                }),
-                  placeholder: 'Additional Comments/Notes',
-                  value: formData.notes,
-                  onChange: (e) => handleChange('notes', e.target.value),
-                  rows: 3,
-                  className: 'w-full p-3 bg-gray-600 rounded border border-gray-500 text-white placeholder-gray-400'
-                })
-              ),
               
-              // Action Buttons
-              React.createElement('div', { className: 'flex space-x-4 pt-6 border-t border-gray-600' },
+              React.createElement('textarea', {
+                placeholder: 'Notes',
+                value: formData.notes,
+                onChange: (e) => handleChange('notes', e.target.value),
+                rows: 3,
+                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+              }),
+              React.createElement('div', { className: 'flex space-x-3' },
                 React.createElement('button', {
                   type: 'submit',
-                  className: 'flex-1 bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg'
-                }, '✅ Create Client'),
+                  className: 'flex-1 bg-green-600 text-white p-3 rounded hover:bg-green-700'
+                }, 'Add Client'),
                 React.createElement('button', {
                   type: 'button',
                   onClick: onClose,
-                  className: 'flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg hover:bg-gray-500 transition-colors text-lg'
-                }, '❌ Cancel')
+                  className: 'flex-1 bg-gray-600 text-white p-3 rounded hover:bg-gray-700'
+                }, 'Cancel')
               )
             )
           )
@@ -5878,61 +5784,9 @@
         );
       }
 
-      // Render the app - React 17 compatible
-      try {
-        console.log('🚀 Starting NetflixCRM application...');
-        ReactDOM.render(React.createElement(NetflixCRM), document.getElementById('root'));
-        console.log('✅ NetflixCRM application rendered successfully');
-      } catch (error) {
-        console.error('❌ Failed to render NetflixCRM:', error);
-        // Fallback rendering
-        document.getElementById('root').innerHTML = `
-          <div style="padding: 50px; color: white; text-align: center; background: #1f2937; min-height: 100vh;">
-            <h1>CLIENT FLOW 360 CRM v2.4</h1>
-            <p>Loading application...</p>
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; margin: 20px auto; max-width: 500px;">
-              <p><strong>✅ Production Ready</strong></p>
-              <p>Complete MLS Bridge API Integration available</p>
-            </div>
-          </div>
-        `;
-      }
-      
-      } catch (globalError) {
-        console.error('❌ Global application error:', globalError);
-        console.error('Stack trace:', globalError.stack);
-        
-        // Fallback UI to prevent black screen
-        const rootElement = document.getElementById('root');
-        if (rootElement) {
-          rootElement.innerHTML = `
-            <div style="padding: 50px; color: white; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-family: Arial, sans-serif;">
-              <div style="max-width: 800px; margin: 0 auto;">
-                <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">🚀 CLIENT FLOW 360 CRM v2.4</h1>
-                <h2 style="font-size: 1.2rem; margin-bottom: 2rem; color: #10b981;">Complete MLS Bridge Integration</h2>
-                
-                <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 10px; margin: 30px 0; text-align: left;">
-                  <h3 style="color: #10b981; margin-bottom: 1rem;">✅ Application Features Ready:</h3>
-                  <ul style="list-style: none; padding: 0; margin: 0;">
-                    <li style="margin: 10px 0;">🎯 <strong>Enhanced MLS Search</strong> - Street + City + State + Zip targeting</li>
-                    <li style="margin: 10px 0;">🏠 <strong>Bridge Data Output API</strong> - Real property data integration</li>
-                    <li style="margin: 10px 0;">📱 <strong>Complete CRM System</strong> - Client management & properties</li>
-                    <li style="margin: 10px 0;">✨ <strong>Production Ready</strong> - No random data, exact matching</li>
-                  </ul>
-                </div>
-                
-                <button onclick="location.reload()" style="background: #059669; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; margin: 20px;">
-                  🔄 Reload Application
-                </button>
-                
-                <div style="margin-top: 30px; font-size: 0.9rem; opacity: 0.8;">
-                  <p>If you continue to see this screen, please check the browser console for technical details.</p>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-      }
+      // Render the app
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(NetflixCRM));
     </script>
   </body>
 </html>
