@@ -644,8 +644,9 @@
             );
         }
 
-        // Render the app
-        ReactDOM.render(React.createElement(LandingPage), document.getElementById('root'));
+        // Render the app with React 18 API
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(LandingPage));
     </script>
 </body>
 </html>
