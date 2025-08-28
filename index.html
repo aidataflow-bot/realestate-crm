@@ -183,6 +183,85 @@
           }
         },
         
+        // Bridge Data Output API for MLS property data
+        bridge: {
+          baseURL: 'https://api.bridgedataoutput.com/api/v2/test',
+          token: '6baca547742c6f96a6ff71b138424f21',
+          
+          searchProperties: async (query) => {
+            try {
+              console.log('🏠 Searching Bridge API for properties:', query);
+              
+              const searchParams = new URLSearchParams({
+                access_token: API.bridge.token,
+                limit: 20  // Get more results to filter through
+              });
+              
+              // Add search filters if provided
+              if (query.city) {
+                searchParams.append('City', query.city);
+              }
+              if (query.state) {
+                searchParams.append('StateOrProvince', query.state);
+              }
+              if (query.zipCode) {
+                searchParams.append('PostalCode', query.zipCode);
+              }
+              
+              console.log('🔍 Search URL:', `${API.bridge.baseURL}/listings?${searchParams.toString()}`);
+              const response = await fetch(`${API.bridge.baseURL}/listings?${searchParams}`);
+              const data = await response.json();
+              
+              if (data.success && data.bundle) {
+                let results = data.bundle.map((listing, index) => {
+                  console.log(`🏠 Property ${index + 1}:`, {
+                    listingKey: listing.ListingKey,
+                    unparsedAddress: listing.UnparsedAddress,
+                    city: listing.City,
+                    state: listing.StateOrProvince,
+                    postalCode: listing.PostalCode,
+                    price: listing.ListPrice,
+                    beds: listing.BedroomsTotal,
+                    baths: listing.BathroomsTotalDecimal
+                  });
+                  
+                  return {
+                    id: listing.ListingKey,
+                    mlsId: listing.ListingId,
+                    address: `${listing.UnparsedAddress || ''} ${listing.City || ''}, ${listing.StateOrProvince || ''} ${listing.PostalCode || ''}`.trim(),
+                    price: listing.ListPrice,
+                    status: listing.StandardStatus || listing.MlsStatus,
+                    bedrooms: listing.BedroomsTotal,
+                    bathrooms: listing.BathroomsTotalDecimal,
+                    sqft: listing.LivingArea,
+                    yearBuilt: listing.YearBuilt,
+                    coordinates: { lat: listing.Latitude, lng: listing.Longitude },
+                    agent: { name: listing.ListAgentFullName, office: listing.ListOfficeName },
+                    photos: listing.Media ? listing.Media.filter(m => m.MediaCategory === 'Photo').map(m => m.MediaURL) : [],
+                    remarks: listing.PublicRemarks
+                  };
+                });
+                
+                // Client-side filtering for more precise matches
+                if (query.address && query.address.trim()) {
+                  const searchAddress = query.address.toLowerCase();
+                  results = results.filter(prop => 
+                    prop.address.toLowerCase().includes(searchAddress) ||
+                    (prop.address.split(',')[0] || '').toLowerCase().includes(searchAddress)
+                  );
+                  console.log(`🎯 Filtered to ${results.length} properties matching "${query.address}"`);
+                }
+                
+                return results;
+              }
+              return [];
+            } catch (error) {
+              console.error('🏠 Bridge API Error:', error);
+              return [];
+            }
+          }
+        },
+        
         // Tasks
         tasks: {
           getAll: async () => {
@@ -4872,14 +4951,33 @@
           spouse: '',
           children: '',
           notes: '',
-          tags: ''
+          tags: '',
+          propertyStreetAddress: '',
+          propertyCity: '',
+          propertyState: '',
+          propertyZipCode: ''
         });
 
         const handleSubmit = (e) => {
           e.preventDefault();
+          
+          // Create property interest object if any property fields are filled
+          const hasPropertyData = formData.propertyStreetAddress || formData.propertyCity || formData.propertyState || formData.propertyZipCode;
+          const propertyInterest = hasPropertyData ? [{
+            id: `property-${Date.now()}`,
+            address: `${formData.propertyStreetAddress || ''} ${formData.propertyCity || ''}, ${formData.propertyState || ''} ${formData.propertyZipCode || ''}`.trim().replace(/,\s*$/, ''),
+            streetAddress: formData.propertyStreetAddress || '',
+            city: formData.propertyCity || '',
+            state: formData.propertyState || '',
+            zipCode: formData.propertyZipCode || '',
+            createdAt: new Date().toISOString(),
+            status: 'Interested'
+          }] : [];
+          
           onAdd({
             ...formData,
-            tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+            tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+            propertiesOfInterest: propertyInterest
           });
         };
 
@@ -4892,7 +4990,7 @@
           onClick: onClose
         },
           React.createElement('div', { 
-            className: 'bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto',
+            className: 'bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto',
             onClick: (e) => e.stopPropagation()
           },
             React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Add New Client'),
@@ -4979,6 +5077,115 @@
                 onChange: (e) => handleChange('tags', e.target.value),
                 className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
               }),
+              
+              // Property Interest Section
+              React.createElement('div', { className: 'bg-slate-700 rounded-lg p-4' },
+                React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+                  React.createElement('div', { className: 'flex items-center' },
+                    React.createElement('span', { className: 'text-2xl mr-2' }, '🎯'),
+                    React.createElement('h3', { className: 'text-lg font-semibold text-purple-400' }, 'Property Interest')
+                  ),
+                  React.createElement('button', {
+                    type: 'button',
+                    onClick: async () => {
+                      try {
+                        // Build search criteria from form fields
+                        const searchCriteria = {};
+                        
+                        if (formData.propertyStreetAddress) {
+                          searchCriteria.address = formData.propertyStreetAddress;
+                        }
+                        if (formData.propertyCity) {
+                          searchCriteria.city = formData.propertyCity;
+                        }
+                        if (formData.propertyState) {
+                          searchCriteria.state = formData.propertyState;
+                        }
+                        if (formData.propertyZipCode) {
+                          searchCriteria.zipCode = formData.propertyZipCode;
+                        }
+                        
+                        console.log('🔍 Searching MLS properties with criteria:', searchCriteria);
+                        const properties = await API.bridge.searchProperties(searchCriteria);
+                        console.log('🏠 Found properties:', properties);
+                        
+                        if (properties.length > 0) {
+                          // Create a selection dialog with available properties
+                          let propertyOptions = properties.slice(0, 5).map((prop, index) => 
+                            `${index + 1}. ${prop.address} - $${prop.price?.toLocaleString() || 'N/A'} (${prop.bedrooms || 0}br/${prop.bathrooms || 0}ba)`
+                          ).join('\\n');
+                          
+                          const selection = prompt(`Found ${properties.length} MLS properties! Select one:\\n\\n${propertyOptions}\\n\\nEnter number (1-5) or 0 to cancel:`);
+                          
+                          if (selection && selection !== '0') {
+                            const selectedIndex = parseInt(selection) - 1;
+                            if (selectedIndex >= 0 && selectedIndex < properties.length) {
+                              const selectedProperty = properties[selectedIndex];
+                              
+                              // Parse the address better
+                              const addressParts = selectedProperty.address.split(',');
+                              const streetAddress = addressParts[0]?.trim() || '';
+                              const city = addressParts[1]?.trim() || '';
+                              const stateZip = addressParts[2]?.trim() || '';
+                              const stateParts = stateZip.split(' ');
+                              const state = stateParts[0] || '';
+                              const zip = stateParts[1] || '';
+                              
+                              handleChange('propertyStreetAddress', streetAddress);
+                              handleChange('propertyCity', city);
+                              handleChange('propertyState', state);
+                              handleChange('propertyZipCode', zip);
+                              
+                              alert(`✅ Selected property: ${selectedProperty.address}\\nPrice: $${selectedProperty.price?.toLocaleString() || 'N/A'}\\nBedrooms: ${selectedProperty.bedrooms || 'N/A'}\\nBathrooms: ${selectedProperty.bathrooms || 'N/A'}`);
+                            }
+                          }
+                        } else {
+                          alert('No MLS properties found in test dataset. This is a demo using Bridge API test data.');
+                        }
+                      } catch (error) {
+                        console.error('MLS Search Error:', error);
+                        alert('❌ Error searching MLS properties. Check console for details.');
+                      }
+                    },
+                    className: 'px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors'
+                  }, '🔍 Search MLS')
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                  React.createElement('p', { className: 'text-gray-300 text-sm mb-3' }, 'Enter details about the property your client is interested in (or use MLS search):'),
+                  React.createElement('p', { className: 'text-yellow-400 text-xs mb-3' }, '🧪 MLS Search uses Bridge API test data. With real credentials, this would search actual MLS listings.')
+                ),
+                React.createElement('input', {
+                  type: 'text',
+                  placeholder: 'Street Address',
+                  value: formData.propertyStreetAddress,
+                  onChange: (e) => handleChange('propertyStreetAddress', e.target.value),
+                  className: 'w-full p-3 bg-slate-600 rounded border border-slate-500 text-white placeholder-gray-400 mb-4'
+                }),
+                React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'City',
+                    value: formData.propertyCity,
+                    onChange: (e) => handleChange('propertyCity', e.target.value),
+                    className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white placeholder-gray-400'
+                  }),
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'State/Province',
+                    value: formData.propertyState,
+                    onChange: (e) => handleChange('propertyState', e.target.value),
+                    className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white placeholder-gray-400'
+                  }),
+                  React.createElement('input', {
+                    type: 'text',
+                    placeholder: 'Zip/Postal Code',
+                    value: formData.propertyZipCode,
+                    onChange: (e) => handleChange('propertyZipCode', e.target.value),
+                    className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white placeholder-gray-400'
+                  })
+                )
+              ),
+              
               React.createElement('textarea', {
                 placeholder: 'Notes',
                 value: formData.notes,
