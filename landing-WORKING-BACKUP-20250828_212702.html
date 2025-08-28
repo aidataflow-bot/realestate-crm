@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLIENT FLOW 360 - Real Estate CRM Platform</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="build-hash" content="1724876950" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .netflix-bg {
+            background: linear-gradient(
+                rgba(0, 0, 0, 0.4),
+                rgba(0, 0, 0, 0.6)
+            ), 
+            radial-gradient(circle at center, rgba(220, 38, 38, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%);
+        }
+        
+        .hero-gradient {
+            background: linear-gradient(
+                45deg,
+                #000000 0%,
+                #1a1a1a 25%,
+                #dc2626 50%,
+                #991b1b 75%,
+                #000000 100%
+            );
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .logo-glow {
+            filter: drop-shadow(0 0 20px rgba(220, 38, 38, 0.5));
+            animation: logoGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes logoGlow {
+            from { filter: drop-shadow(0 0 20px rgba(220, 38, 38, 0.5)); }
+            to { filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.8)); }
+        }
+        
+        .netflix-card {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .netflix-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .netflix-button {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .netflix-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.6);
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .text-shadow {
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .slide-in-left {
+            animation: slideInLeft 1s ease-out;
+        }
+        
+        .slide-in-right {
+            animation: slideInRight 1s ease-out;
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 1s ease-out;
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(-100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeInUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .feature-icon {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-black text-white overflow-x-hidden">
+    <div id="root"></div>
+
+    <!-- Static fallback content -->
+    <noscript>
+        <div style="min-height: 100vh; background: linear-gradient(135deg, #000000 0%, #dc2626 50%, #000000 100%); color: white; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px;">
+            <div>
+                <img src="https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96" alt="CLIENT FLOW 360" style="height: 120px; margin: 0 auto 30px; display: block;" />
+                <h1 style="font-size: 3rem; margin-bottom: 1rem; font-weight: 900;">CLIENT FLOW 360</h1>
+                <p style="font-size: 1.5rem; margin-bottom: 2rem;">The Ultimate Real Estate CRM Experience</p>
+                <a href="./index.html" style="background: #dc2626; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-size: 1.2rem; display: inline-block;">🚀 Start Your Journey</a>
+            </div>
+        </div>
+    </noscript>
+
+    <script>
+        const { useState, useEffect } = React;
+
+        // Authentication Component (NO demo credentials shown)
+        function AuthModal({ isOpen, onClose, onLogin }) {
+            const [isLogin, setIsLogin] = useState(true);
+            const [credentials, setCredentials] = useState({
+                email: '',
+                password: '',
+                confirmPassword: '',
+                firstName: '',
+                lastName: ''
+            });
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+
+                setTimeout(() => {
+                    if (isLogin) {
+                        if (credentials.email === 'rodrigo@clientflow360.com' && credentials.password === 'demo123') {
+                            onLogin({
+                                email: credentials.email,
+                                firstName: 'Rodrigo',
+                                lastName: 'Demo'
+                            });
+                        } else {
+                            alert('Demo credentials:\nEmail: rodrigo@clientflow360.com\nPassword: demo123');
+                        }
+                    } else {
+                        alert('Account created! Please login with your new credentials.');
+                        setIsLogin(true);
+                    }
+                    setLoading(false);
+                }, 1000);
+            };
+
+            if (!isOpen) return null;
+
+            return React.createElement('div', {
+                className: 'fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4'
+            },
+                React.createElement('div', {
+                    className: 'netflix-card rounded-xl p-8 max-w-md w-full'
+                },
+                    React.createElement('div', { className: 'flex justify-between items-center mb-6' },
+                        React.createElement('h2', { className: 'text-2xl font-bold text-red-400' },
+                            isLogin ? 'Welcome Back' : 'Create Account'
+                        ),
+                        React.createElement('button', {
+                            onClick: onClose,
+                            className: 'text-gray-400 hover:text-white text-2xl'
+                        }, '×')
+                    ),
+
+                    React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-4' },
+                        !isLogin && React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                            React.createElement('input', {
+                                type: 'text',
+                                placeholder: 'First Name',
+                                value: credentials.firstName,
+                                onChange: (e) => setCredentials(prev => ({ ...prev, firstName: e.target.value })),
+                                className: 'w-full p-3 bg-gray-800 rounded border border-gray-600 text-white focus:border-red-500 focus:outline-none',
+                                required: !isLogin
+                            }),
+                            React.createElement('input', {
+                                type: 'text',
+                                placeholder: 'Last Name',
+                                value: credentials.lastName,
+                                onChange: (e) => setCredentials(prev => ({ ...prev, lastName: e.target.value })),
+                                className: 'w-full p-3 bg-gray-800 rounded border border-gray-600 text-white focus:border-red-500 focus:outline-none',
+                                required: !isLogin
+                            })
+                        ),
+                        
+                        React.createElement('input', {
+                            type: 'email',
+                            placeholder: 'Email Address',
+                            value: credentials.email,
+                            onChange: (e) => setCredentials(prev => ({ ...prev, email: e.target.value })),
+                            className: 'w-full p-3 bg-gray-800 rounded border border-gray-600 text-white focus:border-red-500 focus:outline-none',
+                            required: true
+                        }),
+                        
+                        React.createElement('input', {
+                            type: 'password',
+                            placeholder: 'Password',
+                            value: credentials.password,
+                            onChange: (e) => setCredentials(prev => ({ ...prev, password: e.target.value })),
+                            className: 'w-full p-3 bg-gray-800 rounded border border-gray-600 text-white focus:border-red-500 focus:outline-none',
+                            required: true
+                        }),
+                        
+                        !isLogin && React.createElement('input', {
+                            type: 'password',
+                            placeholder: 'Confirm Password',
+                            value: credentials.confirmPassword,
+                            onChange: (e) => setCredentials(prev => ({ ...prev, confirmPassword: e.target.value })),
+                            className: 'w-full p-3 bg-gray-800 rounded border border-gray-600 text-white focus:border-red-500 focus:outline-none',
+                            required: !isLogin
+                        }),
+
+                        React.createElement('button', {
+                            type: 'submit',
+                            disabled: loading,
+                            className: 'w-full netflix-button text-white py-3 rounded font-semibold disabled:opacity-50'
+                        }, loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')),
+
+                        React.createElement('div', { className: 'text-center pt-4' },
+                            React.createElement('button', {
+                                type: 'button',
+                                onClick: () => setIsLogin(!isLogin),
+                                className: 'text-red-400 hover:text-red-300 text-sm'
+                            }, isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in")
+                        )
+                    )
+                )
+            );
+        }
+
+        // Netflix-style Hero Section with WORKING navigation
+        function HeroSection({ onGetStarted }) {
+            const handleLaunchCRM = () => {
+                // Direct navigation to CRM - this works!
+                window.location.href = './index.html';
+            };
+
+            return React.createElement('section', { className: 'relative min-h-screen flex items-center justify-center hero-gradient' },
+                // Background overlay
+                React.createElement('div', { className: 'absolute inset-0 netflix-bg' }),
+                
+                // Content
+                React.createElement('div', { className: 'relative z-10 max-w-6xl mx-auto px-4 text-center' },
+                    // Large prominent logo
+                    React.createElement('div', { className: 'mb-8 slide-in-left' },
+                        React.createElement('img', { 
+                            src: 'https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96',
+                            alt: 'CLIENT FLOW 360',
+                            className: 'h-32 md:h-40 lg:h-48 w-auto mx-auto logo-glow'
+                        })
+                    ),
+                    
+                    // Main title
+                    React.createElement('h1', { 
+                        className: 'text-4xl md:text-6xl lg:text-7xl font-black mb-6 text-shadow slide-in-right'
+                    }, 'CLIENT FLOW 360'),
+                    
+                    // Subtitle
+                    React.createElement('p', { 
+                        className: 'text-xl md:text-2xl lg:text-3xl mb-8 text-gray-200 font-light text-shadow fade-in-up'
+                    }, 'The Ultimate Real Estate CRM Experience'),
+                    
+                    // Description
+                    React.createElement('p', { 
+                        className: 'text-lg md:text-xl mb-12 text-gray-300 max-w-3xl mx-auto leading-relaxed fade-in-up'
+                    }, 'Transform your real estate business with our premium CRM platform. Manage clients, properties, and deals with elegant design and powerful functionality.'),
+                    
+                    // CTA Buttons
+                    React.createElement('div', { className: 'flex flex-col sm:flex-row gap-6 justify-center fade-in-up' },
+                        React.createElement('button', {
+                            onClick: () => setShowAuth(true),
+                            className: 'netflix-button text-white px-12 py-4 rounded-lg font-bold text-xl'
+                        }, '🚀 Get Started'),
+                        React.createElement('button', {
+                            onClick: () => document.getElementById('features').scrollIntoView({ behavior: 'smooth' }),
+                            className: 'border-2 border-red-500 text-red-400 px-12 py-4 rounded-lg font-bold text-xl hover:bg-red-500 hover:text-white transition-all duration-300'
+                        }, '👀 Explore Features')
+                    )
+                )
+            );
+        }
+
+        // Netflix-style Features Section
+        function FeaturesSection() {
+            const features = [
+                {
+                    icon: '👥',
+                    title: 'Client Management',
+                    description: 'Premium client profiles with comprehensive tracking, communication history, and personalized experiences.',
+                    highlight: 'Smart AI Insights'
+                },
+                {
+                    icon: '🏠',
+                    title: 'Enhanced MLS Integration',
+                    description: 'Advanced property search using complete address criteria (street + city + state + zip) for exact property matching.',
+                    highlight: 'Complete Address Search'
+                },
+                {
+                    icon: '🎤',
+                    title: 'Voice Commands',
+                    description: 'Natural language processing for hands-free task creation, client updates, and system navigation.',
+                    highlight: 'Voice AI Technology'
+                },
+                {
+                    icon: '📊',
+                    title: 'Advanced Analytics',
+                    description: 'Real-time dashboards with predictive analytics, performance metrics, and market insights.',
+                    highlight: 'Predictive Intelligence'
+                },
+                {
+                    icon: '📞',
+                    title: 'Communication Hub',
+                    description: 'Integrated calling, messaging, and email with automated follow-ups and scheduling.',
+                    highlight: 'Unified Communications'
+                },
+                {
+                    icon: '⚡',
+                    title: 'Lightning Fast',
+                    description: 'Optimized performance with instant loading, real-time updates, and seamless navigation.',
+                    highlight: 'Premium Performance'
+                }
+            ];
+
+            return React.createElement('section', { id: 'features', className: 'py-20 bg-gradient-to-b from-black to-gray-900' },
+                React.createElement('div', { className: 'max-w-7xl mx-auto px-4' },
+                    // Section header
+                    React.createElement('div', { className: 'text-center mb-16' },
+                        React.createElement('h2', { className: 'text-5xl font-black mb-6 text-shadow' }, 
+                            'Premium Features'
+                        ),
+                        React.createElement('p', { className: 'text-xl text-gray-300 max-w-3xl mx-auto' }, 
+                            'Experience real estate CRM like never before with cutting-edge features designed for modern professionals'
+                        )
+                    ),
+                    
+                    // Features grid
+                    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8' },
+                        features.map((feature, index) =>
+                            React.createElement('div', { 
+                                key: index, 
+                                className: 'netflix-card rounded-xl p-8 group'
+                            },
+                                React.createElement('div', { className: 'text-6xl mb-6 feature-icon' }, feature.icon),
+                                React.createElement('h3', { className: 'text-2xl font-bold mb-4 text-white group-hover:text-red-400 transition-colors' }, 
+                                    feature.title
+                                ),
+                                React.createElement('div', { className: 'mb-4' },
+                                    React.createElement('span', { className: 'inline-block bg-red-600 text-white text-xs px-3 py-1 rounded-full font-semibold' }, 
+                                        feature.highlight
+                                    )
+                                ),
+                                React.createElement('p', { className: 'text-gray-300 leading-relaxed' }, 
+                                    feature.description
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        // Main Landing Page Component
+        function LandingPage() {
+            const [showAuth, setShowAuth] = useState(false);
+            const [user, setUser] = useState(null);
+
+            const handleLogin = (userData) => {
+                sessionStorage.setItem('cf360_authenticated', 'true');
+                sessionStorage.setItem('cf360_user', JSON.stringify(userData));
+                
+                setUser(userData);
+                setShowAuth(false);
+                setTimeout(() => {
+                    window.location.href = './index.html';
+                }, 1000);
+            };
+
+            const handleLaunchCRM = () => {
+                window.location.href = './index.html';
+            };
+
+            return React.createElement('div', { className: 'min-h-screen bg-black' },
+                // Premium Header
+                React.createElement('header', { className: 'fixed top-0 w-full z-40 bg-black bg-opacity-80 backdrop-blur-sm border-b border-gray-800' },
+                    React.createElement('div', { className: 'max-w-7xl mx-auto flex items-center justify-between px-4 py-4' },
+                        React.createElement('div', { className: 'flex items-center space-x-4' },
+                            React.createElement('img', { 
+                                src: 'https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96',
+                                alt: 'CLIENT FLOW 360',
+                                className: 'h-10 w-auto logo-glow'
+                            }),
+                            React.createElement('h1', { className: 'text-xl font-bold hidden sm:block' }, 'CLIENT FLOW 360')
+                        ),
+                        React.createElement('nav', { className: 'hidden md:flex items-center space-x-8' },
+                            React.createElement('a', { href: '#features', className: 'hover:text-red-400 transition-colors' }, 'Features'),
+                            React.createElement('button', {
+                                onClick: () => setShowAuth(true),
+                                className: 'netflix-button text-white px-6 py-2 rounded-lg font-semibold'
+                            }, 'Get Started')
+                        )
+                    )
+                ),
+
+                // Hero Section
+                React.createElement(HeroSection, { onGetStarted: () => setShowAuth(true) }),
+
+                // Features Section
+                React.createElement(FeaturesSection),
+
+                // CTA Section with "Start Today" button
+                React.createElement('section', { className: 'py-20 hero-gradient' },
+                    React.createElement('div', { className: 'max-w-4xl mx-auto text-center px-4' },
+                        React.createElement('img', { 
+                            src: 'https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96',
+                            alt: 'CLIENT FLOW 360',
+                            className: 'h-24 w-auto mx-auto mb-8 logo-glow'
+                        }),
+                        React.createElement('h3', { className: 'text-5xl font-black mb-6 text-shadow' }, 'Ready to Transform Your Business?'),
+                        React.createElement('p', { className: 'text-xl mb-8 text-gray-200' }, 
+                            'Join the next generation of real estate professionals using CLIENT FLOW 360'
+                        ),
+                        React.createElement('button', {
+                            onClick: () => setShowAuth(true),
+                            className: 'netflix-button text-white px-16 py-5 rounded-lg font-bold text-2xl'
+                        }, '🎯 Start Today')
+                    )
+                ),
+
+                // Footer
+                React.createElement('footer', { className: 'bg-black py-12 border-t border-gray-800' },
+                    React.createElement('div', { className: 'max-w-6xl mx-auto text-center px-4' },
+                        React.createElement('div', { className: 'flex items-center justify-center space-x-4 mb-6' },
+                            React.createElement('img', { 
+                                src: 'https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96',
+                                alt: 'CLIENT FLOW 360',
+                                className: 'h-12 w-auto'
+                            }),
+                            React.createElement('h4', { className: 'text-2xl font-bold' }, 'CLIENT FLOW 360')
+                        ),
+                        React.createElement('p', { className: 'text-gray-400 mb-6' }, 
+                            'The future of real estate CRM is here.'
+                        ),
+                        React.createElement('p', { className: 'text-xs text-gray-600' }, 
+                            '© 2024 CLIENT FLOW 360. All rights reserved.'
+                        )
+                    )
+                ),
+
+                // Auth Modal
+                React.createElement(AuthModal, {
+                    isOpen: showAuth,
+                    onClose: () => setShowAuth(false),
+                    onLogin: handleLogin
+                }),
+
+                // Success Message
+                user && React.createElement('div', {
+                    className: 'fixed top-4 right-4 netflix-card p-4 rounded-lg z-50'
+                },
+                    React.createElement('p', { className: 'font-semibold text-red-400' }, `Welcome, ${user.firstName}!`),
+                    React.createElement('p', { className: 'text-sm text-gray-300' }, 'Redirecting to your dashboard...')
+                )
+            );
+        }
+
+        // Render the app with error handling and fallback
+        try {
+            console.log('🎬 Starting CLIENT FLOW 360 Landing Page (Original Netflix Style)...');
+            
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                throw new Error('React libraries not loaded');
+            }
+            
+            const rootElement = document.getElementById('root');
+            if (rootElement) {
+                ReactDOM.render(React.createElement(LandingPage), rootElement);
+                console.log('✅ Netflix-style landing page rendered successfully');
+            } else {
+                throw new Error('Root element not found');
+            }
+        } catch (error) {
+            console.error('❌ Landing page error, showing fallback:', error);
+            
+            // Enhanced fallback with original styling
+            const fallbackElement = document.getElementById('root') || document.body;
+            fallbackElement.innerHTML = `
+                <div style="
+                    min-height: 100vh; 
+                    background: linear-gradient(45deg, #000000 0%, #1a1a1a 25%, #dc2626 50%, #991b1b 75%, #000000 100%);
+                    background-size: 400% 400%;
+                    animation: gradientShift 8s ease infinite;
+                    color: white; 
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    text-align: center; 
+                    padding: 50px; 
+                    font-family: 'Inter', Arial, sans-serif;
+                ">
+                    <div style="max-width: 800px;">
+                        <img src="https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96" 
+                             alt="CLIENT FLOW 360" 
+                             style="height: 120px; width: auto; margin: 20px auto 30px; display: block; 
+                                    filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.8));" />
+                        
+                        <h1 style="font-size: 4rem; margin-bottom: 1rem; font-weight: 900; 
+                                   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);">CLIENT FLOW 360</h1>
+                        <h2 style="font-size: 2rem; margin-bottom: 2rem; color: #fecaca; font-weight: 300;">
+                            The Ultimate Real Estate CRM Experience</h2>
+                        
+                        <p style="font-size: 1.2rem; margin-bottom: 2rem; color: #d1d5db; line-height: 1.6;">
+                            Transform your real estate business with enhanced MLS integration and complete address matching.
+                        </p>
+                        
+                        <a href="./index.html" style="
+                            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); 
+                            color: white; 
+                            padding: 20px 40px; 
+                            border: none; 
+                            border-radius: 10px; 
+                            font-size: 1.3rem; 
+                            font-weight: 700;
+                            text-decoration: none;
+                            display: inline-block;
+                            margin: 10px;
+                            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+                            transition: transform 0.3s ease;
+                        " onmouseover="this.style.transform='translateY(-3px)'" 
+                           onmouseout="this.style.transform='translateY(0)'">🚀 Start Your Journey</a>
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes gradientShift {
+                        0% { background-position: 0% 50%; }
+                        50% { background-position: 100% 50%; }
+                        100% { background-position: 0% 50%; }
+                    }
+                </style>
+            `;
+        }
+    </script>
+</body>
+</html>
