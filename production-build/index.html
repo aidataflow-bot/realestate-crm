@@ -8,8 +8,8 @@
     <meta http-equiv="Expires" content="1756402899" />
     <meta name="build-hash" content="1756402899" />
     <title>CLIENT FLOW 360 - Real Estate CRM Platform - v2.4 MLS Bridge Integration</title>
-    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -87,7 +87,7 @@
         if (!isAuthenticated) {
           console.log('🔐 User not authenticated, redirecting to landing page...');
           try {
-            window.location.href = './landing.html';
+            window.location.href = '/landing.html';
           } catch (error) {
             console.error('Redirect error:', error);
             // Fallback: show guest mode
@@ -1242,7 +1242,7 @@
                   sessionStorage.removeItem('cf360_authenticated');
                   sessionStorage.removeItem('cf360_user');
                   setUser(null);
-                  window.location.href = './landing.html';
+                  window.location.href = '/landing.html';
                 },
                 className: 'bg-red-600 px-2 py-1 sm:px-3 sm:py-1 rounded text-xs sm:text-sm hover:bg-red-700'
               }, 'Logout')
