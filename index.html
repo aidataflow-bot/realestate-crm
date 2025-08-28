@@ -78,10 +78,22 @@
 
       // Authentication Check - Redirect to landing if not authenticated
       function checkAuthentication() {
+        // Prevent redirect loops
+        if (window.location.pathname === '/landing.html') {
+          return false;
+        }
+        
         const isAuthenticated = sessionStorage.getItem('cf360_authenticated') === 'true';
         if (!isAuthenticated) {
           console.log('🔐 User not authenticated, redirecting to landing page...');
-          window.location.href = '/landing.html';
+          try {
+            window.location.href = '/landing.html';
+          } catch (error) {
+            console.error('Redirect error:', error);
+            // Fallback: show guest mode
+            console.log('🔐 Starting in guest mode - authentication required for full functionality');
+            return true; // Allow guest access
+          }
           return false;
         }
         return true;

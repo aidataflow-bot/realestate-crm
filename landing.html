@@ -552,7 +552,13 @@
                 setUser(userData);
                 setShowAuth(false);
                 setTimeout(() => {
-                    window.location.href = '/index.html';
+                    try {
+                        window.location.href = '/index.html';
+                    } catch (error) {
+                        console.error('Navigation error:', error);
+                        // Fallback: reload the page
+                        window.location.reload();
+                    }
                 }, 1000);
             };
 
@@ -644,9 +650,21 @@
             );
         }
 
-        // Render the app with React 18 API
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(LandingPage));
+        // Render the app with React 18 compatibility
+        try {
+            // Try React 18 API first
+            if (ReactDOM.createRoot) {
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(LandingPage));
+            } else {
+                // Fallback to React 17 API
+                ReactDOM.render(React.createElement(LandingPage), document.getElementById('root'));
+            }
+        } catch (error) {
+            console.error('React rendering error:', error);
+            // Final fallback
+            ReactDOM.render(React.createElement(LandingPage), document.getElementById('root'));
+        }
     </script>
 </body>
 </html>
