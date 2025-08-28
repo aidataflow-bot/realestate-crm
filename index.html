@@ -5113,101 +5113,157 @@
             
             React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-6' },
               
-              // Contact Information Section
-              React.createElement('div', { className: 'bg-gray-700 rounded-lg p-4' },
-                React.createElement('div', { className: 'flex items-center mb-4' },
-                  React.createElement('span', { className: 'text-2xl mr-2' }, '👤'),
-                  React.createElement('h3', { className: 'text-lg font-semibold text-blue-400' }, 'Contact Information')
+              // Basic Information Section
+              React.createElement('div', { className: 'bg-slate-700/50 rounded-lg p-6 border border-slate-600' },
+                React.createElement('div', { className: 'flex items-center mb-6' },
+                  React.createElement('span', { className: 'text-2xl mr-3' }, '📋'),
+                  React.createElement('h3', { className: 'text-xl font-semibold text-green-400' }, 'Basic Information')
                 ),
                 React.createElement('div', { className: 'space-y-4' },
-                  React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
-                React.createElement('input', {
-                  type: 'text',
-                  placeholder: 'First Name',
-                  value: formData.firstName,
-                  onChange: (e) => handleChange('firstName', e.target.value),
-                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white',
-                  required: true
-                }),
-                React.createElement('input', {
-                  type: 'text',
-                  placeholder: 'Last Name',
-                  value: formData.lastName,
-                  onChange: (e) => handleChange('lastName', e.target.value),
-                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white',
-                  required: true
-                })
+                  React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                    React.createElement('input', {
+                      type: 'text',
+                      placeholder: 'First Name *',
+                      value: formData.firstName,
+                      onChange: (e) => handleChange('firstName', e.target.value),
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-green-400 focus:outline-none transition-colors',
+                      required: true
+                    }),
+                    React.createElement('input', {
+                      type: 'text',
+                      placeholder: 'Last Name *',
+                      value: formData.lastName,
+                      onChange: (e) => handleChange('lastName', e.target.value),
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-green-400 focus:outline-none transition-colors',
+                      required: true
+                    })
+                  ),
+                  React.createElement('div', { className: 'grid grid-cols-2 gap-4' },
+                    React.createElement('input', {
+                      type: 'email',
+                      placeholder: 'Email Address *',
+                      value: formData.email,
+                      onChange: (e) => handleChange('email', e.target.value),
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-green-400 focus:outline-none transition-colors',
+                      required: true
+                    }),
+                    React.createElement('input', {
+                      type: 'tel',
+                      placeholder: 'Phone Number',
+                      value: formData.phone,
+                      onChange: (e) => handleChange('phone', e.target.value),
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-green-400 focus:outline-none transition-colors'
+                    })
+                  )
+                )
               ),
-                  React.createElement('input', {
-                    type: 'email',
-                    placeholder: 'Email',
-                    value: formData.email,
-                    onChange: (e) => handleChange('email', e.target.value),
-                    className: 'w-full p-3 bg-slate-600 rounded border border-slate-500 text-white',
-                    required: true
-                  }),
-                  React.createElement('input', {
-                    type: 'tel',
-                    placeholder: 'Phone',
-                    value: formData.phone,
-                    onChange: (e) => handleChange('phone', e.target.value),
-                    className: 'w-full p-3 bg-slate-600 rounded border border-slate-500 text-white'
-                  }),
-                  React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'Address',
-                    value: formData.address,
-                    onChange: (e) => handleChange('address', e.target.value),
-                    className: 'w-full p-3 bg-slate-600 rounded border border-slate-500 text-white'
-                  })
+              
+              // Current Address Section
+              React.createElement('div', { className: 'bg-slate-700/50 rounded-lg p-6 border border-slate-600' },
+                React.createElement('div', { className: 'flex items-center mb-6' },
+                  React.createElement('span', { className: 'text-2xl mr-3' }, '🏠'),
+                  React.createElement('h3', { className: 'text-xl font-semibold text-blue-400' }, 'Current Address')
+                ),
+                React.createElement('div', { className: 'space-y-4' },
+                  React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
+                    React.createElement('select', {
+                      value: formData.country || 'United States',
+                      onChange: (e) => handleChange('country', e.target.value),
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white focus:border-blue-400 focus:outline-none transition-colors'
+                    },
+                      React.createElement('option', { value: 'United States' }, 'United States'),
+                      React.createElement('option', { value: 'Canada' }, 'Canada'),
+                      React.createElement('option', { value: 'Other' }, 'Other')
+                    ),
+                    React.createElement('input', {
+                      type: 'text',
+                      placeholder: 'Street Address',
+                      value: formData.address,
+                      onChange: (e) => handleChange('address', e.target.value),
+                      className: 'col-span-2 p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-blue-400 focus:outline-none transition-colors'
+                    })
+                  ),
+                  React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
+                    React.createElement('input', {
+                      type: 'text',
+                      placeholder: 'City',
+                      value: formData.city,
+                      onChange: (e) => handleChange('city', e.target.value),
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-blue-400 focus:outline-none transition-colors'
+                    }),
+                    React.createElement('input', {
+                      type: 'text',
+                      placeholder: 'State/Province',
+                      value: formData.state,
+                      onChange: (e) => handleChange('state', e.target.value),
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-blue-400 focus:outline-none transition-colors'
+                    }),
+                    React.createElement('input', {
+                      type: 'text',
+                      placeholder: 'Zip/Postal Code',
+                      value: formData.zipCode,
+                      onChange: (e) => handleChange('zipCode', e.target.value),
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-blue-400 focus:outline-none transition-colors'
+                    })
+                  )
                 )
               ),
               
               // Personal Information Section
-              React.createElement('div', { className: 'bg-gray-700 rounded-lg p-4' },
-                React.createElement('div', { className: 'flex items-center mb-4' },
-                  React.createElement('span', { className: 'text-2xl mr-2' }, '👨‍👩‍👧‍👦'),
-                  React.createElement('h3', { className: 'text-lg font-semibold text-green-400' }, 'Personal Information')
+              React.createElement('div', { className: 'bg-slate-700/50 rounded-lg p-6 border border-slate-600' },
+                React.createElement('div', { className: 'flex items-center mb-6' },
+                  React.createElement('span', { className: 'text-2xl mr-3' }, '👨‍👩‍👧‍👦'),
+                  React.createElement('h3', { className: 'text-xl font-semibold text-yellow-400' }, 'Personal Information')
                 ),
                 React.createElement('div', { className: 'space-y-4' },
-                  React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
-                React.createElement('input', {
-                  type: 'date',
-                  placeholder: 'Birthday',
-                  value: formData.birthday,
-                  onChange: (e) => handleChange('birthday', e.target.value),
-                  className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white'
-                }),
-                React.createElement('input', {
-                  type: 'date',
-                  placeholder: 'Anniversary',
-                  value: formData.anniversary,
-                  onChange: (e) => handleChange('anniversary', e.target.value),
-                    className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white'
-                  })
-                ),
-                  React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+                  React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
+                    React.createElement('div', { className: 'space-y-2' },
+                      React.createElement('label', { className: 'block text-sm font-medium text-slate-300' }, 'Birth Date'),
+                      React.createElement('input', {
+                        type: 'date',
+                        value: formData.birthday,
+                        onChange: (e) => handleChange('birthday', e.target.value),
+                        className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white focus:border-yellow-400 focus:outline-none transition-colors'
+                      })
+                    ),
                     React.createElement('input', {
                       type: 'text',
-                      placeholder: 'Spouse Name',
+                      placeholder: 'Spouse/Partner Name',
                       value: formData.spouse,
                       onChange: (e) => handleChange('spouse', e.target.value),
-                      className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white'
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-yellow-400 focus:outline-none transition-colors'
                     }),
                     React.createElement('input', {
                       type: 'text',
-                      placeholder: 'Children (e.g. Emma 12, Jake 8)',
+                      placeholder: 'Children (e.g., Emma 12, Jake 8)',
                       value: formData.children,
                       onChange: (e) => handleChange('children', e.target.value),
-                      className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white'
+                      className: 'p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-yellow-400 focus:outline-none transition-colors'
                     })
-                  ),
+                  )
+                )
+              ),
+              
+              // CRM Information Section
+              React.createElement('div', { className: 'bg-slate-700/50 rounded-lg p-6 border border-slate-600' },
+                React.createElement('div', { className: 'flex items-center mb-6' },
+                  React.createElement('span', { className: 'text-2xl mr-3' }, '📊'),
+                  React.createElement('h3', { className: 'text-xl font-semibold text-orange-400' }, 'CRM Information')
+                ),
+                React.createElement('div', { className: 'space-y-4' },
                   React.createElement('input', {
                     type: 'text',
-                    placeholder: 'Tags (comma-separated)',
+                    placeholder: 'Tags (comma-separated, e.g., VIP, Luxury, First-time buyer)',
                     value: formData.tags,
                     onChange: (e) => handleChange('tags', e.target.value),
-                    className: 'w-full p-3 bg-slate-600 rounded border border-slate-500 text-white'
+                    className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-orange-400 focus:outline-none transition-colors'
+                  }),
+                  React.createElement('textarea', {
+                    placeholder: 'Additional Comments/Notes',
+                    value: formData.notes || '',
+                    onChange: (e) => handleChange('notes', e.target.value),
+                    rows: 4,
+                    className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-orange-400 focus:outline-none transition-colors resize-none'
                   })
                 )
               ),
