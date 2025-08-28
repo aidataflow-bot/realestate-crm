@@ -650,20 +650,22 @@
             );
         }
 
-        // Render the app with React 18 compatibility
-        try {
-            // Try React 18 API first
-            if (ReactDOM.createRoot) {
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(LandingPage));
-            } else {
-                // Fallback to React 17 API
-                ReactDOM.render(React.createElement(LandingPage), document.getElementById('root'));
+        // Render the app - use React 17 API for maximum compatibility
+        console.log('🎬 Starting CLIENT FLOW 360 Landing Page...');
+        const rootElement = document.getElementById('root');
+        console.log('📦 Root element found:', rootElement);
+        
+        if (rootElement) {
+            try {
+                ReactDOM.render(React.createElement(LandingPage), rootElement);
+                console.log('✅ Landing page rendered successfully');
+            } catch (error) {
+                console.error('❌ Landing page render error:', error);
+                // Fallback: show a simple loading message
+                rootElement.innerHTML = '<div style="color: white; padding: 50px; text-align: center;"><h1>CLIENT FLOW 360 CRM</h1><p>Loading...</p></div>';
             }
-        } catch (error) {
-            console.error('React rendering error:', error);
-            // Final fallback
-            ReactDOM.render(React.createElement(LandingPage), document.getElementById('root'));
+        } else {
+            console.error('❌ Root element not found!');
         }
     </script>
 </body>
