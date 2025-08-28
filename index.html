@@ -5956,9 +5956,8 @@
         );
       }
 
-      // Render the app
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(NetflixCRM));
+      // Render the app - Using React 17 API for compatibility
+      ReactDOM.render(React.createElement(NetflixCRM), document.getElementById('root'));
     </script>
   </body>
 </html>
