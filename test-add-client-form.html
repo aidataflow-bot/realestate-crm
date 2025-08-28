@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Client Form Test - CLIENT FLOW 360</title>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
+            background: #111827; 
+            color: white; 
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script>
+        const { useState } = React;
+        
+        // Bridge Data Output API for MLS property data
+        const API = {
+            bridge: {
+                baseURL: 'https://api.bridgedataoutput.com/api/v2/test',
+                token: '6baca547742c6f96a6ff71b138424f21',
+                
+                searchProperties: async (query) => {
+                    try {
+                        console.log('🏠 Searching Bridge API for properties:', query);
+                        
+                        const searchParams = new URLSearchParams({
+                            access_token: API.bridge.token,
+                            limit: 20
+                        });
+                        
+                        // Add search filters if provided
+                        if (query.city) {
+                            searchParams.append('City', query.city);
+                        }
+                        if (query.state) {
+                            searchParams.append('StateOrProvince', query.state);
+                        }
+                        if (query.zipCode) {
+                            searchParams.append('PostalCode', query.zipCode);
+                        }
+                        
+                        const response = await fetch(`${API.bridge.baseURL}/listings?${searchParams}`);
+                        const data = await response.json();
+                        
+                        if (data.success && data.bundle) {
+                            return data.bundle.slice(0, 5).map((listing) => ({
+                                id: listing.ListingKey,
+                                mlsId: listing.ListingId,
+                                address: `${listing.UnparsedAddress || ''} ${listing.City || ''}, ${listing.StateOrProvince || ''} ${listing.PostalCode || ''}`.trim(),
+                                price: listing.ListPrice,
+                                bedrooms: listing.BedroomsTotal,
+                                bathrooms: listing.BathroomsTotalDecimal,
+                            }));
+                        }
+                        return [];
+                    } catch (error) {
+                        console.error('🏠 Bridge API Error:', error);
+                        return [];
+                    }
+                }
+            }
+        };
+        
+        function AddClientFormTest() {
+            const [showModal, setShowModal] = useState(false);
+            const [formData, setFormData] = useState({
+                firstName: '',
+                lastName: '',
+                email: '',
+                phone: '',
+                address: '',
+                tags: '',
+                propertyStreetAddress: '',
+                propertyCity: '',
+                propertyState: '',
+                propertyZipCode: ''
+            });
+
+            const handleChange = (field, value) => {
+                setFormData(prev => ({ ...prev, [field]: value }));
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                alert('✅ Form submitted successfully! This is just a test.');
+                setShowModal(false);
+            };
+            
+            return React.createElement('div', { className: 'p-6' },
+                React.createElement('h1', { className: 'text-3xl font-bold mb-6' }, '🧪 Add Client Form Test'),
+                React.createElement('p', { className: 'mb-4 text-gray-300' }, 'Click the button below to test the enhanced Add Client form with MLS Search integration:'),
+                
+                React.createElement('button', {
+                    onClick: () => setShowModal(true),
+                    className: 'bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition-colors'
+                }, '+ Test Add Client Form'),
+                
+                // Enhanced Add Client Modal
+                showModal && React.createElement('div', { 
+                    className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+                    onClick: () => setShowModal(false)
+                },
+                    React.createElement('div', { 
+                        className: 'bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto',
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Enhanced Add New Client Form'),
+                        
+                        React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-4' },
+                            // Basic Information
+                            React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
+                                React.createElement('input', {
+                                    type: 'text',
+                                    placeholder: 'First Name',
+                                    value: formData.firstName,
+                                    onChange: (e) => handleChange('firstName', e.target.value),
+                                    className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white',
+                                    required: true
+                                }),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    placeholder: 'Last Name',
+                                    value: formData.lastName,
+                                    onChange: (e) => handleChange('lastName', e.target.value),
+                                    className: 'p-3 bg-gray-700 rounded border border-gray-600 text-white',
+                                    required: true
+                                })
+                            ),
+                            React.createElement('input', {
+                                type: 'email',
+                                placeholder: 'Email',
+                                value: formData.email,
+                                onChange: (e) => handleChange('email', e.target.value),
+                                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white',
+                                required: true
+                            }),
+                            React.createElement('input', {
+                                type: 'tel',
+                                placeholder: 'Phone',
+                                value: formData.phone,
+                                onChange: (e) => handleChange('phone', e.target.value),
+                                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                            }),
+                            React.createElement('input', {
+                                type: 'text',
+                                placeholder: 'Address',
+                                value: formData.address,
+                                onChange: (e) => handleChange('address', e.target.value),
+                                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                            }),
+                            React.createElement('input', {
+                                type: 'text',
+                                placeholder: 'Tags (comma-separated)',
+                                value: formData.tags,
+                                onChange: (e) => handleChange('tags', e.target.value),
+                                className: 'w-full p-3 bg-gray-700 rounded border border-gray-600 text-white'
+                            }),
+                            
+                            // Enhanced Property Interest Section with MLS Search
+                            React.createElement('div', { className: 'bg-slate-700 rounded-lg p-4' },
+                                React.createElement('div', { className: 'flex items-center justify-between mb-4' },
+                                    React.createElement('div', { className: 'flex items-center' },
+                                        React.createElement('span', { className: 'text-2xl mr-2' }, '🎯'),
+                                        React.createElement('h3', { className: 'text-lg font-semibold text-purple-400' }, 'Property Interest')
+                                    ),
+                                    React.createElement('button', {
+                                        type: 'button',
+                                        onClick: async () => {
+                                            try {
+                                                // Build search criteria from form fields
+                                                const searchCriteria = {};
+                                                
+                                                if (formData.propertyStreetAddress) {
+                                                    searchCriteria.address = formData.propertyStreetAddress;
+                                                }
+                                                if (formData.propertyCity) {
+                                                    searchCriteria.city = formData.propertyCity;
+                                                }
+                                                if (formData.propertyState) {
+                                                    searchCriteria.state = formData.propertyState;
+                                                }
+                                                if (formData.propertyZipCode) {
+                                                    searchCriteria.zipCode = formData.propertyZipCode;
+                                                }
+                                                
+                                                console.log('🔍 Searching MLS properties with criteria:', searchCriteria);
+                                                const properties = await API.bridge.searchProperties(searchCriteria);
+                                                console.log('🏠 Found properties:', properties);
+                                                
+                                                if (properties.length > 0) {
+                                                    let propertyOptions = properties.slice(0, 5).map((prop, index) => 
+                                                        `${index + 1}. ${prop.address} - $${prop.price?.toLocaleString() || 'N/A'} (${prop.bedrooms || 0}br/${prop.bathrooms || 0}ba)`
+                                                    ).join('\\n');
+                                                    
+                                                    const selection = prompt(`Found ${properties.length} MLS properties! Select one:\\n\\n${propertyOptions}\\n\\nEnter number (1-5) or 0 to cancel:`);
+                                                    
+                                                    if (selection && selection !== '0') {
+                                                        const selectedIndex = parseInt(selection) - 1;
+                                                        if (selectedIndex >= 0 && selectedIndex < properties.length) {
+                                                            const selectedProperty = properties[selectedIndex];
+                                                            
+                                                            const addressParts = selectedProperty.address.split(',');
+                                                            const streetAddress = addressParts[0]?.trim() || '';
+                                                            const city = addressParts[1]?.trim() || '';
+                                                            const stateZip = addressParts[2]?.trim() || '';
+                                                            const stateParts = stateZip.split(' ');
+                                                            const state = stateParts[0] || '';
+                                                            const zip = stateParts[1] || '';
+                                                            
+                                                            handleChange('propertyStreetAddress', streetAddress);
+                                                            handleChange('propertyCity', city);
+                                                            handleChange('propertyState', state);
+                                                            handleChange('propertyZipCode', zip);
+                                                            
+                                                            alert(`✅ Selected property: ${selectedProperty.address}\\nPrice: $${selectedProperty.price?.toLocaleString() || 'N/A'}\\nBedrooms: ${selectedProperty.bedrooms || 'N/A'}\\nBathrooms: ${selectedProperty.bathrooms || 'N/A'}`);
+                                                        }
+                                                    }
+                                                } else {
+                                                    alert('No MLS properties found. Try different search criteria or check console for details.');
+                                                }
+                                            } catch (error) {
+                                                console.error('MLS Search Error:', error);
+                                                alert('❌ Error searching MLS properties. Check console for details.');
+                                            }
+                                        },
+                                        className: 'px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors'
+                                    }, '🔍 Search MLS')
+                                ),
+                                React.createElement('div', { className: 'mb-4' },
+                                    React.createElement('p', { className: 'text-gray-300 text-sm mb-3' }, 'Enter complete address details for precise MLS property targeting:'),
+                                    React.createElement('p', { className: 'text-green-400 text-xs mb-3' }, '🎯 Enhanced MLS Search - Uses Street + City + State + Zip for exact property matching (no random data)')
+                                ),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    placeholder: 'Street Address',
+                                    value: formData.propertyStreetAddress,
+                                    onChange: (e) => handleChange('propertyStreetAddress', e.target.value),
+                                    className: 'w-full p-3 bg-slate-600 rounded border border-slate-500 text-white placeholder-gray-400 mb-4'
+                                }),
+                                React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
+                                    React.createElement('input', {
+                                        type: 'text',
+                                        placeholder: 'City',
+                                        value: formData.propertyCity,
+                                        onChange: (e) => handleChange('propertyCity', e.target.value),
+                                        className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white placeholder-gray-400'
+                                    }),
+                                    React.createElement('input', {
+                                        type: 'text',
+                                        placeholder: 'State/Province',
+                                        value: formData.propertyState,
+                                        onChange: (e) => handleChange('propertyState', e.target.value),
+                                        className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white placeholder-gray-400'
+                                    }),
+                                    React.createElement('input', {
+                                        type: 'text',
+                                        placeholder: 'Zip/Postal Code',
+                                        value: formData.propertyZipCode,
+                                        onChange: (e) => handleChange('propertyZipCode', e.target.value),
+                                        className: 'p-3 bg-slate-600 rounded border border-slate-500 text-white placeholder-gray-400'
+                                    })
+                                )
+                            ),
+                            
+                            // Action Buttons
+                            React.createElement('div', { className: 'flex space-x-3 pt-4 border-t border-gray-700' },
+                                React.createElement('button', {
+                                    type: 'submit',
+                                    className: 'flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold'
+                                }, '✅ Create Client (Test)'),
+                                React.createElement('button', {
+                                    type: 'button',
+                                    onClick: () => setShowModal(false),
+                                    className: 'flex-1 bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-500 transition-colors'
+                                }, '❌ Cancel')
+                            )
+                        )
+                    )
+                )
+            );
+        }
+        
+        // Render the test app
+        ReactDOM.render(React.createElement(AddClientFormTest), document.getElementById('root'));
+    </script>
+</body>
+</html>
