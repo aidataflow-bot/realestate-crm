@@ -552,7 +552,13 @@
                 setUser(userData);
                 setShowAuth(false);
                 setTimeout(() => {
-                    window.location.href = '/index.html';
+                    try {
+                        window.location.href = '/index.html';
+                    } catch (error) {
+                        console.error('Navigation error:', error);
+                        // Fallback: reload the page
+                        window.location.reload();
+                    }
                 }, 1000);
             };
 
@@ -644,9 +650,23 @@
             );
         }
 
-        // Render the app with React 18 API
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(LandingPage));
+        // Render the app - use React 17 API for maximum compatibility
+        console.log('🎬 Starting CLIENT FLOW 360 Landing Page...');
+        const rootElement = document.getElementById('root');
+        console.log('📦 Root element found:', rootElement);
+        
+        if (rootElement) {
+            try {
+                ReactDOM.render(React.createElement(LandingPage), rootElement);
+                console.log('✅ Landing page rendered successfully');
+            } catch (error) {
+                console.error('❌ Landing page render error:', error);
+                // Fallback: show a simple loading message
+                rootElement.innerHTML = '<div style="color: white; padding: 50px; text-align: center;"><h1>CLIENT FLOW 360 CRM</h1><p>Loading...</p></div>';
+            }
+        } else {
+            console.error('❌ Root element not found!');
+        }
     </script>
 </body>
 </html>
