@@ -6,8 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <meta name="build-hash" content="1756274401" />
-    <title>CLIENT FLOW 360 - Real Estate CRM Platform - v2.3 Persistence Fix</title>
+    <meta name="build-hash" content="1756274402" />
+    <title>CLIENT FLOW 360 - Real Estate CRM Platform - v2.4 Debug Fix</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -327,18 +327,62 @@
           }
         }, []);
         
-        // Enhanced demo clients loader with better persistence handling
+        // Debug localStorage contents on app load
+        const debugLocalStorage = useCallback(() => {
+          console.log('🔍 === DEBUGGING LOCALSTORAGE ===');
+          if (user && user.email) {
+            const storageKey = `cf360_clients_${user.email}`;
+            console.log(`🔑 Storage key: ${storageKey}`);
+            
+            // List all localStorage keys that contain 'cf360'
+            const allKeys = Object.keys(localStorage).filter(key => key.includes('cf360'));
+            console.log('📋 All CF360 keys in localStorage:', allKeys);
+            
+            const savedData = localStorage.getItem(storageKey);
+            console.log('💾 Raw localStorage data:', savedData);
+            
+            if (savedData) {
+              try {
+                const parsed = JSON.parse(savedData);
+                console.log(`📊 Parsed: ${parsed.length} clients`);
+                console.log('📝 Client details:', parsed.map(c => ({ id: c.id, firstName: c.firstName, lastName: c.lastName })));
+              } catch (e) {
+                console.error('❌ Failed to parse localStorage data:', e);
+              }
+            } else {
+              console.log('❌ No data found in localStorage for this user');
+            }
+          } else {
+            console.log('❌ No user logged in for localStorage debug');
+          }
+          console.log('🔍 === END LOCALSTORAGE DEBUG ===');
+        }, [user]);
+        
+        // Enhanced demo clients loader with bulletproof persistence handling
         const loadDemoClients = useCallback(() => {
           try {
+            console.log('🚀 === LOADING DEMO CLIENTS ===');
+            debugLocalStorage(); // Debug first
+            
             if (user && user.email) {
               const storageKey = `cf360_clients_${user.email}`;
               const savedClients = localStorage.getItem(storageKey);
-              if (savedClients) {
-                const parsedClients = JSON.parse(savedClients);
-                console.log(`✅ Loaded ${parsedClients.length} demo clients from localStorage for user: ${user.email}`);
-                console.log(`📋 Client IDs loaded:`, parsedClients.map(c => c.id));
-                setClients(parsedClients);
-                return;
+              if (savedClients && savedClients !== 'null' && savedClients !== 'undefined') {
+                try {
+                  const parsedClients = JSON.parse(savedClients);
+                  if (Array.isArray(parsedClients)) {
+                    console.log(`✅ Loaded ${parsedClients.length} demo clients from localStorage for user: ${user.email}`);
+                    console.log(`📋 Client IDs loaded:`, parsedClients.map(c => c.id));
+                    setClients(parsedClients);
+                    return;
+                  } else {
+                    console.warn('⚠️ Parsed data is not an array, resetting to empty');
+                  }
+                } catch (parseError) {
+                  console.error('❌ Failed to parse saved clients:', parseError);
+                  // Clear corrupted data
+                  localStorage.removeItem(storageKey);
+                }
               }
             }
             
@@ -349,7 +393,7 @@
             console.error('❌ Failed to load demo clients:', error);
             setClients([]);
           }
-        }, [user, saveUserClients]);
+        }, [user, saveUserClients, debugLocalStorage]);
         
         // Initialize app
         useEffect(() => {
@@ -1518,7 +1562,7 @@
           );
         };
         
-        // Enhanced bulk delete function with improved persistence
+        // Bulletproof bulk delete function with comprehensive debugging
         const handleBulkDelete = () => {
           if (selectedClients.length === 0) return;
           
@@ -1526,48 +1570,84 @@
           const confirmMessage = `Are you sure you want to delete ${clientsToDelete} client(s)? This action cannot be undone.`;
           
           if (confirm(confirmMessage)) {
-            console.log(`🗑️ Starting bulk delete of ${clientsToDelete} clients:`, selectedClients);
+            console.log(`🗑️ === STARTING BULK DELETE ===`);
+            console.log(`🗑️ Deleting ${clientsToDelete} clients:`, selectedClients);
+            console.log(`📊 Current clients before delete: ${clients.length}`);
+            console.log(`📋 Current client IDs:`, clients.map(c => c.id));
             
             // Filter out selected clients
             const updatedClients = clients.filter(client => !selectedClients.includes(client.id));
-            console.log(`📊 Clients before delete: ${clients.length}, after delete: ${updatedClients.length}`);
+            console.log(`📊 Clients after filter: ${updatedClients.length}`);
+            console.log(`📋 Remaining client IDs:`, updatedClients.map(c => c.id));
             
-            // CRITICAL: Save to localStorage FIRST before updating state
+            // CRITICAL: Save to localStorage FIRST with extensive verification
             try {
-              saveUserClients(user, updatedClients);
-              console.log(`💾 Successfully saved ${updatedClients.length} clients to localStorage`);
-              
-              // Double-verify the save worked with a delay to ensure persistence
-              setTimeout(() => {
-                if (user && user.email) {
-                  const storageKey = `cf360_clients_${user.email}`;
-                  const savedData = localStorage.getItem(storageKey);
-                  const verifyClients = savedData ? JSON.parse(savedData) : [];
-                  console.log(`🔍 Delayed verification: ${verifyClients.length} clients in localStorage after save`);
+              // Force save with manual localStorage operation to ensure it works
+              if (user && user.email) {
+                const storageKey = `cf360_clients_${user.email}`;
+                const dataToSave = JSON.stringify(updatedClients);
+                
+                console.log(`💾 Saving to localStorage key: ${storageKey}`);
+                console.log(`💾 Data being saved (length ${dataToSave.length}):`, dataToSave.substring(0, 200) + '...');
+                
+                // Force the save
+                localStorage.setItem(storageKey, dataToSave);
+                
+                // Immediate verification
+                const immediateCheck = localStorage.getItem(storageKey);
+                if (immediateCheck) {
+                  const immediateData = JSON.parse(immediateCheck);
+                  console.log(`✅ Immediate verification: ${immediateData.length} clients saved`);
                   
-                  if (verifyClients.length !== updatedClients.length) {
-                    console.error('❌ Verification failed: localStorage count mismatch');
-                    alert('Warning: Delete operation may not be fully persistent. Please refresh and check.');
-                  } else {
-                    console.log('✅ Verification passed: localStorage save is persistent');
+                  if (immediateData.length !== updatedClients.length) {
+                    throw new Error(`Save verification failed: expected ${updatedClients.length}, got ${immediateData.length}`);
                   }
+                } else {
+                  throw new Error('Save failed: no data found in localStorage after save');
                 }
-              }, 100);
+                
+                // Also use the saveUserClients function
+                saveUserClients(user, updatedClients);
+                
+                // Triple verification with delay
+                setTimeout(() => {
+                  const delayedCheck = localStorage.getItem(storageKey);
+                  if (delayedCheck) {
+                    const delayedData = JSON.parse(delayedCheck);
+                    console.log(`🔍 Delayed verification: ${delayedData.length} clients in localStorage`);
+                    
+                    if (delayedData.length !== updatedClients.length) {
+                      console.error('❌ DELAYED VERIFICATION FAILED!');
+                      console.error(`Expected: ${updatedClients.length}, Got: ${delayedData.length}`);
+                      alert('WARNING: Delete operation may not be persistent. Data mismatch detected!');
+                    } else {
+                      console.log('✅ DELAYED VERIFICATION PASSED: localStorage is persistent');
+                    }
+                  } else {
+                    console.error('❌ DELAYED VERIFICATION FAILED: No data in localStorage');
+                    alert('WARNING: Delete operation may not be persistent. No data found!');
+                  }
+                }, 500);
+              } else {
+                throw new Error('No user logged in for localStorage save');
+              }
               
             } catch (error) {
-              console.error('❌ Failed to save clients after bulk delete:', error);
-              alert('Warning: Delete operation may not be persistent due to save error.');
+              console.error('❌ CRITICAL: Failed to save clients after bulk delete:', error);
+              alert(`CRITICAL ERROR: Delete operation failed to save. Error: ${error.message}`);
               return; // Don't update UI state if save failed
             }
             
             // Update state AFTER successful save
+            console.log(`🔄 Updating UI state with ${updatedClients.length} clients`);
             setClients(updatedClients);
             
             // Reset selection state
             setSelectedClients([]);
             setSelectAll(false);
             
-            console.log(`✅ Bulk delete completed: ${clientsToDelete} clients removed with verified persistence`);
+            console.log(`✅ === BULK DELETE COMPLETED ===`);
+            console.log(`✅ Result: ${clientsToDelete} clients deleted, ${updatedClients.length} remaining`);
             
             // Show success notification
             const notification = document.createElement('div');
@@ -1582,7 +1662,7 @@
               if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
               }
-            }, 3000);
+            }, 4000);
             
             // Show success message
             alert(`✅ Successfully deleted ${clientsToDelete} client(s)`);
@@ -1611,6 +1691,40 @@
                     : 'bg-purple-600 text-white hover:bg-purple-700'
                 }`
               }, isListeningForTask ? '🎤 Task Listening...' : '📝 Voice Task')
+            )
+          ),
+
+          // Debug Section (temporary for debugging)
+          user && React.createElement('div', {
+            className: 'mb-4 p-3 bg-red-900/20 border border-red-600 rounded-lg'
+          },
+            React.createElement('h4', { className: 'text-sm font-bold text-red-400 mb-2' }, '🐛 Debug Panel (Temporary)'),
+            React.createElement('div', { className: 'flex flex-wrap gap-2' },
+              React.createElement('button', {
+                onClick: () => {
+                  debugLocalStorage();
+                  console.log('🔍 Current clients in state:', clients.length);
+                  console.log('📋 Client IDs in state:', clients.map(c => c.id));
+                },
+                className: 'px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700'
+              }, '🔍 Debug localStorage'),
+              React.createElement('button', {
+                onClick: () => {
+                  if (user && user.email) {
+                    const storageKey = `cf360_clients_${user.email}`;
+                    localStorage.removeItem(storageKey);
+                    console.log('🗑️ Cleared localStorage for user:', user.email);
+                    alert('localStorage cleared! Refresh to see effect.');
+                  }
+                },
+                className: 'px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700'
+              }, '🗑️ Clear localStorage'),
+              React.createElement('button', {
+                onClick: () => {
+                  loadDemoClients();
+                },
+                className: 'px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700'
+              }, '🔄 Reload Data')
             )
           ),
 
