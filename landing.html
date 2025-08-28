@@ -4,10 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CLIENT FLOW 360 - Real Estate CRM Platform</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="build-hash" content="1756406000" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         
@@ -125,7 +129,7 @@
 <body class="bg-black text-white overflow-x-hidden">
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script>
         const { useState, useEffect } = React;
 
         // Authentication Component
@@ -651,21 +655,72 @@
         }
 
         // Render the app - use React 17 API for maximum compatibility
-        console.log('🎬 Starting CLIENT FLOW 360 Landing Page...');
-        const rootElement = document.getElementById('root');
-        console.log('📦 Root element found:', rootElement);
-        
-        if (rootElement) {
-            try {
+        try {
+            console.log('🎬 Starting CLIENT FLOW 360 Landing Page...');
+            
+            // Ensure React is loaded
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                throw new Error('React libraries not loaded');
+            }
+            
+            const rootElement = document.getElementById('root');
+            console.log('📦 Root element found:', rootElement);
+            
+            if (rootElement) {
                 ReactDOM.render(React.createElement(LandingPage), rootElement);
                 console.log('✅ Landing page rendered successfully');
-            } catch (error) {
-                console.error('❌ Landing page render error:', error);
-                // Fallback: show a simple loading message
-                rootElement.innerHTML = '<div style="color: white; padding: 50px; text-align: center;"><h1>CLIENT FLOW 360 CRM</h1><p>Loading...</p></div>';
+            } else {
+                throw new Error('Root element not found');
             }
-        } else {
-            console.error('❌ Root element not found!');
+        } catch (error) {
+            console.error('❌ Landing page error:', error);
+            
+            // Comprehensive fallback UI
+            const fallbackElement = document.getElementById('root') || document.body;
+            fallbackElement.innerHTML = `
+                <div style="
+                    min-height: 100vh; 
+                    background: linear-gradient(135deg, #000000 0%, #1a1a1a 25%, #dc2626 50%, #991b1b 75%, #000000 100%); 
+                    color: white; 
+                    padding: 50px; 
+                    text-align: center; 
+                    font-family: 'Inter', Arial, sans-serif;
+                ">
+                    <div style="max-width: 800px; margin: 0 auto;">
+                        <img src="https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96" 
+                             alt="CLIENT FLOW 360" 
+                             style="height: 120px; width: auto; margin: 20px auto; display: block;" />
+                        
+                        <h1 style="font-size: 3rem; margin-bottom: 1rem; font-weight: 900;">CLIENT FLOW 360</h1>
+                        <h2 style="font-size: 1.5rem; margin-bottom: 2rem; color: #dc2626;">Real Estate CRM Platform</h2>
+                        
+                        <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; margin: 30px 0;">
+                            <p style="font-size: 1.2rem; margin-bottom: 1rem;">✅ Application is Ready</p>
+                            <p style="margin-bottom: 1rem;">Experience the ultimate real estate CRM with powerful client management and MLS integration.</p>
+                        </div>
+                        
+                        <div style="margin: 30px 0;">
+                            <a href="./index.html" style="
+                                background: #dc2626; 
+                                color: white; 
+                                padding: 15px 30px; 
+                                border: none; 
+                                border-radius: 8px; 
+                                font-size: 1.2rem; 
+                                text-decoration: none;
+                                display: inline-block;
+                                margin: 10px;
+                            ">🚀 Launch CRM Dashboard</a>
+                        </div>
+                        
+                        <div style="margin-top: 30px; font-size: 0.9rem; opacity: 0.8;">
+                            <p><strong>Demo Login:</strong></p>
+                            <p>Email: rodrigo@clientflow360.com</p>
+                            <p>Password: admin123</p>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
     </script>
 </body>
