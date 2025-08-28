@@ -5127,24 +5127,52 @@
         );
       }
 
-      // Add Client Modal Component  
+      // Modern Add Client Modal Component with Tabs
       function AddClientModal({ onClose, onAdd }) {
+        const [activeTab, setActiveTab] = useState('basic');
         const [formData, setFormData] = useState({
+          // Basic Information Tab
           firstName: '',
           lastName: '',
           email: '',
           phone: '',
+          alternatePhone: '',
           address: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          
+          // Personal Details Tab
           birthday: '',
           anniversary: '',
           spouse: '',
           children: '',
+          occupation: '',
+          employer: '',
           notes: '',
           tags: '',
+          
+          // Property Preferences Tab
           budget: '',
+          budgetMax: '',
           propertyType: 'house',
+          bedrooms: '',
+          bathrooms: '',
+          sqftMin: '',
+          sqftMax: '',
+          preferredAreas: '',
+          mustHaves: '',
+          dealBreakers: '',
+          
+          // CRM Details Tab
           stage: 'LEAD',
-          source: 'referral'
+          source: 'referral',
+          priority: 'medium',
+          assignedAgent: '',
+          
+          // Communication Preferences
+          preferredContact: 'email',
+          bestTimeToCall: 'morning'
         });
 
         const handleSubmit = (e) => {
