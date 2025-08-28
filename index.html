@@ -195,21 +195,36 @@
           }
         },
         
-        // Bridge Data Output API for MLS property data
+        // Bridge Data Output API for MLS property data - Enhanced with exact address matching
         bridge: {
           baseURL: 'https://api.bridgedataoutput.com/api/v2/test',
           token: '6baca547742c6f96a6ff71b138424f21',
           
           searchProperties: async (query) => {
             try {
-              console.log('🏠 Searching Bridge API for properties:', query);
+              console.log('🏠 Enhanced MLS Search with complete address criteria:', query);
               
               const searchParams = new URLSearchParams({
                 access_token: API.bridge.token,
-                limit: 20  // Get more results to filter through
+                limit: 50  // Get more results for better filtering
               });
               
-              // Add search filters if provided
+              // Enhanced search with street address filtering
+              if (query.address && query.address.trim()) {
+                // Extract potential street number from address for better matching
+                const streetMatch = query.address.match(/^(\d+)/);
+                if (streetMatch) {
+                  searchParams.append('StreetNumber', streetMatch[1]);
+                }
+                
+                // Extract street name for more precise filtering
+                const streetName = query.address.replace(/^\d+\s*/, '').trim();
+                if (streetName) {
+                  searchParams.append('StreetName', streetName);
+                }
+              }
+              
+              // Add all location filters for comprehensive search
               if (query.city) {
                 searchParams.append('City', query.city);
               }
@@ -220,55 +235,144 @@
                 searchParams.append('PostalCode', query.zipCode);
               }
               
-              console.log('🔍 Search URL:', `${API.bridge.baseURL}/listings?${searchParams.toString()}`);
+              console.log('🔍 Enhanced Search URL:', `${API.bridge.baseURL}/listings?${searchParams.toString()}`);
               const response = await fetch(`${API.bridge.baseURL}/listings?${searchParams}`);
               const data = await response.json();
               
               if (data.success && data.bundle) {
                 let results = data.bundle.map((listing, index) => {
+                  const fullAddress = `${listing.UnparsedAddress || ''} ${listing.City || ''}, ${listing.StateOrProvince || ''} ${listing.PostalCode || ''}`.trim();
+                  
                   console.log(`🏠 Property ${index + 1}:`, {
                     listingKey: listing.ListingKey,
-                    unparsedAddress: listing.UnparsedAddress,
+                    fullAddress: fullAddress,
+                    streetNumber: listing.StreetNumber,
+                    streetName: listing.StreetName,
                     city: listing.City,
                     state: listing.StateOrProvince,
                     postalCode: listing.PostalCode,
                     price: listing.ListPrice,
                     beds: listing.BedroomsTotal,
-                    baths: listing.BathroomsTotalDecimal
+                    baths: listing.BathroomsTotalDecimal,
+                    sqft: listing.LivingArea
                   });
                   
                   return {
                     id: listing.ListingKey,
                     mlsId: listing.ListingId,
-                    address: `${listing.UnparsedAddress || ''} ${listing.City || ''}, ${listing.StateOrProvince || ''} ${listing.PostalCode || ''}`.trim(),
+                    address: fullAddress,
+                    streetAddress: listing.UnparsedAddress || `${listing.StreetNumber || ''} ${listing.StreetName || ''}`.trim(),
+                    city: listing.City,
+                    state: listing.StateOrProvince,
+                    zipCode: listing.PostalCode,
                     price: listing.ListPrice,
                     status: listing.StandardStatus || listing.MlsStatus,
                     bedrooms: listing.BedroomsTotal,
                     bathrooms: listing.BathroomsTotalDecimal,
                     sqft: listing.LivingArea,
                     yearBuilt: listing.YearBuilt,
+                    propertyType: listing.PropertyType || 'Residential',
                     coordinates: { lat: listing.Latitude, lng: listing.Longitude },
-                    agent: { name: listing.ListAgentFullName, office: listing.ListOfficeName },
+                    agent: { 
+                      name: listing.ListAgentFullName, 
+                      office: listing.ListOfficeName,
+                      phone: listing.ListAgentDirectPhone
+                    },
                     photos: listing.Media ? listing.Media.filter(m => m.MediaCategory === 'Photo').map(m => m.MediaURL) : [],
-                    remarks: listing.PublicRemarks
+                    remarks: listing.PublicRemarks,
+                    matchScore: 0  // Initialize match score for ranking
                   };
                 });
                 
-                // Client-side filtering for more precise matches
-                if (query.address && query.address.trim()) {
-                  const searchAddress = query.address.toLowerCase();
-                  results = results.filter(prop => 
-                    prop.address.toLowerCase().includes(searchAddress) ||
-                    (prop.address.split(',')[0] || '').toLowerCase().includes(searchAddress)
-                  );
-                  console.log(`🎯 Filtered to ${results.length} properties matching "${query.address}"`);
+                // Enhanced client-side filtering for exact address matching
+                if (query.address || query.city || query.state || query.zipCode) {
+                  results = results.filter(prop => {
+                    let matchScore = 0;
+                    let matches = true;
+                    
+                    // Exact street address matching (highest priority)
+                    if (query.address && query.address.trim()) {
+                      const searchAddress = query.address.toLowerCase().trim();
+                      const propStreetAddress = (prop.streetAddress || '').toLowerCase().trim();
+                      const propFullAddress = prop.address.toLowerCase();
+                      
+                      if (propStreetAddress.includes(searchAddress) || propFullAddress.includes(searchAddress)) {
+                        matchScore += 10; // High score for address match
+                        
+                        // Exact match gets even higher score
+                        if (propStreetAddress === searchAddress) {
+                          matchScore += 20;
+                        }
+                      } else {
+                        matches = false;
+                      }
+                    }
+                    
+                    // City matching (medium priority)
+                    if (query.city && query.city.trim()) {
+                      const searchCity = query.city.toLowerCase().trim();
+                      const propCity = (prop.city || '').toLowerCase();
+                      
+                      if (propCity === searchCity) {
+                        matchScore += 5;
+                      } else if (propCity.includes(searchCity)) {
+                        matchScore += 2;
+                      } else {
+                        matches = false;
+                      }
+                    }
+                    
+                    // State matching (medium priority)
+                    if (query.state && query.state.trim()) {
+                      const searchState = query.state.toLowerCase().trim();
+                      const propState = (prop.state || '').toLowerCase();
+                      
+                      if (propState === searchState) {
+                        matchScore += 5;
+                      } else {
+                        matches = false;
+                      }
+                    }
+                    
+                    // Zip code matching (high priority)
+                    if (query.zipCode && query.zipCode.trim()) {
+                      const searchZip = query.zipCode.trim();
+                      const propZip = (prop.zipCode || '').trim();
+                      
+                      if (propZip === searchZip) {
+                        matchScore += 8;
+                      } else if (propZip.startsWith(searchZip.substring(0, 3))) {
+                        matchScore += 3; // Partial zip match
+                      } else {
+                        matches = false;
+                      }
+                    }
+                    
+                    prop.matchScore = matchScore;
+                    return matches;
+                  });
+                  
+                  // Sort by match score (highest first) then by price
+                  results.sort((a, b) => {
+                    if (b.matchScore !== a.matchScore) {
+                      return b.matchScore - a.matchScore;
+                    }
+                    return (a.price || 0) - (b.price || 0);
+                  });
+                  
+                  console.log(`🎯 Enhanced filtering: ${results.length} properties match complete address criteria`);
+                  console.log('Top matches:', results.slice(0, 3).map(p => ({
+                    address: p.address,
+                    matchScore: p.matchScore,
+                    price: p.price
+                  })));
                 }
                 
                 return results;
               }
               return [];
             } catch (error) {
-              console.error('🏠 Bridge API Error:', error);
+              console.error('🏠 Enhanced MLS Search Error:', error);
               return [];
             }
           }
@@ -5101,70 +5205,138 @@
                     type: 'button',
                     onClick: async () => {
                       try {
-                        // Build search criteria from form fields
+                        // Enhanced validation for complete address search
+                        const hasAddress = formData.propertyStreetAddress?.trim();
+                        const hasCity = formData.propertyCity?.trim();
+                        const hasState = formData.propertyState?.trim();
+                        const hasZip = formData.propertyZipCode?.trim();
+                        
+                        if (!hasAddress && !hasCity && !hasState && !hasZip) {
+                          alert('⚠️ Please enter at least one address component:\n• Street Address (recommended)\n• City\n• State\n• Zip Code\n\nFor best results, enter complete address with street, city, state, and zip.');
+                          return;
+                        }
+                        
+                        // Build comprehensive search criteria
                         const searchCriteria = {};
                         
-                        if (formData.propertyStreetAddress) {
-                          searchCriteria.address = formData.propertyStreetAddress;
+                        if (hasAddress) {
+                          searchCriteria.address = formData.propertyStreetAddress.trim();
                         }
-                        if (formData.propertyCity) {
-                          searchCriteria.city = formData.propertyCity;
+                        if (hasCity) {
+                          searchCriteria.city = formData.propertyCity.trim();
                         }
-                        if (formData.propertyState) {
-                          searchCriteria.state = formData.propertyState;
+                        if (hasState) {
+                          searchCriteria.state = formData.propertyState.trim();
                         }
-                        if (formData.propertyZipCode) {
-                          searchCriteria.zipCode = formData.propertyZipCode;
+                        if (hasZip) {
+                          searchCriteria.zipCode = formData.propertyZipCode.trim();
                         }
                         
-                        console.log('🔍 Searching MLS properties with criteria:', searchCriteria);
-                        const properties = await API.bridge.searchProperties(searchCriteria);
-                        console.log('🏠 Found properties:', properties);
+                        console.log('🔍 Enhanced MLS Search with complete address criteria:', searchCriteria);
                         
-                        if (properties.length > 0) {
-                          // Create a selection dialog with available properties
-                          let propertyOptions = properties.slice(0, 5).map((prop, index) => 
-                            `${index + 1}. ${prop.address} - $${prop.price?.toLocaleString() || 'N/A'} (${prop.bedrooms || 0}br/${prop.bathrooms || 0}ba)`
-                          ).join('\\n');
+                        // Show loading state
+                        const button = event.target;
+                        const originalText = button.textContent;
+                        button.textContent = '🔄 Searching...';
+                        button.disabled = true;
+                        
+                        try {
+                          const properties = await API.bridge.searchProperties(searchCriteria);
+                          console.log('🏠 Found properties with enhanced search:', properties);
                           
-                          const selection = prompt(`Found ${properties.length} MLS properties! Select one:\\n\\n${propertyOptions}\\n\\nEnter number (1-5) or 0 to cancel:`);
-                          
-                          if (selection && selection !== '0') {
-                            const selectedIndex = parseInt(selection) - 1;
-                            if (selectedIndex >= 0 && selectedIndex < properties.length) {
-                              const selectedProperty = properties[selectedIndex];
+                          if (properties.length > 0) {
+                            // Enhanced property selection with detailed information
+                            let propertyOptions = properties.slice(0, 8).map((prop, index) => {
+                              const sqftInfo = prop.sqft ? ` | ${prop.sqft.toLocaleString()} sqft` : '';
+                              const yearInfo = prop.yearBuilt ? ` | Built ${prop.yearBuilt}` : '';
+                              const matchInfo = prop.matchScore ? ` [Match: ${prop.matchScore}%]` : '';
                               
-                              // Parse the address better
-                              const addressParts = selectedProperty.address.split(',');
-                              const streetAddress = addressParts[0]?.trim() || '';
-                              const city = addressParts[1]?.trim() || '';
-                              const stateZip = addressParts[2]?.trim() || '';
-                              const stateParts = stateZip.split(' ');
-                              const state = stateParts[0] || '';
-                              const zip = stateParts[1] || '';
-                              
-                              handleChange('propertyStreetAddress', streetAddress);
-                              handleChange('propertyCity', city);
-                              handleChange('propertyState', state);
-                              handleChange('propertyZipCode', zip);
-                              
-                              alert(`✅ Selected property: ${selectedProperty.address}\\nPrice: $${selectedProperty.price?.toLocaleString() || 'N/A'}\\nBedrooms: ${selectedProperty.bedrooms || 'N/A'}\\nBathrooms: ${selectedProperty.bathrooms || 'N/A'}`);
+                              return `${index + 1}. ${prop.address}
+   💰 $${prop.price?.toLocaleString() || 'Price N/A'}
+   🏠 ${prop.bedrooms || 0}br/${prop.bathrooms || 0}ba${sqftInfo}${yearInfo}${matchInfo}
+   📝 ${prop.status || 'Status Unknown'}`;
+                            }).join('\\n\\n');
+                            
+                            alert(`🎯 Found ${properties.length} MLS properties matching your criteria!\\n\\nTop matches based on address accuracy:\\n\\n${propertyOptions}\\n\\nThese properties match your search for:\\n• Street: ${hasAddress ? formData.propertyStreetAddress : 'Not specified'}\\n• City: ${hasCity ? formData.propertyCity : 'Not specified'}\\n• State: ${hasState ? formData.propertyState : 'Not specified'}\\n• Zip: ${hasZip ? formData.propertyZipCode : 'Not specified'}`);
+                            
+                            const selection = prompt(`Select a property to auto-fill details:\\n\\nEnter number (1-${Math.min(8, properties.length)}) or 0 to cancel:`);
+                            
+                            if (selection && selection !== '0') {
+                              const selectedIndex = parseInt(selection) - 1;
+                              if (selectedIndex >= 0 && selectedIndex < properties.length) {
+                                const selectedProperty = properties[selectedIndex];
+                                
+                                // Use the enhanced property data from our improved API
+                                handleChange('propertyStreetAddress', selectedProperty.streetAddress || selectedProperty.address.split(',')[0]?.trim() || '');
+                                handleChange('propertyCity', selectedProperty.city || '');
+                                handleChange('propertyState', selectedProperty.state || '');
+                                handleChange('propertyZipCode', selectedProperty.zipCode || '');
+                                
+                                // Auto-fill additional property details if available
+                                if (selectedProperty.price) {
+                                  handleChange('propertyPrice', selectedProperty.price.toString());
+                                }
+                                if (selectedProperty.bedrooms) {
+                                  handleChange('propertyBedrooms', selectedProperty.bedrooms.toString());
+                                }
+                                if (selectedProperty.bathrooms) {
+                                  handleChange('propertyBathrooms', selectedProperty.bathrooms.toString());
+                                }
+                                if (selectedProperty.sqft) {
+                                  handleChange('propertySqft', selectedProperty.sqft.toString());
+                                }
+                                if (selectedProperty.propertyType) {
+                                  handleChange('propertyType', selectedProperty.propertyType.toLowerCase());
+                                }
+                                if (selectedProperty.yearBuilt) {
+                                  handleChange('propertyYearBuilt', selectedProperty.yearBuilt.toString());
+                                }
+                                
+                                const matchDetails = selectedProperty.matchScore > 15 ? 
+                                  '🎯 Exact Match!' : 
+                                  selectedProperty.matchScore > 10 ? 
+                                    '✅ Strong Match' : 
+                                    '📍 Location Match';
+                                
+                                alert(`${matchDetails}\\n\\n✅ Auto-filled property details:\\n\\n📍 Address: ${selectedProperty.address}\\n💰 Price: $${selectedProperty.price?.toLocaleString() || 'N/A'}\\n🏠 ${selectedProperty.bedrooms || 0} bed / ${selectedProperty.bathrooms || 0} bath\\n📐 ${selectedProperty.sqft?.toLocaleString() || 'N/A'} sqft\\n📅 Built: ${selectedProperty.yearBuilt || 'Unknown'}\\n🏷️ Type: ${selectedProperty.propertyType || 'Unknown'}\\n📊 Status: ${selectedProperty.status || 'Unknown'}\\n\\nMLS ID: ${selectedProperty.mlsId || 'N/A'}${selectedProperty.agent?.name ? '\\n👤 Agent: ' + selectedProperty.agent.name : ''}`);
+                              }
                             }
+                          } else {
+                            const searchSummary = Object.entries(searchCriteria)
+                              .map(([key, value]) => `${key}: "${value}"`)
+                              .join(', ');
+                            
+                            alert(`🔍 No MLS properties found matching your search criteria:\\n\\n${searchSummary}\\n\\nTips for better results:\\n• Try searching with just city and state\\n• Check spelling of street address\\n• Use common abbreviations (St, Ave, Dr)\\n• Try a broader zip code area\\n\\nNote: This demo uses Bridge API test data. Real MLS integration would have more comprehensive listings.`);
                           }
-                        } else {
-                          alert('No MLS properties found in test dataset. This is a demo using Bridge API test data.');
+                        } finally {
+                          // Restore button state
+                          button.textContent = originalText;
+                          button.disabled = false;
                         }
                       } catch (error) {
-                        console.error('MLS Search Error:', error);
-                        alert('❌ Error searching MLS properties. Check console for details.');
+                        console.error('Enhanced MLS Search Error:', error);
+                        alert(`❌ MLS Search Error:\\n\\n${error.message || 'Unknown error occurred'}\\n\\nPlease check:\\n• Internet connection\\n• Address format\\n• Try again in a moment\\n\\nCheck browser console for technical details.`);
                       }
                     },
-                    className: 'px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors'
-                  }, '🔍 Search MLS')
+                    className: 'px-4 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors font-semibold flex items-center gap-2'
+                  }, 
+                    React.createElement('span', null, '🔍'),
+                    React.createElement('span', null, 'Enhanced MLS Search')
+                  )
                 ),
                 React.createElement('div', { className: 'mb-4' },
-                  React.createElement('p', { className: 'text-gray-300 text-sm mb-3' }, 'Enter details about the property your client is interested in (or use MLS search):'),
-                  React.createElement('p', { className: 'text-yellow-400 text-xs mb-3' }, '🧪 MLS Search uses Bridge API test data. With real credentials, this would search actual MLS listings.')
+                  React.createElement('p', { className: 'text-gray-300 text-sm mb-3' }, 'Enter complete property address details for exact MLS matching:'),
+                  React.createElement('div', { className: 'bg-blue-900/30 border border-blue-600/50 rounded-lg p-3 mb-3' },
+                    React.createElement('p', { className: 'text-blue-300 text-xs font-semibold mb-2' }, '🎯 Enhanced MLS Integration Features:'),
+                    React.createElement('ul', { className: 'text-blue-200 text-xs space-y-1' },
+                      React.createElement('li', null, '✅ Complete address matching (Street + City + State + Zip)'),
+                      React.createElement('li', null, '✅ Smart property ranking by relevance'),
+                      React.createElement('li', null, '✅ Auto-fill property details from MLS data'),
+                      React.createElement('li', null, '✅ Real-time Bridge API integration')
+                    )
+                  ),
+                  React.createElement('p', { className: 'text-yellow-400 text-xs mb-2' }, '💡 For best results, enter street address + city + state + zip code.'),
+                  React.createElement('p', { className: 'text-gray-400 text-xs' }, '🧪 Currently using Bridge API test dataset. Live MLS credentials would provide real property data.')
                 ),
                 React.createElement('input', {
                   type: 'text',
