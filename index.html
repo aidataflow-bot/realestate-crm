@@ -5129,7 +5129,7 @@
 
       // Modern Add Client Modal Component with Tabs
       function AddClientModal({ onClose, onAdd }) {
-        const [activeTab, setActiveTab] = useState('basic');
+        const [activeTab, setActiveTab] = useState('overview');
         const [formData, setFormData] = useState({
           // Basic Information Tab
           firstName: '',
@@ -5198,6 +5198,7 @@
         };
 
         const tabs = [
+          { id: 'overview', label: '📋 Customer Overview', description: '360° client summary' },
           { id: 'basic', label: '👤 Basic Info', description: 'Name, contact details' },
           { id: 'personal', label: '🏠 Personal', description: 'Family, occupation' },
           { id: 'property', label: '🎯 Property Needs', description: 'Budget, preferences' },
@@ -5206,6 +5207,115 @@
 
         const renderTabContent = () => {
           switch (activeTab) {
+            case 'overview':
+              return React.createElement('div', { className: 'space-y-6' },
+                React.createElement('div', { className: 'text-center mb-6' },
+                  React.createElement('h3', { className: 'text-2xl font-bold text-white mb-2 flex items-center justify-center' },
+                    React.createElement('span', { className: 'mr-3' }, '📋'),
+                    'Customer 360° Overview'
+                  ),
+                  React.createElement('p', { className: 'text-gray-300' }, 'Complete client profile and summary')
+                ),
+                
+                // Quick Summary Cards
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4 mb-6' },
+                  React.createElement('div', { className: 'bg-blue-900/30 p-4 rounded-lg border border-blue-600' },
+                    React.createElement('div', { className: 'text-center' },
+                      React.createElement('div', { className: 'text-2xl mb-2' }, '👤'),
+                      React.createElement('h4', { className: 'text-sm font-semibold text-blue-300 mb-1' }, 'Client Profile'),
+                      React.createElement('p', { className: 'text-xs text-gray-400' }, 'Personal & contact info')
+                    )
+                  ),
+                  React.createElement('div', { className: 'bg-green-900/30 p-4 rounded-lg border border-green-600' },
+                    React.createElement('div', { className: 'text-center' },
+                      React.createElement('div', { className: 'text-2xl mb-2' }, '🎯'),
+                      React.createElement('h4', { className: 'text-sm font-semibold text-green-300 mb-1' }, 'Property Goals'),
+                      React.createElement('p', { className: 'text-xs text-gray-400' }, 'Budget & preferences')
+                    )
+                  ),
+                  React.createElement('div', { className: 'bg-purple-900/30 p-4 rounded-lg border border-purple-600' },
+                    React.createElement('div', { className: 'text-center' },
+                      React.createElement('div', { className: 'text-2xl mb-2' }, '📊'),
+                      React.createElement('h4', { className: 'text-sm font-semibold text-purple-300 mb-1' }, 'CRM Status'),
+                      React.createElement('p', { className: 'text-xs text-gray-400' }, 'Lead stage & priority')
+                    )
+                  )
+                ),
+                
+                // Form Preview
+                React.createElement('div', { className: 'bg-gray-700/50 p-6 rounded-lg border border-gray-600' },
+                  React.createElement('h4', { className: 'text-lg font-semibold text-white mb-4 flex items-center' },
+                    React.createElement('span', { className: 'mr-2' }, '📝'),
+                    'Client Information Preview'
+                  ),
+                  React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
+                    // Basic Info Preview
+                    React.createElement('div', {},
+                      React.createElement('h5', { className: 'text-sm font-semibold text-blue-300 mb-3' }, 'Contact Details'),
+                      React.createElement('div', { className: 'space-y-2 text-sm' },
+                        React.createElement('div', { className: 'flex justify-between' },
+                          React.createElement('span', { className: 'text-gray-400' }, 'Name:'),
+                          React.createElement('span', { className: 'text-white' }, 
+                            formData.firstName && formData.lastName 
+                              ? `${formData.firstName} ${formData.lastName}`
+                              : 'Not entered'
+                          )
+                        ),
+                        React.createElement('div', { className: 'flex justify-between' },
+                          React.createElement('span', { className: 'text-gray-400' }, 'Email:'),
+                          React.createElement('span', { className: 'text-white' }, formData.email || 'Not entered')
+                        ),
+                        React.createElement('div', { className: 'flex justify-between' },
+                          React.createElement('span', { className: 'text-gray-400' }, 'Phone:'),
+                          React.createElement('span', { className: 'text-white' }, formData.phone || 'Not entered')
+                        ),
+                        React.createElement('div', { className: 'flex justify-between' },
+                          React.createElement('span', { className: 'text-gray-400' }, 'Address:'),
+                          React.createElement('span', { className: 'text-white text-right' }, formData.address || 'Not entered')
+                        )
+                      )
+                    ),
+                    // Property Info Preview
+                    React.createElement('div', {},
+                      React.createElement('h5', { className: 'text-sm font-semibold text-green-300 mb-3' }, 'Property Preferences'),
+                      React.createElement('div', { className: 'space-y-2 text-sm' },
+                        React.createElement('div', { className: 'flex justify-between' },
+                          React.createElement('span', { className: 'text-gray-400' }, 'Budget:'),
+                          React.createElement('span', { className: 'text-white' }, 
+                            formData.budget ? `$${parseInt(formData.budget).toLocaleString()}` : 'Not set'
+                          )
+                        ),
+                        React.createElement('div', { className: 'flex justify-between' },
+                          React.createElement('span', { className: 'text-gray-400' }, 'Property Type:'),
+                          React.createElement('span', { className: 'text-white capitalize' }, formData.propertyType || 'Not selected')
+                        ),
+                        React.createElement('div', { className: 'flex justify-between' },
+                          React.createElement('span', { className: 'text-gray-400' }, 'Stage:'),
+                          React.createElement('span', { className: 'text-white' }, formData.stage || 'Not set')
+                        ),
+                        React.createElement('div', { className: 'flex justify-between' },
+                          React.createElement('span', { className: 'text-gray-400' }, 'Source:'),
+                          React.createElement('span', { className: 'text-white capitalize' }, formData.source || 'Not set')
+                        )
+                      )
+                    )
+                  )
+                ),
+                
+                // Navigation Helper
+                React.createElement('div', { className: 'bg-yellow-900/20 p-4 rounded-lg border border-yellow-600' },
+                  React.createElement('div', { className: 'flex items-center' },
+                    React.createElement('span', { className: 'text-2xl mr-3' }, '💡'),
+                    React.createElement('div', {},
+                      React.createElement('h4', { className: 'text-sm font-semibold text-yellow-300 mb-1' }, 'Fill Out Client Information'),
+                      React.createElement('p', { className: 'text-xs text-gray-400' }, 
+                        'Use the tabs above to complete all client details. Start with Basic Info, then Personal, Property Needs, and CRM Details.'
+                      )
+                    )
+                  )
+                )
+              );
+
             case 'basic':
               return React.createElement('div', { className: 'space-y-4' },
                 React.createElement('div', { className: 'text-center mb-6' },
