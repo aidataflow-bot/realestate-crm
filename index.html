@@ -5127,52 +5127,38 @@
         );
       }
 
-      // Modern Add Client Modal Component with Tabs
+      // Simple Add Client Modal Component  
       function AddClientModal({ onClose, onAdd }) {
-        const [activeTab, setActiveTab] = useState('overview');
         const [formData, setFormData] = useState({
-          // Basic Information Tab
+          // Basic Information
           firstName: '',
           lastName: '',
           email: '',
           phone: '',
-          alternatePhone: '',
+          
+          // Mailing Address
           address: '',
           city: '',
           state: '',
           zipCode: '',
           
-          // Personal Details Tab
+          // Personal Details  
           birthday: '',
-          anniversary: '',
+          anniversary: '', // What should this second date be?
           spouse: '',
           children: '',
-          occupation: '',
-          employer: '',
-          notes: '',
-          tags: '',
           
-          // Property Preferences Tab
-          budget: '',
-          budgetMax: '',
+          // Property of Interest
+          propertyAddress: '',
+          propertyPrice: '',
           propertyType: 'house',
-          bedrooms: '',
-          bathrooms: '',
-          sqftMin: '',
-          sqftMax: '',
-          preferredAreas: '',
-          mustHaves: '',
-          dealBreakers: '',
+          budget: '',
           
-          // CRM Details Tab
+          // CRM Details
           stage: 'LEAD',
           source: 'referral',
-          priority: 'medium',
-          assignedAgent: '',
-          
-          // Communication Preferences
-          preferredContact: 'email',
-          bestTimeToCall: 'morning'
+          notes: '',
+          tags: ''
         });
 
         const handleSubmit = (e) => {
@@ -5650,7 +5636,7 @@
           onClick: onClose
         },
           React.createElement('div', { 
-            className: 'bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden',
+            className: 'bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto',
             onClick: (e) => e.stopPropagation()
           },
             // Header with close button
