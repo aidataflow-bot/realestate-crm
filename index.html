@@ -226,7 +226,11 @@
               
               // Map ZIP codes to coordinates for better results
               if (query.zipCode === '32828') {
-                lat = 28.5383; lng = -81.3792; // Orlando 32828 area
+                lat = 28.5850; lng = -81.2850; // Specific 32828 ZIP area coordinates
+              } else if (query.zipCode === '32806') {
+                lat = 28.5100; lng = -81.3676; // 32806 area
+              } else if (query.zipCode === '32805') {
+                lat = 28.5339; lng = -81.3960; // 32805 area
               } else if (query.city && query.city.toLowerCase().includes('orlando')) {
                 lat = 28.5383; lng = -81.3792; // Orlando general area
               }
