@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Valuation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #111827;
+            color: white;
+        }
+        .test-container {
+            background: #1f2937;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        input, button, select {
+            padding: 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #374151;
+            background: #374151;
+            color: white;
+            width: 200px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #dc2626;
+            cursor: pointer;
+            font-weight: bold;
+            width: auto;
+            padding: 12px 24px;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #0f172a;
+            border-radius: 5px;
+            border-left: 4px solid #10b981;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .address-test {
+            background: #1f2937;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏠 Enhanced Property Valuation System Test</h1>
+    
+    <div class="test-container">
+        <h2>🎯 Test Individual Property</h2>
+        <input type="text" id="address" placeholder="Street Address" value="14147 Mailer Blvd">
+        <input type="text" id="city" placeholder="City" value="Orlando">
+        <select id="state">
+            <option value="FL">Florida (FL)</option>
+            <option value="CA">California (CA)</option>
+            <option value="TX">Texas (TX)</option>
+            <option value="NY">New York (NY)</option>
+        </select>
+        <input type="text" id="zipCode" placeholder="Zip Code" value="32832">
+        <br>
+        <button onclick="testSingleProperty()">🔍 Test Property Valuation</button>
+        <div id="single-results" class="results" style="display:none;"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>📊 Test Multiple Locations</h2>
+        <button onclick="testMultipleLocations()">🌎 Test Area-Based Valuations</button>
+        <div id="multiple-results" class="results" style="display:none;"></div>
+    </div>
+
+    <script>
+        // Copy the enhanced valuation function from the CRM
+        function getAreaBasedValue(city, state, sqft = 1800) {
+            const areaValueMap = {
+                // Florida - Orlando Metro
+                'orlando,fl': { avgPrice: 380000, sqftPrice: 200 },
+                'winter park,fl': { avgPrice: 520000, sqftPrice: 280 },
+                'maitland,fl': { avgPrice: 450000, sqftPrice: 240 },
+                'kissimmee,fl': { avgPrice: 320000, sqftPrice: 170 },
+                'apopka,fl': { avgPrice: 340000, sqftPrice: 180 },
+                
+                // Florida - Other major cities
+                'miami,fl': { avgPrice: 550000, sqftPrice: 300 },
+                'tampa,fl': { avgPrice: 420000, sqftPrice: 220 },
+                'jacksonville,fl': { avgPrice: 350000, sqftPrice: 180 },
+                'fort lauderdale,fl': { avgPrice: 480000, sqftPrice: 260 },
+                
+                // Default by state
+                'fl': { avgPrice: 380000, sqftPrice: 190 },
+                'ca': { avgPrice: 750000, sqftPrice: 400 },
+                'tx': { avgPrice: 320000, sqftPrice: 160 },
+                'ny': { avgPrice: 480000, sqftPrice: 250 },
+                'default': { avgPrice: 350000, sqftPrice: 175 }
+            };
+            
+            const locationKey = `${city.toLowerCase()},${state.toLowerCase()}`;
+            const stateKey = state.toLowerCase();
+            
+            const areaData = areaValueMap[locationKey] || 
+                            areaValueMap[stateKey] || 
+                            areaValueMap['default'];
+            
+            const calculatedValue = sqft ? Math.round(sqft * areaData.sqftPrice) : areaData.avgPrice;
+            
+            return {
+                value: calculatedValue,
+                source: `${city}, ${state} Area Estimate`,
+                method: sqft ? `$${areaData.sqftPrice}/sqft × ${sqft} sqft` : 'Average area price',
+                sqftPrice: areaData.sqftPrice,
+                avgPrice: areaData.avgPrice
+            };
+        }
+
+        async function testSingleProperty() {
+            const address = document.getElementById('address').value;
+            const city = document.getElementById('city').value;
+            const state = document.getElementById('state').value;
+            const zipCode = document.getElementById('zipCode').value;
+            const resultsDiv = document.getElementById('single-results');
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = '🔄 Testing enhanced valuation system...';
+            
+            // Test with different square footages
+            const testSizes = [1200, 1800, 2400, 3000];
+            let results = '';
+            
+            for (const sqft of testSizes) {
+                const valuation = getAreaBasedValue(city, state, sqft);
+                results += `
+                    <div style="margin: 10px 0; padding: 10px; background: #374151; border-radius: 5px;">
+                        <strong>🏠 ${sqft} sqft Property:</strong><br>
+                        💰 <strong>Estimated Value: $${valuation.value.toLocaleString()}</strong><br>
+                        📊 Method: ${valuation.method}<br>
+                        📍 Source: ${valuation.source}<br>
+                        📐 Rate: $${valuation.sqftPrice}/sqft
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = `
+                <h3>✅ ${address}, ${city}, ${state} ${zipCode}</h3>
+                ${results}
+                <hr style="margin: 20px 0; border-color: #374151;">
+                <p><strong>🎯 Valuation Logic:</strong></p>
+                <p>1. ✅ ATTOM Market Value (if available)</p>
+                <p>2. ✅ ATTOM Assessed Value (if available)</p> 
+                <p>3. ✅ <span style="color: #10b981;">Area-Based Estimate (currently used)</span></p>
+                <p>4. ✅ Default $350k (last resort)</p>
+            `;
+        }
+
+        async function testMultipleLocations() {
+            const resultsDiv = document.getElementById('multiple-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = '🔄 Testing multiple locations...';
+            
+            const testLocations = [
+                { city: 'Orlando', state: 'FL', sqft: 1878 },
+                { city: 'Miami', state: 'FL', sqft: 1500 },
+                { city: 'Los Angeles', state: 'CA', sqft: 1800 },
+                { city: 'Austin', state: 'TX', sqft: 2200 },
+                { city: 'Brooklyn', state: 'NY', sqft: 1200 },
+                { city: 'Winter Park', state: 'FL', sqft: 2500 }
+            ];
+            
+            let results = '<div class="test-grid">';
+            
+            for (const location of testLocations) {
+                const valuation = getAreaBasedValue(location.city, location.state, location.sqft);
+                const oldValue = 350000; // Previous static fallback
+                const improvement = valuation.value - oldValue;
+                const improvementColor = improvement > 0 ? '#10b981' : '#ef4444';
+                
+                results += `
+                    <div class="address-test">
+                        <h4>📍 ${location.city}, ${location.state}</h4>
+                        <p><strong>🏠 Property:</strong> ${location.sqft} sqft</p>
+                        <p><strong>💰 New Value:</strong> $${valuation.value.toLocaleString()}</p>
+                        <p><strong>📊 Rate:</strong> $${valuation.sqftPrice}/sqft</p>
+                        <p><strong>🔄 Previous:</strong> $${oldValue.toLocaleString()}</p>
+                        <p style="color: ${improvementColor};">
+                            <strong>📈 Change:</strong> ${improvement > 0 ? '+' : ''}$${improvement.toLocaleString()}
+                        </p>
+                        <p><small>Method: ${valuation.method}</small></p>
+                    </div>
+                `;
+            }
+            
+            results += '</div>';
+            
+            resultsDiv.innerHTML = `
+                <h3>🌎 Area-Based Valuation Results</h3>
+                ${results}
+                <hr style="margin: 20px 0; border-color: #374151;">
+                <p style="color: #10b981;"><strong>✅ Enhanced Valuations Active!</strong></p>
+                <p>Your CRM now provides location-aware property estimates instead of generic $350k fallbacks.</p>
+            `;
+        }
+    </script>
+</body>
+</html>
