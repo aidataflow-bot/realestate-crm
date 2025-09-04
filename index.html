@@ -377,13 +377,70 @@
             }
           },
 
-          // 🏠 🔍 Property Details Lookup - Now with REAL DATA via Realtor16 API!
+          // 🏠 🔍 Property Details Lookup - Now with REAL DATA via ATTOM API!
           getPropertyDetails: async (address, city, state, zipCode) => {
             try {
               console.log('🏠 🔍 REAL API Property Lookup for:', { address, city, state, zipCode });
               
               const fullAddress = `${address} ${city}, ${state} ${zipCode}`.trim();
-              console.log('🏠 📡 Calling Realtor16 API for:', fullAddress);
+              console.log('🏠 📡 Calling ATTOM API for:', fullAddress);
+              
+              // Area-based valuation function - available throughout this function
+              const getAreaBasedValue = (city, state, sqft = 1800) => {
+                const areaValueMap = {
+                  // Florida - Orlando Metro (FL abbreviation)
+                  'orlando,fl': { avgPrice: 399000, sqftPrice: 210 },
+                  'winter park,fl': { avgPrice: 520000, sqftPrice: 280 },
+                  'maitland,fl': { avgPrice: 450000, sqftPrice: 240 },
+                  'kissimmee,fl': { avgPrice: 320000, sqftPrice: 170 },
+                  'apopka,fl': { avgPrice: 340000, sqftPrice: 180 },
+                  
+                  // Florida - Orlando Metro (Full state name)
+                  'orlando,florida': { avgPrice: 399000, sqftPrice: 210 },
+                  'winter park,florida': { avgPrice: 520000, sqftPrice: 280 },
+                  'maitland,florida': { avgPrice: 450000, sqftPrice: 240 },
+                  'kissimmee,florida': { avgPrice: 320000, sqftPrice: 170 },
+                  'apopka,florida': { avgPrice: 340000, sqftPrice: 180 },
+                  
+                  // Florida - Other major cities
+                  'miami,fl': { avgPrice: 550000, sqftPrice: 300 },
+                  'tampa,fl': { avgPrice: 420000, sqftPrice: 220 },
+                  'jacksonville,fl': { avgPrice: 350000, sqftPrice: 180 },
+                  'fort lauderdale,fl': { avgPrice: 480000, sqftPrice: 260 },
+                  'miami,florida': { avgPrice: 550000, sqftPrice: 300 },
+                  'tampa,florida': { avgPrice: 420000, sqftPrice: 220 },
+                  'jacksonville,florida': { avgPrice: 350000, sqftPrice: 180 },
+                  'fort lauderdale,florida': { avgPrice: 480000, sqftPrice: 260 },
+                  
+                  // Default by state
+                  'fl': { avgPrice: 380000, sqftPrice: 190 },
+                  'florida': { avgPrice: 380000, sqftPrice: 190 },
+                  'ca': { avgPrice: 750000, sqftPrice: 400 },
+                  'california': { avgPrice: 750000, sqftPrice: 400 },
+                  'tx': { avgPrice: 320000, sqftPrice: 160 },
+                  'texas': { avgPrice: 320000, sqftPrice: 160 },
+                  'ny': { avgPrice: 480000, sqftPrice: 250 },
+                  'new york': { avgPrice: 480000, sqftPrice: 250 },
+                  'default': { avgPrice: 350000, sqftPrice: 175 }
+                };
+                
+                const locationKey = `${city.toLowerCase()},${state.toLowerCase()}`;
+                const stateKey = state.toLowerCase();
+                
+                const areaData = areaValueMap[locationKey] || 
+                                areaValueMap[stateKey] || 
+                                areaValueMap['default'];
+                
+                // Calculate value based on square footage if available
+                const calculatedValue = sqft ? Math.round(sqft * areaData.sqftPrice) : areaData.avgPrice;
+                
+                return {
+                  value: calculatedValue,
+                  source: `${city}, ${state} Area Estimate`,
+                  method: sqft ? `$${areaData.sqftPrice}/sqft × ${sqft} sqft` : 'Average area price',
+                  sqftPrice: areaData.sqftPrice
+                };
+              };
               
               // REAL API CALL to Realtor16
               let propertyData;
@@ -419,23 +476,43 @@
                     const address_info = property.address || {};
                     const assessment = property.assessment || {};
                     
-                    // Map ATTOM data to our format - REAL property records!
+                    // Map ATTOM data to our format with enhanced area-based valuation fallback
+                    const propertyBedrooms = building.rooms?.beds || building.bedrooms || 3;
+                    const propertyBathrooms = building.rooms?.baths || building.bathrooms || 2;
+                    const propertySqft = building.size?.livingsize || building.livingSize || 1800;
+                    const propertyYearBuilt = building.summary?.yearbuilt || building.yearBuilt || 2000;
+                    
+                    // Get area-based valuation if ATTOM doesn't provide market/assessed values
+                    let propertyValuation = assessment.market?.mktttlvalue || assessment.assessed?.assdttlvalue;
+                    let valuationSource = 'ATTOM Market Value';
+                    let valuationMethod = 'ATTOM AVM';
+                    
+                    if (!propertyValuation) {
+                      const areaValuation = getAreaBasedValue(city || 'Orlando', state || 'FL', propertySqft);
+                      propertyValuation = areaValuation.value;
+                      valuationSource = areaValuation.source;
+                      valuationMethod = areaValuation.method;
+                      console.log(`💰 Using area-based valuation: ${propertySqft} sqft × $${areaValuation.sqftPrice}/sqft = $${propertyValuation.toLocaleString()}`);
+                    }
+                    
                     propertyData = {
                       address: fullAddress,
-                      bedrooms: building.rooms?.beds || building.bedrooms || 3,
-                      bathrooms: building.rooms?.baths || building.bathrooms || 2,
-                      sqft: building.size?.livingsize || building.livingSize || 1800,
-                      yearBuilt: building.summary?.yearbuilt || building.yearBuilt || 2000,
+                      bedrooms: propertyBedrooms,
+                      bathrooms: propertyBathrooms,
+                      sqft: propertySqft,
+                      yearBuilt: propertyYearBuilt,
                       lotSize: property.lot?.lotsize1 ? (property.lot.lotsize1 / 43560).toFixed(2) : 0.25,
                       propertyType: building.summary?.propertytype || 'Single Family Home',
-                      zestimate: assessment.market?.mktttlvalue || assessment.assessed?.assdttlvalue || 350000,
+                      zestimate: propertyValuation,
                       coordinates: { 
                         lat: address_info.GeoCoordinate?.Latitude || 28.5383, 
                         lng: address_info.GeoCoordinate?.Longitude || -81.3792
                       },
                       source: 'ATTOM Data API - Real Property Records',
+                      valuationSource: valuationSource,
+                      valuationMethod: valuationMethod,
                       attomId: property.identifier?.attomId,
-                      assessorId: property.identifier?.apn,
+                      assessorId: property.identifier?.assessorId || property.identifier?.apn,
                       lastSaleDate: property.sale?.amount?.salerecdate,
                       lastSalePrice: property.sale?.amount?.saleamt,
                       taxAssessedValue: assessment.assessed?.assdttlvalue,
@@ -462,46 +539,7 @@
               if (!propertyData) {
                 console.log('🏠 Generating enhanced area-based valuation for:', fullAddress);
                 
-                // Area-based valuation map for better estimates
-                const getAreaBasedValue = (city, state, sqft = 1800) => {
-                  const areaValueMap = {
-                    // Florida - Orlando Metro
-                    'orlando,fl': { avgPrice: 380000, sqftPrice: 200 },
-                    'winter park,fl': { avgPrice: 520000, sqftPrice: 280 },
-                    'maitland,fl': { avgPrice: 450000, sqftPrice: 240 },
-                    'kissimmee,fl': { avgPrice: 320000, sqftPrice: 170 },
-                    'apopka,fl': { avgPrice: 340000, sqftPrice: 180 },
-                    
-                    // Florida - Other major cities
-                    'miami,fl': { avgPrice: 550000, sqftPrice: 300 },
-                    'tampa,fl': { avgPrice: 420000, sqftPrice: 220 },
-                    'jacksonville,fl': { avgPrice: 350000, sqftPrice: 180 },
-                    'fort lauderdale,fl': { avgPrice: 480000, sqftPrice: 260 },
-                    
-                    // Default by state
-                    'fl': { avgPrice: 380000, sqftPrice: 190 },
-                    'ca': { avgPrice: 750000, sqftPrice: 400 },
-                    'tx': { avgPrice: 320000, sqftPrice: 160 },
-                    'ny': { avgPrice: 480000, sqftPrice: 250 },
-                    'default': { avgPrice: 350000, sqftPrice: 175 }
-                  };
-                  
-                  const locationKey = `${city.toLowerCase()},${state.toLowerCase()}`;
-                  const stateKey = state.toLowerCase();
-                  
-                  const areaData = areaValueMap[locationKey] || 
-                                  areaValueMap[stateKey] || 
-                                  areaValueMap['default'];
-                  
-                  // Calculate value based on square footage if available
-                  const calculatedValue = sqft ? Math.round(sqft * areaData.sqftPrice) : areaData.avgPrice;
-                  
-                  return {
-                    value: calculatedValue,
-                    source: `${city}, ${state} Area Estimate`,
-                    method: sqft ? `$${areaData.sqftPrice}/sqft × ${sqft} sqft` : 'Average area price'
-                  };
-                };
+                // Using area-based valuation function (now available throughout the getPropertyDetails function)
                 
                 if (fullAddress.includes('14147 Mailer Blvd') || fullAddress.toLowerCase().includes('mailer')) {
                 // Get area-based valuation for this specific property
