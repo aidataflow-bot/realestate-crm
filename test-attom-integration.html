@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATTOM API Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #111827;
+            color: white;
+        }
+        .test-container {
+            background: #1f2937;
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid #374151;
+        }
+        input, button {
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #374151;
+            background: #374151;
+            color: white;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background: #dc2626;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #b91c1c;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #0f172a;
+            border-radius: 5px;
+            border-left: 4px solid #10b981;
+            min-height: 100px;
+        }
+        .error {
+            border-left-color: #ef4444;
+            background: #1f1f1f;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🏠 ATTOM API Integration Test</h1>
+        <p>Test the real property data lookup with your ATTOM API key!</p>
+        
+        <input type="text" id="address" placeholder="Street Address (e.g., 123 Main St)" value="14147 Mailer Blvd">
+        <input type="text" id="city" placeholder="City" value="Orlando">
+        <input type="text" id="state" placeholder="State" value="FL">
+        <input type="text" id="zipCode" placeholder="Zip Code" value="32832">
+        
+        <button onclick="testATTOMAPI()">🔍 Test ATTOM Property Lookup</button>
+        
+        <div id="results" class="results">
+            Ready to test ATTOM API integration...
+        </div>
+    </div>
+
+    <script>
+        async function testATTOMAPI() {
+            const address = document.getElementById('address').value;
+            const city = document.getElementById('city').value;
+            const state = document.getElementById('state').value;
+            const zipCode = document.getElementById('zipCode').value;
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = '🔄 Testing ATTOM API integration...';
+            resultsDiv.classList.remove('error');
+            
+            try {
+                console.log('🏠 🔍 REAL API Property Lookup for:', { address, city, state, zipCode });
+                
+                const fullAddress = `${address} ${city}, ${state} ${zipCode}`.trim();
+                console.log('🏠 📡 Calling ATTOM API for:', fullAddress);
+                
+                // ATTOM Data API - Get property details for ANY property
+                const attomParams = new URLSearchParams({
+                    address1: address,
+                    address2: `${city} ${state} ${zipCode}`,
+                    format: 'json'
+                });
+                
+                const attomUrl = `https://api.gateway.attomdata.com/propertyapi/v1.0.0/property/detail?${attomParams}`;
+                console.log('🔗 ATTOM API URL:', attomUrl);
+                
+                const response = await fetch(attomUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'apikey': 'b58077119da5fe3a968245f82fcf7c51' // Your ATTOM API key
+                    }
+                });
+                
+                if (response.ok) {
+                    const attomData = await response.json();
+                    console.log('✅ ATTOM API Response:', attomData);
+                    
+                    if (attomData && attomData.property && attomData.property.length > 0) {
+                        const property = attomData.property[0];
+                        const building = property.building || {};
+                        const address_info = property.address || {};
+                        const assessment = property.assessment || {};
+                        
+                        // Display real property data
+                        resultsDiv.innerHTML = `
+                            <h3>✅ REAL PROPERTY DATA FOUND!</h3>
+                            <p><strong>📍 Address:</strong> ${address_info.oneLine || fullAddress}</p>
+                            <p><strong>🛏️ Bedrooms:</strong> ${building.rooms?.beds || 'N/A'}</p>
+                            <p><strong>🛁 Bathrooms:</strong> ${building.rooms?.bathstotal || 'N/A'}</p>
+                            <p><strong>📐 Square Feet:</strong> ${building.size?.livingsize?.toLocaleString() || 'N/A'}</p>
+                            <p><strong>🏠 Property Type:</strong> ${building.summary?.propertyusegeneral || 'N/A'}</p>
+                            <p><strong>🏗️ Year Built:</strong> ${building.summary?.yearbuilt || 'N/A'}</p>
+                            <p><strong>💰 Assessed Value:</strong> $${assessment.assessed?.assdttlvalue?.toLocaleString() || 'N/A'}</p>
+                            <p><strong>🏷️ Market Value:</strong> $${assessment.market?.mktttlvalue?.toLocaleString() || 'N/A'}</p>
+                            <p><strong>🆔 ATTOM ID:</strong> ${property.identifier?.attomId || 'N/A'}</p>
+                            <p><strong>📋 APN:</strong> ${property.identifier?.apn || 'N/A'}</p>
+                            <hr style="margin: 15px 0; border-color: #374151;">
+                            <p style="color: #10b981; font-weight: bold;">🎉 ATTOM API Integration Working Successfully!</p>
+                        `;
+                    } else {
+                        resultsDiv.innerHTML = `
+                            <h3>⚠️ No Property Found</h3>
+                            <p>ATTOM API responded but no property data found for this address.</p>
+                            <pre>${JSON.stringify(attomData, null, 2)}</pre>
+                        `;
+                        resultsDiv.classList.add('error');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    resultsDiv.innerHTML = `
+                        <h3>❌ ATTOM API Error</h3>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Response:</strong> ${errorText}</p>
+                    `;
+                    resultsDiv.classList.add('error');
+                    console.log('❌ ATTOM API request failed:', response.status, errorText);
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <h3>❌ Integration Error</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Check console for details.</p>
+                `;
+                resultsDiv.classList.add('error');
+                console.error('🔄 API error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
