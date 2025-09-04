@@ -754,8 +754,41 @@
               last_name: client.last_name || client.lastName,
               role: 'BUYER', // Default for now
               stage: 'ACTIVE', // Default for now  
-              city: client.address ? client.address.split(',')[1]?.trim() : 'Los Angeles',
-              state: client.address ? client.address.split(',')[2]?.trim() || 'CA' : 'CA',
+              city: (() => {
+                if (!client.address) return 'Orlando';
+                const parts = client.address.split(',');
+                if (parts.length >= 2) {
+                  const cityPart = parts[1]?.trim();
+                  return cityPart || 'Orlando';
+                }
+                // Handle "Orlando FL" format without commas
+                if (client.address.toLowerCase().includes('orlando')) return 'Orlando';
+                return 'Orlando';
+              })(),
+              state: (() => {
+                if (!client.address) return 'FL';
+                const parts = client.address.split(',');
+                if (parts.length >= 3) {
+                  // Extract state from "Florida 32828" or "FL 32828" format
+                  const statePart = parts[2]?.trim();
+                  if (statePart) {
+                    const stateMatch = statePart.match(/^(FL|Florida|CA|California|TX|Texas|NY|New York)/i);
+                    if (stateMatch) {
+                      const state = stateMatch[1].toLowerCase();
+                      if (state === 'florida') return 'FL';
+                      if (state === 'california') return 'CA';
+                      if (state === 'texas') return 'TX';
+                      if (state === 'new york') return 'NY';
+                      return state.toUpperCase();
+                    }
+                  }
+                  return 'FL';
+                }
+                // Handle "Orlando FL" or "Orlando Florida" format
+                if (client.address.toLowerCase().includes('florida')) return 'FL';
+                if (client.address.toLowerCase().includes(' fl')) return 'FL';
+                return 'FL';
+              })(),
               tags: Array.isArray(client.tags) ? client.tags : (client.tags ? client.tags.split(',') : []),
               lifetimeNetCommission: 15000, // Default for now
               calls: [], // Will load separately if needed
@@ -769,7 +802,7 @@
             return enrichedClients;
           } catch (error) {
             console.error('❌ Failed to load clients:', error);
-            setError('Failed to load clients from database - using demo mode');
+            setError('Unable to connect to database - loading Orlando demo clients');
             return [];
           } finally {
             setLoading(false);
@@ -815,8 +848,8 @@
                 phone: '(555) 123-4567',
                 role: 'BUYER',
                 stage: 'ACTIVE',
-                city: 'Los Angeles',
-                state: 'CA',
+                city: 'Orlando',
+                state: 'FL',
                 tags: ['First Time Buyer', 'High Priority'],
                 lifetimeNetCommission: 15000,
                 calls: [],
@@ -1492,8 +1525,35 @@
               last_name: newClient.last_name || newClient.lastName || clientData.lastName,
               role: 'BUYER',
               stage: 'ACTIVE',
-              city: clientData.address ? clientData.address.split(',')[1]?.trim() : 'Los Angeles', 
-              state: clientData.address ? clientData.address.split(',')[2]?.trim() || 'CA' : 'CA',
+              city: (() => {
+                if (!clientData.address) return 'Orlando';
+                const parts = clientData.address.split(',');
+                if (parts.length >= 2) return parts[1]?.trim() || 'Orlando';
+                // Handle Orlando addresses from property interest
+                if (clientData.propertiesOfInterest && clientData.propertiesOfInterest.length > 0) {
+                  const firstProperty = clientData.propertiesOfInterest[0];
+                  if (firstProperty.address && firstProperty.address.toLowerCase().includes('orlando')) {
+                    return 'Orlando';
+                  }
+                }
+                return 'Orlando';
+              })(), 
+              state: (() => {
+                if (!clientData.address) return 'FL';
+                const parts = clientData.address.split(',');
+                if (parts.length >= 3) return parts[2]?.trim() || 'FL';
+                // Handle Orlando/Florida addresses from property interest
+                if (clientData.propertiesOfInterest && clientData.propertiesOfInterest.length > 0) {
+                  const firstProperty = clientData.propertiesOfInterest[0];
+                  if (firstProperty.address && (
+                    firstProperty.address.toLowerCase().includes('florida') ||
+                    firstProperty.address.toLowerCase().includes('orlando')
+                  )) {
+                    return 'FL';
+                  }
+                }
+                return 'FL';
+              })(),
               tags: Array.isArray(clientData.tags) ? clientData.tags : (clientData.tags ? clientData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []),
               lifetimeNetCommission: 0,
               calls: [],

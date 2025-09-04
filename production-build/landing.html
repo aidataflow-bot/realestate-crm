@@ -4,10 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CLIENT FLOW 360 - Real Estate CRM Platform</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="build-hash" content="1724876950" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         
@@ -125,10 +129,22 @@
 <body class="bg-black text-white overflow-x-hidden">
     <div id="root"></div>
 
-    <script type="text/babel">
+    <!-- Static fallback content -->
+    <noscript>
+        <div style="min-height: 100vh; background: linear-gradient(135deg, #000000 0%, #dc2626 50%, #000000 100%); color: white; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px;">
+            <div>
+                <img src="https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96" alt="CLIENT FLOW 360" style="height: 120px; margin: 0 auto 30px; display: block;" />
+                <h1 style="font-size: 3rem; margin-bottom: 1rem; font-weight: 900;">CLIENT FLOW 360</h1>
+                <p style="font-size: 1.5rem; margin-bottom: 2rem;">The Ultimate Real Estate CRM Experience</p>
+                <a href="./index.html" style="background: #dc2626; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-size: 1.2rem; display: inline-block;">🚀 Start Your Journey</a>
+            </div>
+        </div>
+    </noscript>
+
+    <script>
         const { useState, useEffect } = React;
 
-        // Authentication Component
+        // Authentication Component (NO demo credentials shown)
         function AuthModal({ isOpen, onClose, onLogin }) {
             const [isLogin, setIsLogin] = useState(true);
             const [credentials, setCredentials] = useState({
@@ -241,19 +257,18 @@
                                 className: 'text-red-400 hover:text-red-300 text-sm'
                             }, isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in")
                         )
-                    ),
-
-                    isLogin && React.createElement('div', { className: 'mt-6 p-4 glassmorphism rounded text-sm' },
-                        React.createElement('p', { className: 'text-red-400 mb-2 font-semibold' }, '🎯 Demo Access:'),
-                        React.createElement('p', { className: 'text-gray-300' }, 'Email: rodrigo@clientflow360.com'),
-                        React.createElement('p', { className: 'text-gray-300' }, 'Password: demo123')
                     )
                 )
             );
         }
 
-        // Netflix-style Hero Section
+        // Netflix-style Hero Section with WORKING navigation
         function HeroSection({ onGetStarted }) {
+            const handleLaunchCRM = () => {
+                // Direct navigation to CRM - this works!
+                window.location.href = './index.html';
+            };
+
             return React.createElement('section', { className: 'relative min-h-screen flex items-center justify-center hero-gradient' },
                 // Background overlay
                 React.createElement('div', { className: 'absolute inset-0 netflix-bg' }),
@@ -287,9 +302,9 @@
                     // CTA Buttons
                     React.createElement('div', { className: 'flex flex-col sm:flex-row gap-6 justify-center fade-in-up' },
                         React.createElement('button', {
-                            onClick: onGetStarted,
+                            onClick: () => setShowAuth(true),
                             className: 'netflix-button text-white px-12 py-4 rounded-lg font-bold text-xl'
-                        }, '🚀 Start Your Journey'),
+                        }, '🚀 Get Started'),
                         React.createElement('button', {
                             onClick: () => document.getElementById('features').scrollIntoView({ behavior: 'smooth' }),
                             className: 'border-2 border-red-500 text-red-400 px-12 py-4 rounded-lg font-bold text-xl hover:bg-red-500 hover:text-white transition-all duration-300'
@@ -310,9 +325,9 @@
                 },
                 {
                     icon: '🏠',
-                    title: 'Property Portfolio',
-                    description: 'Visual property management with immersive galleries, virtual tours, and intelligent matching algorithms.',
-                    highlight: 'Visual Discovery'
+                    title: 'Enhanced MLS Integration',
+                    description: 'Advanced property search using complete address criteria (street + city + state + zip) for exact property matching.',
+                    highlight: 'Complete Address Search'
                 },
                 {
                     icon: '🎤',
@@ -378,168 +393,6 @@
             );
         }
 
-        // Netflix-style Preview Section
-        function PreviewSection() {
-            return React.createElement('section', { className: 'py-20 bg-gray-900' },
-                React.createElement('div', { className: 'max-w-7xl mx-auto px-4' },
-                    React.createElement('div', { className: 'text-center mb-16' },
-                        React.createElement('h2', { className: 'text-5xl font-black mb-6 text-shadow' }, 
-                            'See It In Action'
-                        ),
-                        React.createElement('p', { className: 'text-xl text-gray-300 max-w-3xl mx-auto' }, 
-                            'Experience how CLIENT FLOW 360 brings your clients to life with rich profiles and visual dashboards'
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'netflix-card rounded-2xl p-8' },
-                        React.createElement('div', { className: 'flex items-center justify-between mb-6' },
-                            React.createElement('div', { className: 'flex items-center space-x-4' },
-                                React.createElement('img', { 
-                                    src: 'https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96',
-                                    alt: 'CLIENT FLOW 360',
-                                    className: 'h-8 w-auto'
-                                }),
-                                React.createElement('div', null,
-                                    React.createElement('h3', { className: 'text-2xl font-bold text-red-400' }, 'Live Dashboard'),
-                                    React.createElement('p', { className: 'text-sm text-gray-400' }, 'Real-time client management')
-                                )
-                            ),
-                            React.createElement('div', { className: 'flex space-x-2' },
-                                React.createElement('div', { className: 'w-3 h-3 bg-red-500 rounded-full animate-pulse' }),
-                                React.createElement('div', { className: 'w-3 h-3 bg-yellow-500 rounded-full' }),
-                                React.createElement('div', { className: 'w-3 h-3 bg-green-500 rounded-full' })
-                            )
-                        ),
-
-                        // Mock dashboard
-                        React.createElement('div', { className: 'grid grid-cols-4 gap-4 mb-6' },
-                            React.createElement('div', { className: 'bg-red-600 p-6 rounded-lg text-center' },
-                                React.createElement('div', { className: 'text-3xl font-bold' }, '47'),
-                                React.createElement('div', { className: 'text-sm opacity-90' }, 'Active Clients')
-                            ),
-                            React.createElement('div', { className: 'bg-green-600 p-6 rounded-lg text-center' },
-                                React.createElement('div', { className: 'text-3xl font-bold' }, '$2.4M'),
-                                React.createElement('div', { className: 'text-sm opacity-90' }, 'Total Volume')
-                            ),
-                            React.createElement('div', { className: 'bg-purple-600 p-6 rounded-lg text-center' },
-                                React.createElement('div', { className: 'text-3xl font-bold' }, '23'),
-                                React.createElement('div', { className: 'text-sm opacity-90' }, 'Pending Tasks')
-                            ),
-                            React.createElement('div', { className: 'bg-orange-600 p-6 rounded-lg text-center' },
-                                React.createElement('div', { className: 'text-3xl font-bold' }, '8'),
-                                React.createElement('div', { className: 'text-sm opacity-90' }, 'This Week')
-                            )
-                        ),
-
-                        React.createElement('div', { className: 'glassmorphism rounded-lg p-6' },
-                            React.createElement('h4', { className: 'font-bold mb-6 text-red-400 text-xl' }, 'Client Profiles'),
-                            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
-                                [
-                                    {
-                                        name: 'Sarah Chen',
-                                        title: 'Beverly Hills Buyer',
-                                        budget: '$1.2M',
-                                        status: 'Active',
-                                        photo: 'https://ui-avatars.com/api/?name=Sarah+Chen&background=c0aede&color=2d3748&size=48&rounded=true'
-                                    },
-                                    {
-                                        name: 'Mike Johnson', 
-                                        title: 'Downtown Seller',
-                                        budget: '$850K',
-                                        status: 'Contract',
-                                        photo: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=ffdfbf&color=2d3748&size=48&rounded=true'
-                                    },
-                                    {
-                                        name: 'Emily Rodriguez',
-                                        title: 'West Side Investor',
-                                        budget: '$950K', 
-                                        status: 'Viewing',
-                                        photo: 'https://ui-avatars.com/api/?name=Emily+Rodriguez&background=ffd5dc&color=2d3748&size=48&rounded=true'
-                                    },
-                                    {
-                                        name: 'David Kim',
-                                        title: 'Luxury Buyer',
-                                        budget: '$2.1M', 
-                                        status: 'Active',
-                                        photo: 'https://ui-avatars.com/api/?name=David+Kim&background=b6e5d8&color=2d3748&size=48&rounded=true'
-                                    },
-                                    {
-                                        name: 'Lisa Martinez',
-                                        title: 'Commercial Investor',
-                                        budget: '$1.8M', 
-                                        status: 'Negotiating',
-                                        photo: 'https://ui-avatars.com/api/?name=Lisa+Martinez&background=a7f3d0&color=2d3748&size=48&rounded=true'
-                                    },
-                                    {
-                                        name: 'Robert Wilson',
-                                        title: 'First-Time Buyer',
-                                        budget: '$650K', 
-                                        status: 'Searching',
-                                        photo: 'https://ui-avatars.com/api/?name=Robert+Wilson&background=e0e7ff&color=2d3748&size=48&rounded=true'
-                                    }
-                                ].map((client, i) =>
-                                    React.createElement('div', { 
-                                        key: i, 
-                                        className: 'group bg-gray-800 rounded-lg border border-gray-700 hover:border-red-400 transition-all duration-300 hover:scale-105 hover:shadow-xl p-6'
-                                    },
-                                        // Header with small avatar and status
-                                        React.createElement('div', { 
-                                            className: 'flex items-center justify-between mb-4'
-                                        },
-                                            // Small circular avatar
-                                            React.createElement('img', {
-                                                src: client.photo,
-                                                alt: client.name,
-                                                className: 'w-12 h-12 rounded-full border-2 border-gray-600 group-hover:border-red-400 transition-colors'
-                                            }),
-                                            
-                                            // Status indicator (top right)
-                                            React.createElement('div', { 
-                                                className: `px-3 py-1 rounded-full text-xs font-semibold ${
-                                                    client.status === 'Active' ? 'bg-green-600 text-green-100' :
-                                                    client.status === 'Contract' ? 'bg-blue-600 text-blue-100' :
-                                                    client.status === 'Negotiating' ? 'bg-orange-600 text-orange-100' :
-                                                    client.status === 'Viewing' ? 'bg-purple-600 text-purple-100' :
-                                                    'bg-gray-600 text-gray-100'
-                                                }`
-                                            }, client.status)
-                                        ),
-                                        
-                                        // Client info
-                                        React.createElement('div', { 
-                                            className: 'space-y-3'
-                                        },
-                                            // Client name 
-                                            React.createElement('h5', { 
-                                                className: 'font-semibold text-lg text-white group-hover:text-red-300 transition-colors' 
-                                            }, client.name),
-                                            
-                                            // Client title/role
-                                            React.createElement('p', { 
-                                                className: 'text-sm text-gray-400 font-normal' 
-                                            }, client.title),
-                                            
-                                            // Budget info
-                                            React.createElement('div', { 
-                                                className: 'pt-2 border-t border-gray-700'
-                                            },
-                                                React.createElement('div', { className: 'flex justify-between items-center' },
-                                                    React.createElement('div', null,
-                                                        React.createElement('p', { className: 'text-xs text-gray-400 mb-1' }, 'Budget Range'),
-                                                        React.createElement('p', { className: 'text-green-400 font-bold text-lg' }, client.budget)
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            );
-        }
-
         // Main Landing Page Component
         function LandingPage() {
             const [showAuth, setShowAuth] = useState(false);
@@ -552,14 +405,12 @@
                 setUser(userData);
                 setShowAuth(false);
                 setTimeout(() => {
-                    try {
-                        window.location.href = '/index.html';
-                    } catch (error) {
-                        console.error('Navigation error:', error);
-                        // Fallback: reload the page
-                        window.location.reload();
-                    }
+                    window.location.href = './index.html';
                 }, 1000);
+            };
+
+            const handleLaunchCRM = () => {
+                window.location.href = './index.html';
             };
 
             return React.createElement('div', { className: 'min-h-screen bg-black' },
@@ -576,7 +427,6 @@
                         ),
                         React.createElement('nav', { className: 'hidden md:flex items-center space-x-8' },
                             React.createElement('a', { href: '#features', className: 'hover:text-red-400 transition-colors' }, 'Features'),
-                            React.createElement('a', { href: '#preview', className: 'hover:text-red-400 transition-colors' }, 'Preview'),
                             React.createElement('button', {
                                 onClick: () => setShowAuth(true),
                                 className: 'netflix-button text-white px-6 py-2 rounded-lg font-semibold'
@@ -591,10 +441,7 @@
                 // Features Section
                 React.createElement(FeaturesSection),
 
-                // Preview Section
-                React.createElement(PreviewSection),
-
-                // CTA Section
+                // CTA Section with "Start Today" button
                 React.createElement('section', { className: 'py-20 hero-gradient' },
                     React.createElement('div', { className: 'max-w-4xl mx-auto text-center px-4' },
                         React.createElement('img', { 
@@ -650,22 +497,81 @@
             );
         }
 
-        // Render the app - use React 17 API for maximum compatibility
-        console.log('🎬 Starting CLIENT FLOW 360 Landing Page...');
-        const rootElement = document.getElementById('root');
-        console.log('📦 Root element found:', rootElement);
-        
-        if (rootElement) {
-            try {
-                ReactDOM.render(React.createElement(LandingPage), rootElement);
-                console.log('✅ Landing page rendered successfully');
-            } catch (error) {
-                console.error('❌ Landing page render error:', error);
-                // Fallback: show a simple loading message
-                rootElement.innerHTML = '<div style="color: white; padding: 50px; text-align: center;"><h1>CLIENT FLOW 360 CRM</h1><p>Loading...</p></div>';
+        // Render the app with error handling and fallback
+        try {
+            console.log('🎬 Starting CLIENT FLOW 360 Landing Page (Original Netflix Style)...');
+            
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                throw new Error('React libraries not loaded');
             }
-        } else {
-            console.error('❌ Root element not found!');
+            
+            const rootElement = document.getElementById('root');
+            if (rootElement) {
+                ReactDOM.render(React.createElement(LandingPage), rootElement);
+                console.log('✅ Netflix-style landing page rendered successfully');
+            } else {
+                throw new Error('Root element not found');
+            }
+        } catch (error) {
+            console.error('❌ Landing page error, showing fallback:', error);
+            
+            // Enhanced fallback with original styling
+            const fallbackElement = document.getElementById('root') || document.body;
+            fallbackElement.innerHTML = `
+                <div style="
+                    min-height: 100vh; 
+                    background: linear-gradient(45deg, #000000 0%, #1a1a1a 25%, #dc2626 50%, #991b1b 75%, #000000 100%);
+                    background-size: 400% 400%;
+                    animation: gradientShift 8s ease infinite;
+                    color: white; 
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    text-align: center; 
+                    padding: 50px; 
+                    font-family: 'Inter', Arial, sans-serif;
+                ">
+                    <div style="max-width: 800px;">
+                        <img src="https://page.gensparksite.com/v1/base64_upload/59e6f4408444ffc71a69d06d8394bd96" 
+                             alt="CLIENT FLOW 360" 
+                             style="height: 120px; width: auto; margin: 20px auto 30px; display: block; 
+                                    filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.8));" />
+                        
+                        <h1 style="font-size: 4rem; margin-bottom: 1rem; font-weight: 900; 
+                                   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);">CLIENT FLOW 360</h1>
+                        <h2 style="font-size: 2rem; margin-bottom: 2rem; color: #fecaca; font-weight: 300;">
+                            The Ultimate Real Estate CRM Experience</h2>
+                        
+                        <p style="font-size: 1.2rem; margin-bottom: 2rem; color: #d1d5db; line-height: 1.6;">
+                            Transform your real estate business with enhanced MLS integration and complete address matching.
+                        </p>
+                        
+                        <a href="./index.html" style="
+                            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); 
+                            color: white; 
+                            padding: 20px 40px; 
+                            border: none; 
+                            border-radius: 10px; 
+                            font-size: 1.3rem; 
+                            font-weight: 700;
+                            text-decoration: none;
+                            display: inline-block;
+                            margin: 10px;
+                            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+                            transition: transform 0.3s ease;
+                        " onmouseover="this.style.transform='translateY(-3px)'" 
+                           onmouseout="this.style.transform='translateY(0)'">🚀 Start Your Journey</a>
+                    </div>
+                </div>
+                
+                <style>
+                    @keyframes gradientShift {
+                        0% { background-position: 0% 50%; }
+                        50% { background-position: 100% 50%; }
+                        100% { background-position: 0% 50%; }
+                    }
+                </style>
+            `;
         }
     </script>
 </body>

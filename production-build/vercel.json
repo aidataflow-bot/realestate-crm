@@ -3,7 +3,7 @@
   "name": "client-flow-360-crm",
   "builds": [
     {
-      "src": "index.html",
+      "src": "*.html",
       "use": "@vercel/static"
     }
   ],
@@ -13,7 +13,7 @@
       "destination": "https://your-backend-api.com/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!landing|index|.*\\.).*)",
       "destination": "/index.html"
     }
   ],
