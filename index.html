@@ -1461,7 +1461,7 @@
               calls: [],
               transactions: [],
               todos: [],
-              propertiesOfInterest: []
+              propertiesOfInterest: clientData.propertiesOfInterest || []
             };
             
             setClients(prevClients => [enrichedClient, ...prevClients]);
@@ -5019,12 +5019,12 @@
                         }, (property.status || 'active').toUpperCase())
                       ),
                       React.createElement('p', { className: 'text-green-400 font-bold text-xl' }, 
-                        `$${property.price.toLocaleString()}`
+                        `$${(property.price || property.zestimate || 'N/A').toLocaleString ? (property.price || property.zestimate).toLocaleString() : (property.price || property.zestimate || 'N/A')}`
                       ),
                       React.createElement('div', { className: 'grid grid-cols-3 gap-4 mt-2 text-sm text-gray-300' },
-                        React.createElement('div', null, `🛏️ ${property.bedrooms} bed`),
-                        React.createElement('div', null, `🚿 ${property.bathrooms} bath`),
-                        React.createElement('div', null, `📐 ${property.sqft} sqft`)
+                        React.createElement('div', null, `🛏️ ${property.bedrooms || 'N/A'} bed`),
+                        React.createElement('div', null, `🚿 ${property.bathrooms || 'N/A'} bath`),
+                        React.createElement('div', null, `📐 ${property.sqft ? property.sqft.toLocaleString() : 'N/A'} sqft`)
                       )
                     ),
                     property.description && React.createElement('p', { className: 'text-sm text-gray-400 line-clamp-2 mb-3' }, 
@@ -5613,6 +5613,7 @@
         const [isAutoPopulating, setIsAutoPopulating] = useState(false);
         const [autoPopulateSuccess, setAutoPopulateSuccess] = useState(false);
         const [autoPopulateError, setAutoPopulateError] = useState(null);
+        const [retrievedPropertyDetails, setRetrievedPropertyDetails] = useState(null); // Store fetched property data
         const autoPopulateTimeoutRef = useRef(null);
         
         // Auto-populate property details for Property Interest
@@ -5640,6 +5641,8 @@
             
             console.log('✅ Client property auto-populate successful:', propertyDetails);
             
+            // Store the retrieved property details for form submission
+            setRetrievedPropertyDetails(propertyDetails);
             setAutoPopulateSuccess(true);
             
             // Clear success message after 3 seconds
@@ -5697,7 +5700,7 @@
         const handleSubmit = (e) => {
           e.preventDefault();
           
-          // Create property interest object if any property fields are filled
+          // Create property interest object with full details if any property fields are filled
           const hasPropertyData = formData.propertyStreetAddress || formData.propertyCity || formData.propertyState || formData.propertyZipCode;
           const propertyInterest = hasPropertyData ? [{
             id: `property-${Date.now()}`,
@@ -5706,6 +5709,27 @@
             city: formData.propertyCity || '',
             state: formData.propertyState || '',
             zipCode: formData.propertyZipCode || '',
+            // Include full property details if auto-populate retrieved them
+            ...(retrievedPropertyDetails && {
+              bedrooms: retrievedPropertyDetails.bedrooms,
+              bathrooms: retrievedPropertyDetails.bathrooms,
+              sqft: retrievedPropertyDetails.sqft,
+              price: retrievedPropertyDetails.zestimate || 350000, // Map zestimate to price for Properties tab
+              yearBuilt: retrievedPropertyDetails.yearBuilt,
+              propertyType: retrievedPropertyDetails.propertyType,
+              zestimate: retrievedPropertyDetails.zestimate,
+              lotSize: retrievedPropertyDetails.lotSize,
+              coordinates: retrievedPropertyDetails.coordinates,
+              source: retrievedPropertyDetails.source,
+              valuationSource: retrievedPropertyDetails.valuationSource,
+              valuationMethod: retrievedPropertyDetails.valuationMethod,
+              attomId: retrievedPropertyDetails.attomId,
+              assessorId: retrievedPropertyDetails.assessorId,
+              lastSaleDate: retrievedPropertyDetails.lastSaleDate,
+              lastSalePrice: retrievedPropertyDetails.lastSalePrice,
+              taxAssessedValue: retrievedPropertyDetails.taxAssessedValue,
+              description: `${retrievedPropertyDetails.bedrooms || 'N/A'}br/${retrievedPropertyDetails.bathrooms || 'N/A'}ba • ${retrievedPropertyDetails.sqft ? retrievedPropertyDetails.sqft.toLocaleString() + ' sqft' : 'Size N/A'} • ${retrievedPropertyDetails.propertyType || 'Property Type N/A'}${retrievedPropertyDetails.yearBuilt ? ' • Built ' + retrievedPropertyDetails.yearBuilt : ''}`
+            }),
             createdAt: new Date().toISOString(),
             status: 'Interested'
           }] : [];
@@ -5930,6 +5954,9 @@
                           
                           console.log('✅ Manual client property lookup successful:', propertyDetails);
                           
+                          // Store the retrieved property details for form submission
+                          setRetrievedPropertyDetails(propertyDetails);
+                          
                           // Show property details to user
                           const details = [
                             `Address: ${propertyDetails.address || 'N/A'}`,
@@ -5938,7 +5965,8 @@
                             `Square Feet: ${propertyDetails.sqft ? propertyDetails.sqft.toLocaleString() : 'N/A'}`,
                             `Property Type: ${propertyDetails.propertyType || 'N/A'}`,
                             `Year Built: ${propertyDetails.yearBuilt || 'N/A'}`,
-                            `Estimated Value: ${propertyDetails.zestimate ? '$' + propertyDetails.zestimate.toLocaleString() : 'N/A'}`
+                            `Estimated Value: ${propertyDetails.zestimate ? '$' + propertyDetails.zestimate.toLocaleString() : 'N/A'}`,
+                            `Valuation Source: ${propertyDetails.valuationSource || propertyDetails.source || 'N/A'}`
                           ].join('\\n');
                           
                           alert(`✅ Property Details Found!\\n\\n${details}\\n\\nThis property information will be saved with the client when you submit the form.`);
