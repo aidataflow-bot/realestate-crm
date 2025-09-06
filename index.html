@@ -100,8 +100,10 @@
       }
 
       // Check authentication on page load
-      if (!checkAuthentication()) {
-        throw new Error('Authentication required');
+      const isAuthenticated = checkAuthentication();
+      if (!isAuthenticated && window.location.pathname !== '/landing.html') {
+        // Only redirect if not already on landing page
+        return; // Let the redirect in checkAuthentication handle it
       }
       
       console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v4.0 - PROPERTY_MANAGEMENT_1756274000 - COMPREHENSIVE PROPERTY SYSTEM...');
