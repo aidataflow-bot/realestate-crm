@@ -421,6 +421,10 @@
                   'texas': { avgPrice: 320000, sqftPrice: 160 },
                   'ny': { avgPrice: 480000, sqftPrice: 250 },
                   'new york': { avgPrice: 480000, sqftPrice: 250 },
+                  'nc': { avgPrice: 290000, sqftPrice: 140 },
+                  'north carolina': { avgPrice: 290000, sqftPrice: 140 },
+                  'pfafftown,nc': { avgPrice: 293000, sqftPrice: 142 },
+                  'pfafftown,north carolina': { avgPrice: 293000, sqftPrice: 142 },
                   'default': { avgPrice: 350000, sqftPrice: 175 }
                 };
                 
@@ -478,7 +482,7 @@
                     
                     // Map ATTOM data to our format with enhanced area-based valuation fallback
                     const propertyBedrooms = building.rooms?.beds || building.bedrooms || 3;
-                    const propertyBathrooms = building.rooms?.baths || building.bathrooms || 2;
+                    const propertyBathrooms = building.rooms?.bathstotal || building.rooms?.baths || building.bathrooms || 2;
                     const propertySqft = building.size?.livingsize || building.livingSize || 1800;
                     const propertyYearBuilt = building.summary?.yearbuilt || building.yearBuilt || 2000;
                     
@@ -505,8 +509,24 @@
                       propertyType: building.summary?.propertytype || 'Single Family Home',
                       zestimate: propertyValuation,
                       coordinates: { 
-                        lat: address_info.GeoCoordinate?.Latitude || 28.5383, 
-                        lng: address_info.GeoCoordinate?.Longitude || -81.3792
+                        lat: address_info.GeoCoordinate?.Latitude || (() => {
+                          const stateCoords = {
+                            'FL': { lat: 28.5383, lng: -81.3792 }, 'CA': { lat: 36.7783, lng: -119.4179 },
+                            'TX': { lat: 31.1060, lng: -97.6475 }, 'NY': { lat: 42.9538, lng: -75.5268 },
+                            'IL': { lat: 40.3363, lng: -89.0022 }, 'PA': { lat: 40.5773, lng: -77.2640 },
+                            'OH': { lat: 40.3736, lng: -82.7755 }, 'GA': { lat: 32.9866, lng: -83.6487 }
+                          };
+                          return (stateCoords[state?.toUpperCase()] || stateCoords['FL']).lat;
+                        })(), 
+                        lng: address_info.GeoCoordinate?.Longitude || (() => {
+                          const stateCoords = {
+                            'FL': { lat: 28.5383, lng: -81.3792 }, 'CA': { lat: 36.7783, lng: -119.4179 },
+                            'TX': { lat: 31.1060, lng: -97.6475 }, 'NY': { lat: 42.9538, lng: -75.5268 },
+                            'IL': { lat: 40.3363, lng: -89.0022 }, 'PA': { lat: 40.5773, lng: -77.2640 },
+                            'OH': { lat: 40.3736, lng: -82.7755 }, 'GA': { lat: 32.9866, lng: -83.6487 }
+                          };
+                          return (stateCoords[state?.toUpperCase()] || stateCoords['FL']).lng;
+                        })()
                       },
                       source: 'ATTOM Data API - Real Property Records',
                       valuationSource: valuationSource,
@@ -596,8 +616,68 @@
                 const bathrooms = Math.floor(Math.random() * 3) + 1; // 1-3 bathrooms
                 const sqft = Math.floor(Math.random() * 1500) + 1200; // 1200-2700 sqft
                 
-                // Get area-based valuation for this location
-                const areaValuation = getAreaBasedValue(city || 'Unknown', state || 'FL', sqft);
+                // Get area-based valuation for this location (use actual state, not FL default)
+                const actualState = state || 'FL';
+                const actualCity = city || 'Unknown';
+                const areaValuation = getAreaBasedValue(actualCity, actualState, sqft);
+                
+                // State coordinate mapping for realistic property locations
+                const stateCoordinates = {
+                  'AL': { lat: 32.7794, lng: -86.8287 }, // Alabama
+                  'AK': { lat: 64.0685, lng: -152.2782 }, // Alaska
+                  'AZ': { lat: 34.2744, lng: -111.2847 }, // Arizona
+                  'AR': { lat: 34.8938, lng: -92.4426 }, // Arkansas
+                  'CA': { lat: 36.7783, lng: -119.4179 }, // California
+                  'CO': { lat: 39.0646, lng: -105.3272 }, // Colorado
+                  'CT': { lat: 41.6219, lng: -72.7273 }, // Connecticut
+                  'DE': { lat: 39.1612, lng: -75.5264 }, // Delaware
+                  'DC': { lat: 38.9072, lng: -77.0369 }, // District of Columbia
+                  'FL': { lat: 28.5383, lng: -81.3792 }, // Florida (Orlando area)
+                  'GA': { lat: 32.9866, lng: -83.6487 }, // Georgia
+                  'HI': { lat: 21.1098, lng: -157.5311 }, // Hawaii
+                  'ID': { lat: 44.2394, lng: -114.5103 }, // Idaho
+                  'IL': { lat: 40.3363, lng: -89.0022 }, // Illinois
+                  'IN': { lat: 39.8647, lng: -86.2604 }, // Indiana
+                  'IA': { lat: 42.0046, lng: -93.2140 }, // Iowa
+                  'KS': { lat: 38.4937, lng: -98.3804 }, // Kansas
+                  'KY': { lat: 37.6668, lng: -84.6691 }, // Kentucky
+                  'LA': { lat: 31.1801, lng: -91.8749 }, // Louisiana
+                  'ME': { lat: 44.6074, lng: -69.3977 }, // Maine
+                  'MD': { lat: 39.0550, lng: -76.7909 }, // Maryland
+                  'MA': { lat: 42.2373, lng: -71.5314 }, // Massachusetts
+                  'MI': { lat: 43.3266, lng: -84.5361 }, // Michigan
+                  'MN': { lat: 45.7326, lng: -93.9196 }, // Minnesota
+                  'MS': { lat: 32.7364, lng: -89.6678 }, // Mississippi
+                  'MO': { lat: 38.4623, lng: -92.3020 }, // Missouri
+                  'MT': { lat: 47.0527, lng: -110.2143 }, // Montana
+                  'NE': { lat: 41.2524, lng: -99.2183 }, // Nebraska
+                  'NV': { lat: 38.4199, lng: -117.1219 }, // Nevada
+                  'NH': { lat: 43.4108, lng: -71.5653 }, // New Hampshire
+                  'NJ': { lat: 40.3140, lng: -74.5089 }, // New Jersey
+                  'NM': { lat: 34.8375, lng: -106.2371 }, // New Mexico
+                  'NY': { lat: 42.9538, lng: -75.5268 }, // New York
+                  'NC': { lat: 35.6411, lng: -79.8431 }, // North Carolina
+                  'ND': { lat: 47.5362, lng: -99.7930 }, // North Dakota
+                  'OH': { lat: 40.3736, lng: -82.7755 }, // Ohio
+                  'OK': { lat: 35.5889, lng: -96.9252 }, // Oklahoma
+                  'OR': { lat: 44.5672, lng: -122.1269 }, // Oregon
+                  'PA': { lat: 40.5773, lng: -77.2640 }, // Pennsylvania
+                  'RI': { lat: 41.6762, lng: -71.5562 }, // Rhode Island
+                  'SC': { lat: 33.8191, lng: -80.9066 }, // South Carolina
+                  'SD': { lat: 44.2853, lng: -99.4632 }, // South Dakota
+                  'TN': { lat: 35.7449, lng: -86.7489 }, // Tennessee
+                  'TX': { lat: 31.1060, lng: -97.6475 }, // Texas
+                  'UT': { lat: 40.1135, lng: -111.8535 }, // Utah
+                  'VT': { lat: 44.0407, lng: -72.7093 }, // Vermont
+                  'VA': { lat: 37.7680, lng: -78.2057 }, // Virginia
+                  'WA': { lat: 47.3826, lng: -121.0187 }, // Washington
+                  'WV': { lat: 38.4680, lng: -80.9696 }, // West Virginia
+                  'WI': { lat: 44.2563, lng: -89.6385 }, // Wisconsin
+                  'WY': { lat: 42.7475, lng: -107.2085 } // Wyoming
+                };
+                
+                // Get coordinates for the searched state
+                const baseCoords = stateCoordinates[actualState.toUpperCase()] || stateCoordinates['FL'];
                 
                 propertyData = {
                   address: fullAddress,
@@ -607,14 +687,14 @@
                   yearBuilt: Math.floor(Math.random() * 30) + 1985, // 1985-2015
                   lotSize: Math.round((Math.random() * 0.4 + 0.15) * 100) / 100, // 0.15-0.55 acres
                   propertyType: ['Single Family Home', 'Townhouse', 'Condo', 'Ranch', 'Colonial'][Math.floor(Math.random() * 5)],
-                  zestimate: areaValuation.value, // Area-based market valuation
+                  zestimate: areaValuation.value, // Area-based market valuation for actual state
                   valuationSource: areaValuation.source,
                   valuationMethod: areaValuation.method,
                   coordinates: { 
-                    lat: 28.5383 + (Math.random() * 2 - 1), // Wider geographic range
-                    lng: -81.3792 + (Math.random() * 2 - 1)
+                    lat: baseCoords.lat + (Math.random() * 1 - 0.5), // Realistic coordinates for the state
+                    lng: baseCoords.lng + (Math.random() * 1 - 0.5)
                   },
-                  source: `Area-Based Property Estimate (${state || 'General'} Market)`
+                  source: `Area-Based Property Estimate (${actualState} Market)`
                 };
               }
               } // Close fallback if (!propertyData) block
@@ -754,8 +834,94 @@
               last_name: client.last_name || client.lastName,
               role: 'BUYER', // Default for now
               stage: 'ACTIVE', // Default for now  
-              city: client.address ? client.address.split(',')[1]?.trim() : 'Los Angeles',
-              state: client.address ? client.address.split(',')[2]?.trim() || 'CA' : 'CA',
+              city: (() => {
+                if (!client.address) return 'Orlando';
+                const parts = client.address.split(',');
+                if (parts.length >= 2) {
+                  const cityPart = parts[1]?.trim();
+                  return cityPart || 'Orlando';
+                }
+                // Handle "Orlando FL" format without commas
+                if (client.address.toLowerCase().includes('orlando')) return 'Orlando';
+                return 'Orlando';
+              })(),
+              state: (() => {
+                if (!client.address) return 'FL';
+                
+                // Complete US state mapping (all 50 states + DC)
+                const stateMap = {
+                  // Standard abbreviations
+                  'AL': 'AL', 'AK': 'AK', 'AZ': 'AZ', 'AR': 'AR', 'CA': 'CA', 'CO': 'CO', 'CT': 'CT', 'DE': 'DE', 'DC': 'DC', 'FL': 'FL',
+                  'GA': 'GA', 'HI': 'HI', 'ID': 'ID', 'IL': 'IL', 'IN': 'IN', 'IA': 'IA', 'KS': 'KS', 'KY': 'KY', 'LA': 'LA', 'ME': 'ME',
+                  'MD': 'MD', 'MA': 'MA', 'MI': 'MI', 'MN': 'MN', 'MS': 'MS', 'MO': 'MO', 'MT': 'MT', 'NE': 'NE', 'NV': 'NV', 'NH': 'NH',
+                  'NJ': 'NJ', 'NM': 'NM', 'NY': 'NY', 'NC': 'NC', 'ND': 'ND', 'OH': 'OH', 'OK': 'OK', 'OR': 'OR', 'PA': 'PA', 'RI': 'RI',
+                  'SC': 'SC', 'SD': 'SD', 'TN': 'TN', 'TX': 'TX', 'UT': 'UT', 'VT': 'VT', 'VA': 'VA', 'WA': 'WA', 'WV': 'WV', 'WI': 'WI', 'WY': 'WY',
+                  
+                  // Full state names (lowercase for matching)
+                  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA', 'colorado': 'CO',
+                  'connecticut': 'CT', 'delaware': 'DE', 'district of columbia': 'DC', 'florida': 'FL', 'georgia': 'GA',
+                  'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+                  'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD', 'massachusetts': 'MA',
+                  'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT',
+                  'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM',
+                  'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+                  'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD',
+                  'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA',
+                  'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'
+                };
+                
+                const parts = client.address.split(',');
+                if (parts.length >= 3) {
+                  // Extract state from "Florida 32828" or "FL 32828" format
+                  const statePart = parts[2]?.trim();
+                  if (statePart) {
+                    // Try to find state at the beginning of the part (before zip code)
+                    const stateWords = statePart.split(' ');
+                    for (let i = 0; i < Math.min(stateWords.length, 3); i++) {
+                      const candidate = stateWords.slice(0, i + 1).join(' ').toLowerCase();
+                      if (stateMap[candidate]) {
+                        return stateMap[candidate];
+                      }
+                      // Also check uppercase abbreviations
+                      const upperCandidate = candidate.toUpperCase();
+                      if (stateMap[upperCandidate]) {
+                        return stateMap[upperCandidate];
+                      }
+                    }
+                  }
+                }
+                
+                // Handle formats without commas (e.g., "Orlando FL", "Los Angeles CA")
+                const addressLower = client.address.toLowerCase();
+                
+                // First, check for state abbreviations at the end of the address
+                const words = addressLower.split(/\s+/);
+                const lastWord = words[words.length - 1];
+                const secondLastWord = words.length > 1 ? words[words.length - 2] : '';
+                
+                // Check last word for state abbreviation
+                if (stateMap[lastWord.toUpperCase()]) {
+                  return stateMap[lastWord.toUpperCase()];
+                }
+                
+                // Check last two words for state names like "new york"
+                const lastTwoWords = `${secondLastWord} ${lastWord}`;
+                if (stateMap[lastTwoWords]) {
+                  return stateMap[lastTwoWords];
+                }
+                
+                // Then check for state names anywhere in address (but prioritize exact matches)
+                for (const [stateName, stateCode] of Object.entries(stateMap)) {
+                  if (stateName.length > 2) { // Only for full state names, not abbreviations
+                    if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
+                      return stateCode;
+                    }
+                  }
+                }
+                
+                // Default to FL (Orlando market focus)
+                return 'FL';
+              })(),
               tags: Array.isArray(client.tags) ? client.tags : (client.tags ? client.tags.split(',') : []),
               lifetimeNetCommission: 15000, // Default for now
               calls: [], // Will load separately if needed
@@ -769,7 +935,7 @@
             return enrichedClients;
           } catch (error) {
             console.error('❌ Failed to load clients:', error);
-            setError('Failed to load clients from database - using demo mode');
+            setError('Unable to connect to database - loading Orlando demo clients');
             return [];
           } finally {
             setLoading(false);
@@ -815,8 +981,8 @@
                 phone: '(555) 123-4567',
                 role: 'BUYER',
                 stage: 'ACTIVE',
-                city: 'Los Angeles',
-                state: 'CA',
+                city: 'Orlando',
+                state: 'FL',
                 tags: ['First Time Buyer', 'High Priority'],
                 lifetimeNetCommission: 15000,
                 calls: [],
@@ -1492,8 +1658,98 @@
               last_name: newClient.last_name || newClient.lastName || clientData.lastName,
               role: 'BUYER',
               stage: 'ACTIVE',
-              city: clientData.address ? clientData.address.split(',')[1]?.trim() : 'Los Angeles', 
-              state: clientData.address ? clientData.address.split(',')[2]?.trim() || 'CA' : 'CA',
+              city: (() => {
+                if (!clientData.address) return 'Orlando';
+                const parts = clientData.address.split(',');
+                if (parts.length >= 2) return parts[1]?.trim() || 'Orlando';
+                // Handle Orlando addresses from property interest
+                if (clientData.propertiesOfInterest && clientData.propertiesOfInterest.length > 0) {
+                  const firstProperty = clientData.propertiesOfInterest[0];
+                  if (firstProperty.address && firstProperty.address.toLowerCase().includes('orlando')) {
+                    return 'Orlando';
+                  }
+                }
+                return 'Orlando';
+              })(), 
+              state: (() => {
+                if (!clientData.address) return 'FL';
+                
+                // Complete US state mapping (same as above)
+                const stateMap = {
+                  'AL': 'AL', 'AK': 'AK', 'AZ': 'AZ', 'AR': 'AR', 'CA': 'CA', 'CO': 'CO', 'CT': 'CT', 'DE': 'DE', 'DC': 'DC', 'FL': 'FL',
+                  'GA': 'GA', 'HI': 'HI', 'ID': 'ID', 'IL': 'IL', 'IN': 'IN', 'IA': 'IA', 'KS': 'KS', 'KY': 'KY', 'LA': 'LA', 'ME': 'ME',
+                  'MD': 'MD', 'MA': 'MA', 'MI': 'MI', 'MN': 'MN', 'MS': 'MS', 'MO': 'MO', 'MT': 'MT', 'NE': 'NE', 'NV': 'NV', 'NH': 'NH',
+                  'NJ': 'NJ', 'NM': 'NM', 'NY': 'NY', 'NC': 'NC', 'ND': 'ND', 'OH': 'OH', 'OK': 'OK', 'OR': 'OR', 'PA': 'PA', 'RI': 'RI',
+                  'SC': 'SC', 'SD': 'SD', 'TN': 'TN', 'TX': 'TX', 'UT': 'UT', 'VT': 'VT', 'VA': 'VA', 'WA': 'WA', 'WV': 'WV', 'WI': 'WI', 'WY': 'WY',
+                  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA', 'colorado': 'CO',
+                  'connecticut': 'CT', 'delaware': 'DE', 'district of columbia': 'DC', 'florida': 'FL', 'georgia': 'GA',
+                  'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+                  'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD', 'massachusetts': 'MA',
+                  'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT',
+                  'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM',
+                  'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+                  'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD',
+                  'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA',
+                  'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'
+                };
+                
+                const parts = clientData.address.split(',');
+                if (parts.length >= 3) {
+                  const statePart = parts[2]?.trim();
+                  if (statePart) {
+                    const stateWords = statePart.split(' ');
+                    for (let i = 0; i < Math.min(stateWords.length, 3); i++) {
+                      const candidate = stateWords.slice(0, i + 1).join(' ').toLowerCase();
+                      if (stateMap[candidate]) return stateMap[candidate];
+                      const upperCandidate = candidate.toUpperCase();
+                      if (stateMap[upperCandidate]) return stateMap[upperCandidate];
+                    }
+                  }
+                }
+                
+                // Handle property interest addresses
+                if (clientData.propertiesOfInterest && clientData.propertiesOfInterest.length > 0) {
+                  const firstProperty = clientData.propertiesOfInterest[0];
+                  if (firstProperty.address) {
+                    const addressLower = firstProperty.address.toLowerCase();
+                    for (const [stateName, stateCode] of Object.entries(stateMap)) {
+                      if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
+                        return stateCode;
+                      }
+                    }
+                  }
+                }
+                
+                // Handle formats without commas
+                const addressLower = clientData.address.toLowerCase();
+                
+                // First, check for state abbreviations at the end of the address
+                const words = addressLower.split(/\s+/);
+                const lastWord = words[words.length - 1];
+                const secondLastWord = words.length > 1 ? words[words.length - 2] : '';
+                
+                // Check last word for state abbreviation
+                if (stateMap[lastWord.toUpperCase()]) {
+                  return stateMap[lastWord.toUpperCase()];
+                }
+                
+                // Check last two words for state names like "new york"
+                const lastTwoWords = `${secondLastWord} ${lastWord}`;
+                if (stateMap[lastTwoWords]) {
+                  return stateMap[lastTwoWords];
+                }
+                
+                // Then check for state names anywhere in address (but prioritize exact matches)
+                for (const [stateName, stateCode] of Object.entries(stateMap)) {
+                  if (stateName.length > 2) { // Only for full state names, not abbreviations
+                    if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
+                      return stateCode;
+                    }
+                  }
+                }
+                
+                return 'FL'; // Default to FL
+              })(),
               tags: Array.isArray(clientData.tags) ? clientData.tags : (clientData.tags ? clientData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []),
               lifetimeNetCommission: 0,
               calls: [],
