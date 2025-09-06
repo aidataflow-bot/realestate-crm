@@ -85,16 +85,18 @@
         
         const isAuthenticated = sessionStorage.getItem('cf360_authenticated') === 'true';
         if (!isAuthenticated) {
-          console.log('🔐 User not authenticated, redirecting to landing page...');
-          try {
-            window.location.href = './landing.html';
-          } catch (error) {
-            console.error('Redirect error:', error);
-            // Fallback: show guest mode
-            console.log('🔐 Starting in guest mode - authentication required for full functionality');
-            return true; // Allow guest access
-          }
-          return false;
+          console.log('🔐 User not authenticated, starting in demo mode...');
+          // Auto-authenticate for demo purposes in production
+          sessionStorage.setItem('cf360_authenticated', 'true');
+          sessionStorage.setItem('cf360_user', JSON.stringify({
+            id: 'demo_user',
+            username: 'demo',
+            firstName: 'Demo',
+            lastName: 'User',
+            role: 'agent'
+          }));
+          console.log('✅ Demo mode activated - full CRM functionality available');
+          return true; // Allow immediate access
         }
         return true;
       }
