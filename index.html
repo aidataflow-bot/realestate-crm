@@ -101,12 +101,18 @@
 
       // Check authentication on page load
       const isAuthenticated = checkAuthentication();
-      if (!isAuthenticated && window.location.pathname !== '/landing.html') {
-        // Only redirect if not already on landing page
-        return; // Let the redirect in checkAuthentication handle it
+      if (!isAuthenticated) {
+        // User will be redirected by checkAuthentication function
+        console.log('🔐 Authentication required - redirecting...');
+      } else {
+        // Only run CRM code if authenticated
+        console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v4.0 - PROPERTY_MANAGEMENT_1756274000 - COMPREHENSIVE PROPERTY SYSTEM...');
+        
+        // Start the main application
+        startCRMApplication();
       }
       
-      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v4.0 - PROPERTY_MANAGEMENT_1756274000 - COMPREHENSIVE PROPERTY SYSTEM...');
+      function startCRMApplication() {
       
       // API Service
       const API = {
@@ -6967,8 +6973,9 @@
         );
       }
 
-      // Render the app - Using React 17 API for compatibility
-      ReactDOM.render(React.createElement(NetflixCRM), document.getElementById('root'));
+        // Render the app - Using React 17 API for compatibility
+        ReactDOM.render(React.createElement(NetflixCRM), document.getElementById('root'));
+      } // End of startCRMApplication function
     </script>
   </body>
 </html>
