@@ -813,9 +813,29 @@
                 
                 // Handle formats without commas (e.g., "Orlando FL", "Los Angeles CA")
                 const addressLower = client.address.toLowerCase();
+                
+                // First, check for state abbreviations at the end of the address
+                const words = addressLower.split(/\s+/);
+                const lastWord = words[words.length - 1];
+                const secondLastWord = words.length > 1 ? words[words.length - 2] : '';
+                
+                // Check last word for state abbreviation
+                if (stateMap[lastWord.toUpperCase()]) {
+                  return stateMap[lastWord.toUpperCase()];
+                }
+                
+                // Check last two words for state names like "new york"
+                const lastTwoWords = `${secondLastWord} ${lastWord}`;
+                if (stateMap[lastTwoWords]) {
+                  return stateMap[lastTwoWords];
+                }
+                
+                // Then check for state names anywhere in address (but prioritize exact matches)
                 for (const [stateName, stateCode] of Object.entries(stateMap)) {
-                  if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
-                    return stateCode;
+                  if (stateName.length > 2) { // Only for full state names, not abbreviations
+                    if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
+                      return stateCode;
+                    }
                   }
                 }
                 
@@ -1622,9 +1642,29 @@
                 
                 // Handle formats without commas
                 const addressLower = clientData.address.toLowerCase();
+                
+                // First, check for state abbreviations at the end of the address
+                const words = addressLower.split(/\s+/);
+                const lastWord = words[words.length - 1];
+                const secondLastWord = words.length > 1 ? words[words.length - 2] : '';
+                
+                // Check last word for state abbreviation
+                if (stateMap[lastWord.toUpperCase()]) {
+                  return stateMap[lastWord.toUpperCase()];
+                }
+                
+                // Check last two words for state names like "new york"
+                const lastTwoWords = `${secondLastWord} ${lastWord}`;
+                if (stateMap[lastTwoWords]) {
+                  return stateMap[lastTwoWords];
+                }
+                
+                // Then check for state names anywhere in address (but prioritize exact matches)
                 for (const [stateName, stateCode] of Object.entries(stateMap)) {
-                  if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
-                    return stateCode;
+                  if (stateName.length > 2) { // Only for full state names, not abbreviations
+                    if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
+                      return stateCode;
+                    }
                   }
                 }
                 
