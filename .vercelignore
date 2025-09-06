@@ -1,18 +1,16 @@
-# Ignore unnecessary files for Vercel deployment
-node_modules
-.git
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.DS_Store
+# Ignore development files
+node_modules/
+.git/
 *.log
-backend/
-frontend/
-.next/
-out/
-dist/
-dist-fresh/
+.env*
+debug-*.cjs
+test-*.cjs
 production-build/
-production-deployment/
-build/
+dist/
+README.md
+DEPLOY-TO-VERCEL.md
+
+# Keep only production files
+!index.html
+!landing.html
+!vercel.json
