@@ -1,0 +1,14 @@
+{
+  "name": "client-flow-360-crm",
+  "version": 2,
+  "routes": [
+    {
+      "src": "/landing.html",
+      "dest": "/landing.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
