@@ -505,8 +505,24 @@
                       propertyType: building.summary?.propertytype || 'Single Family Home',
                       zestimate: propertyValuation,
                       coordinates: { 
-                        lat: address_info.GeoCoordinate?.Latitude || 28.5383, 
-                        lng: address_info.GeoCoordinate?.Longitude || -81.3792
+                        lat: address_info.GeoCoordinate?.Latitude || (() => {
+                          const stateCoords = {
+                            'FL': { lat: 28.5383, lng: -81.3792 }, 'CA': { lat: 36.7783, lng: -119.4179 },
+                            'TX': { lat: 31.1060, lng: -97.6475 }, 'NY': { lat: 42.9538, lng: -75.5268 },
+                            'IL': { lat: 40.3363, lng: -89.0022 }, 'PA': { lat: 40.5773, lng: -77.2640 },
+                            'OH': { lat: 40.3736, lng: -82.7755 }, 'GA': { lat: 32.9866, lng: -83.6487 }
+                          };
+                          return (stateCoords[state?.toUpperCase()] || stateCoords['FL']).lat;
+                        })(), 
+                        lng: address_info.GeoCoordinate?.Longitude || (() => {
+                          const stateCoords = {
+                            'FL': { lat: 28.5383, lng: -81.3792 }, 'CA': { lat: 36.7783, lng: -119.4179 },
+                            'TX': { lat: 31.1060, lng: -97.6475 }, 'NY': { lat: 42.9538, lng: -75.5268 },
+                            'IL': { lat: 40.3363, lng: -89.0022 }, 'PA': { lat: 40.5773, lng: -77.2640 },
+                            'OH': { lat: 40.3736, lng: -82.7755 }, 'GA': { lat: 32.9866, lng: -83.6487 }
+                          };
+                          return (stateCoords[state?.toUpperCase()] || stateCoords['FL']).lng;
+                        })()
                       },
                       source: 'ATTOM Data API - Real Property Records',
                       valuationSource: valuationSource,
@@ -596,8 +612,68 @@
                 const bathrooms = Math.floor(Math.random() * 3) + 1; // 1-3 bathrooms
                 const sqft = Math.floor(Math.random() * 1500) + 1200; // 1200-2700 sqft
                 
-                // Get area-based valuation for this location
-                const areaValuation = getAreaBasedValue(city || 'Unknown', state || 'FL', sqft);
+                // Get area-based valuation for this location (use actual state, not FL default)
+                const actualState = state || 'FL';
+                const actualCity = city || 'Unknown';
+                const areaValuation = getAreaBasedValue(actualCity, actualState, sqft);
+                
+                // State coordinate mapping for realistic property locations
+                const stateCoordinates = {
+                  'AL': { lat: 32.7794, lng: -86.8287 }, // Alabama
+                  'AK': { lat: 64.0685, lng: -152.2782 }, // Alaska
+                  'AZ': { lat: 34.2744, lng: -111.2847 }, // Arizona
+                  'AR': { lat: 34.8938, lng: -92.4426 }, // Arkansas
+                  'CA': { lat: 36.7783, lng: -119.4179 }, // California
+                  'CO': { lat: 39.0646, lng: -105.3272 }, // Colorado
+                  'CT': { lat: 41.6219, lng: -72.7273 }, // Connecticut
+                  'DE': { lat: 39.1612, lng: -75.5264 }, // Delaware
+                  'DC': { lat: 38.9072, lng: -77.0369 }, // District of Columbia
+                  'FL': { lat: 28.5383, lng: -81.3792 }, // Florida (Orlando area)
+                  'GA': { lat: 32.9866, lng: -83.6487 }, // Georgia
+                  'HI': { lat: 21.1098, lng: -157.5311 }, // Hawaii
+                  'ID': { lat: 44.2394, lng: -114.5103 }, // Idaho
+                  'IL': { lat: 40.3363, lng: -89.0022 }, // Illinois
+                  'IN': { lat: 39.8647, lng: -86.2604 }, // Indiana
+                  'IA': { lat: 42.0046, lng: -93.2140 }, // Iowa
+                  'KS': { lat: 38.4937, lng: -98.3804 }, // Kansas
+                  'KY': { lat: 37.6668, lng: -84.6691 }, // Kentucky
+                  'LA': { lat: 31.1801, lng: -91.8749 }, // Louisiana
+                  'ME': { lat: 44.6074, lng: -69.3977 }, // Maine
+                  'MD': { lat: 39.0550, lng: -76.7909 }, // Maryland
+                  'MA': { lat: 42.2373, lng: -71.5314 }, // Massachusetts
+                  'MI': { lat: 43.3266, lng: -84.5361 }, // Michigan
+                  'MN': { lat: 45.7326, lng: -93.9196 }, // Minnesota
+                  'MS': { lat: 32.7364, lng: -89.6678 }, // Mississippi
+                  'MO': { lat: 38.4623, lng: -92.3020 }, // Missouri
+                  'MT': { lat: 47.0527, lng: -110.2143 }, // Montana
+                  'NE': { lat: 41.2524, lng: -99.2183 }, // Nebraska
+                  'NV': { lat: 38.4199, lng: -117.1219 }, // Nevada
+                  'NH': { lat: 43.4108, lng: -71.5653 }, // New Hampshire
+                  'NJ': { lat: 40.3140, lng: -74.5089 }, // New Jersey
+                  'NM': { lat: 34.8375, lng: -106.2371 }, // New Mexico
+                  'NY': { lat: 42.9538, lng: -75.5268 }, // New York
+                  'NC': { lat: 35.6411, lng: -79.8431 }, // North Carolina
+                  'ND': { lat: 47.5362, lng: -99.7930 }, // North Dakota
+                  'OH': { lat: 40.3736, lng: -82.7755 }, // Ohio
+                  'OK': { lat: 35.5889, lng: -96.9252 }, // Oklahoma
+                  'OR': { lat: 44.5672, lng: -122.1269 }, // Oregon
+                  'PA': { lat: 40.5773, lng: -77.2640 }, // Pennsylvania
+                  'RI': { lat: 41.6762, lng: -71.5562 }, // Rhode Island
+                  'SC': { lat: 33.8191, lng: -80.9066 }, // South Carolina
+                  'SD': { lat: 44.2853, lng: -99.4632 }, // South Dakota
+                  'TN': { lat: 35.7449, lng: -86.7489 }, // Tennessee
+                  'TX': { lat: 31.1060, lng: -97.6475 }, // Texas
+                  'UT': { lat: 40.1135, lng: -111.8535 }, // Utah
+                  'VT': { lat: 44.0407, lng: -72.7093 }, // Vermont
+                  'VA': { lat: 37.7680, lng: -78.2057 }, // Virginia
+                  'WA': { lat: 47.3826, lng: -121.0187 }, // Washington
+                  'WV': { lat: 38.4680, lng: -80.9696 }, // West Virginia
+                  'WI': { lat: 44.2563, lng: -89.6385 }, // Wisconsin
+                  'WY': { lat: 42.7475, lng: -107.2085 } // Wyoming
+                };
+                
+                // Get coordinates for the searched state
+                const baseCoords = stateCoordinates[actualState.toUpperCase()] || stateCoordinates['FL'];
                 
                 propertyData = {
                   address: fullAddress,
@@ -607,14 +683,14 @@
                   yearBuilt: Math.floor(Math.random() * 30) + 1985, // 1985-2015
                   lotSize: Math.round((Math.random() * 0.4 + 0.15) * 100) / 100, // 0.15-0.55 acres
                   propertyType: ['Single Family Home', 'Townhouse', 'Condo', 'Ranch', 'Colonial'][Math.floor(Math.random() * 5)],
-                  zestimate: areaValuation.value, // Area-based market valuation
+                  zestimate: areaValuation.value, // Area-based market valuation for actual state
                   valuationSource: areaValuation.source,
                   valuationMethod: areaValuation.method,
                   coordinates: { 
-                    lat: 28.5383 + (Math.random() * 2 - 1), // Wider geographic range
-                    lng: -81.3792 + (Math.random() * 2 - 1)
+                    lat: baseCoords.lat + (Math.random() * 1 - 0.5), // Realistic coordinates for the state
+                    lng: baseCoords.lng + (Math.random() * 1 - 0.5)
                   },
-                  source: `Area-Based Property Estimate (${state || 'General'} Market)`
+                  source: `Area-Based Property Estimate (${actualState} Market)`
                 };
               }
               } // Close fallback if (!propertyData) block
