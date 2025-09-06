@@ -128,9 +128,10 @@
             console.log('🔧 API server not available, using client-side storage');
             return {
               status: 'ok',
-              storage: 'Client-Side',
-              mode: 'Local Storage',
-              timestamp: new Date().toISOString()
+              storage: 'In-Memory Fallback',
+              mode: 'Local Storage + API Fallback',
+              timestamp: new Date().toISOString(),
+              note: 'Supabase not configured, using fallback storage'
             };
           }
         },
@@ -1889,7 +1890,7 @@
                 className: `text-xs px-2 py-1 rounded hidden sm:block ${
                   apiHealth && apiHealth.status === 'ok' ? 'bg-green-600 text-green-100' : 'bg-red-600 text-red-100'
                 }`
-              }, `DB: ${apiHealth?.storage || 'Client-Side'}`)
+              }, `DB: ${apiHealth?.storage || 'Fallback Storage'}`)
             ),
             React.createElement('div', { className: 'flex items-center space-x-2 sm:space-x-4 flex-shrink-0' },
               React.createElement('span', { className: 'text-xs sm:text-sm' }, `Welcome, ${user.firstName}!`),
