@@ -1,0 +1,26 @@
+{
+  "name": "CLIENT FLOW 360 CRM - Supabase Environment Configuration",
+  "description": "Environment variables needed for Supabase integration",
+  "project_id": "kgezacvwtcetwdlxetji",
+  "required_environment_variables": {
+    "SUPABASE_URL": {
+      "value": "https://kgezacvwtcetwdlxetji.supabase.co",
+      "description": "Supabase project URL - already configured",
+      "status": "configured"
+    },
+    "SUPABASE_ANON_KEY": {
+      "value": "PASTE_YOUR_ANON_KEY_HERE",
+      "description": "Supabase anon public key from dashboard Settings > API",
+      "status": "pending",
+      "instructions": "Get this from https://supabase.com/dashboard → project kgezacvwtcetwdlxetji → Settings → API → anon public"
+    }
+  },
+  "deployment_steps": [
+    "1. Go to Vercel dashboard for your project",
+    "2. Navigate to Settings > Environment Variables",
+    "3. Add SUPABASE_URL = https://kgezacvwtcetwdlxetji.supabase.co",
+    "4. Add SUPABASE_ANON_KEY = [your key from Supabase]",
+    "5. Redeploy the project",
+    "6. Verify connection at /api/health endpoint"
+  ]
+}
