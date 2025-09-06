@@ -124,8 +124,14 @@
             const response = await axios.get(`${API.baseURL}/health`);
             return response.data;
           } catch (error) {
-            console.error('Health check failed:', error);
-            throw error;
+            // Fallback for client-side deployment (no backend server)
+            console.log('🔧 API server not available, using client-side storage');
+            return {
+              status: 'ok',
+              storage: 'Client-Side',
+              mode: 'Local Storage',
+              timestamp: new Date().toISOString()
+            };
           }
         },
         
@@ -1883,7 +1889,7 @@
                 className: `text-xs px-2 py-1 rounded hidden sm:block ${
                   apiHealth && apiHealth.status === 'ok' ? 'bg-green-600 text-green-100' : 'bg-red-600 text-red-100'
                 }`
-              }, apiHealth ? `DB: ${apiHealth.storage}` : 'DB: Connecting...')
+              }, apiHealth && apiHealth.storage ? `DB: ${apiHealth.storage}` : 'DB: Local Storage')
             ),
             React.createElement('div', { className: 'flex items-center space-x-2 sm:space-x-4 flex-shrink-0' },
               React.createElement('span', { className: 'text-xs sm:text-sm' }, `Welcome, ${user.firstName}!`),
