@@ -767,26 +767,59 @@
               })(),
               state: (() => {
                 if (!client.address) return 'FL';
+                
+                // Complete US state mapping (all 50 states + DC)
+                const stateMap = {
+                  // Standard abbreviations
+                  'AL': 'AL', 'AK': 'AK', 'AZ': 'AZ', 'AR': 'AR', 'CA': 'CA', 'CO': 'CO', 'CT': 'CT', 'DE': 'DE', 'DC': 'DC', 'FL': 'FL',
+                  'GA': 'GA', 'HI': 'HI', 'ID': 'ID', 'IL': 'IL', 'IN': 'IN', 'IA': 'IA', 'KS': 'KS', 'KY': 'KY', 'LA': 'LA', 'ME': 'ME',
+                  'MD': 'MD', 'MA': 'MA', 'MI': 'MI', 'MN': 'MN', 'MS': 'MS', 'MO': 'MO', 'MT': 'MT', 'NE': 'NE', 'NV': 'NV', 'NH': 'NH',
+                  'NJ': 'NJ', 'NM': 'NM', 'NY': 'NY', 'NC': 'NC', 'ND': 'ND', 'OH': 'OH', 'OK': 'OK', 'OR': 'OR', 'PA': 'PA', 'RI': 'RI',
+                  'SC': 'SC', 'SD': 'SD', 'TN': 'TN', 'TX': 'TX', 'UT': 'UT', 'VT': 'VT', 'VA': 'VA', 'WA': 'WA', 'WV': 'WV', 'WI': 'WI', 'WY': 'WY',
+                  
+                  // Full state names (lowercase for matching)
+                  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA', 'colorado': 'CO',
+                  'connecticut': 'CT', 'delaware': 'DE', 'district of columbia': 'DC', 'florida': 'FL', 'georgia': 'GA',
+                  'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+                  'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD', 'massachusetts': 'MA',
+                  'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT',
+                  'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM',
+                  'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+                  'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD',
+                  'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA',
+                  'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'
+                };
+                
                 const parts = client.address.split(',');
                 if (parts.length >= 3) {
                   // Extract state from "Florida 32828" or "FL 32828" format
                   const statePart = parts[2]?.trim();
                   if (statePart) {
-                    const stateMatch = statePart.match(/^(FL|Florida|CA|California|TX|Texas|NY|New York)/i);
-                    if (stateMatch) {
-                      const state = stateMatch[1].toLowerCase();
-                      if (state === 'florida') return 'FL';
-                      if (state === 'california') return 'CA';
-                      if (state === 'texas') return 'TX';
-                      if (state === 'new york') return 'NY';
-                      return state.toUpperCase();
+                    // Try to find state at the beginning of the part (before zip code)
+                    const stateWords = statePart.split(' ');
+                    for (let i = 0; i < Math.min(stateWords.length, 3); i++) {
+                      const candidate = stateWords.slice(0, i + 1).join(' ').toLowerCase();
+                      if (stateMap[candidate]) {
+                        return stateMap[candidate];
+                      }
+                      // Also check uppercase abbreviations
+                      const upperCandidate = candidate.toUpperCase();
+                      if (stateMap[upperCandidate]) {
+                        return stateMap[upperCandidate];
+                      }
                     }
                   }
-                  return 'FL';
                 }
-                // Handle "Orlando FL" or "Orlando Florida" format
-                if (client.address.toLowerCase().includes('florida')) return 'FL';
-                if (client.address.toLowerCase().includes(' fl')) return 'FL';
+                
+                // Handle formats without commas (e.g., "Orlando FL", "Los Angeles CA")
+                const addressLower = client.address.toLowerCase();
+                for (const [stateName, stateCode] of Object.entries(stateMap)) {
+                  if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
+                    return stateCode;
+                  }
+                }
+                
+                // Default to FL (Orlando market focus)
                 return 'FL';
               })(),
               tags: Array.isArray(client.tags) ? client.tags : (client.tags ? client.tags.split(',') : []),
@@ -1540,19 +1573,62 @@
               })(), 
               state: (() => {
                 if (!clientData.address) return 'FL';
+                
+                // Complete US state mapping (same as above)
+                const stateMap = {
+                  'AL': 'AL', 'AK': 'AK', 'AZ': 'AZ', 'AR': 'AR', 'CA': 'CA', 'CO': 'CO', 'CT': 'CT', 'DE': 'DE', 'DC': 'DC', 'FL': 'FL',
+                  'GA': 'GA', 'HI': 'HI', 'ID': 'ID', 'IL': 'IL', 'IN': 'IN', 'IA': 'IA', 'KS': 'KS', 'KY': 'KY', 'LA': 'LA', 'ME': 'ME',
+                  'MD': 'MD', 'MA': 'MA', 'MI': 'MI', 'MN': 'MN', 'MS': 'MS', 'MO': 'MO', 'MT': 'MT', 'NE': 'NE', 'NV': 'NV', 'NH': 'NH',
+                  'NJ': 'NJ', 'NM': 'NM', 'NY': 'NY', 'NC': 'NC', 'ND': 'ND', 'OH': 'OH', 'OK': 'OK', 'OR': 'OR', 'PA': 'PA', 'RI': 'RI',
+                  'SC': 'SC', 'SD': 'SD', 'TN': 'TN', 'TX': 'TX', 'UT': 'UT', 'VT': 'VT', 'VA': 'VA', 'WA': 'WA', 'WV': 'WV', 'WI': 'WI', 'WY': 'WY',
+                  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR', 'california': 'CA', 'colorado': 'CO',
+                  'connecticut': 'CT', 'delaware': 'DE', 'district of columbia': 'DC', 'florida': 'FL', 'georgia': 'GA',
+                  'hawaii': 'HI', 'idaho': 'ID', 'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+                  'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD', 'massachusetts': 'MA',
+                  'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS', 'missouri': 'MO', 'montana': 'MT',
+                  'nebraska': 'NE', 'nevada': 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM',
+                  'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+                  'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC', 'south dakota': 'SD',
+                  'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT', 'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA',
+                  'west virginia': 'WV', 'wisconsin': 'WI', 'wyoming': 'WY'
+                };
+                
                 const parts = clientData.address.split(',');
-                if (parts.length >= 3) return parts[2]?.trim() || 'FL';
-                // Handle Orlando/Florida addresses from property interest
-                if (clientData.propertiesOfInterest && clientData.propertiesOfInterest.length > 0) {
-                  const firstProperty = clientData.propertiesOfInterest[0];
-                  if (firstProperty.address && (
-                    firstProperty.address.toLowerCase().includes('florida') ||
-                    firstProperty.address.toLowerCase().includes('orlando')
-                  )) {
-                    return 'FL';
+                if (parts.length >= 3) {
+                  const statePart = parts[2]?.trim();
+                  if (statePart) {
+                    const stateWords = statePart.split(' ');
+                    for (let i = 0; i < Math.min(stateWords.length, 3); i++) {
+                      const candidate = stateWords.slice(0, i + 1).join(' ').toLowerCase();
+                      if (stateMap[candidate]) return stateMap[candidate];
+                      const upperCandidate = candidate.toUpperCase();
+                      if (stateMap[upperCandidate]) return stateMap[upperCandidate];
+                    }
                   }
                 }
-                return 'FL';
+                
+                // Handle property interest addresses
+                if (clientData.propertiesOfInterest && clientData.propertiesOfInterest.length > 0) {
+                  const firstProperty = clientData.propertiesOfInterest[0];
+                  if (firstProperty.address) {
+                    const addressLower = firstProperty.address.toLowerCase();
+                    for (const [stateName, stateCode] of Object.entries(stateMap)) {
+                      if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
+                        return stateCode;
+                      }
+                    }
+                  }
+                }
+                
+                // Handle formats without commas
+                const addressLower = clientData.address.toLowerCase();
+                for (const [stateName, stateCode] of Object.entries(stateMap)) {
+                  if (addressLower.includes(' ' + stateName) || addressLower.includes(stateName + ' ')) {
+                    return stateCode;
+                  }
+                }
+                
+                return 'FL'; // Default to FL
               })(),
               tags: Array.isArray(clientData.tags) ? clientData.tags : (clientData.tags ? clientData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []),
               lifetimeNetCommission: 0,
