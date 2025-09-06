@@ -1889,7 +1889,7 @@
                 className: `text-xs px-2 py-1 rounded hidden sm:block ${
                   apiHealth && apiHealth.status === 'ok' ? 'bg-green-600 text-green-100' : 'bg-red-600 text-red-100'
                 }`
-              }, apiHealth && apiHealth.storage ? `DB: ${apiHealth.storage}` : 'DB: Local Storage')
+              }, `DB: ${apiHealth?.storage || 'Client-Side'}`)
             ),
             React.createElement('div', { className: 'flex items-center space-x-2 sm:space-x-4 flex-shrink-0' },
               React.createElement('span', { className: 'text-xs sm:text-sm' }, `Welcome, ${user.firstName}!`),
