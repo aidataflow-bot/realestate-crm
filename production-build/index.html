@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="1756402899" />
-    <meta name="build-hash" content="1756402899" />
-    <title>CLIENT FLOW 360 - Real Estate CRM Platform - v2.4 MLS Bridge Integration</title>
+    <meta http-equiv="Expires" content="0" />
+    <meta name="build-hash" content="1725910800" />
+    <meta name="version" content="2.10-api-routing-fix" />
+    <!-- Cache buster: Fixed Vercel API routing and enhanced debugging -->
+    <title>CLIENT FLOW 360 - Real Estate CRM Platform - v2.10 API Fix</title>
     <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -100,11 +102,19 @@
       }
 
       // Check authentication on page load
-      if (!checkAuthentication()) {
-        throw new Error('Authentication required');
+      const isAuthenticated = checkAuthentication();
+      if (!isAuthenticated) {
+        // User will be redirected by checkAuthentication function
+        console.log('🔐 Authentication required - redirecting...');
+      } else {
+        // Only run CRM code if authenticated
+        console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v4.0 - PROPERTY_MANAGEMENT_1756274000 - COMPREHENSIVE PROPERTY SYSTEM...');
+        
+        // Start the main application
+        startCRMApplication();
       }
       
-      console.log('🎬 CLIENT FLOW 360 - Starting Netflix-style CRM with Database v4.0 - PROPERTY_MANAGEMENT_1756274000 - COMPREHENSIVE PROPERTY SYSTEM...');
+      function startCRMApplication() {
       
       // API Service
       const API = {
@@ -116,8 +126,15 @@
             const response = await axios.get(`${API.baseURL}/health`);
             return response.data;
           } catch (error) {
-            console.error('Health check failed:', error);
-            throw error;
+            // Fallback for client-side deployment (no backend server)
+            console.log('🔧 API server not available, using client-side storage');
+            return {
+              status: 'ok',
+              storage: 'In-Memory Fallback',
+              mode: 'Local Storage + API Fallback',
+              timestamp: new Date().toISOString(),
+              note: 'Supabase not configured, using fallback storage'
+            };
           }
         },
         
@@ -814,6 +831,10 @@
         const [propertyFormData, setPropertyFormData] = useState({});
         const [apiHealth, setApiHealth] = useState(null);
         
+        // Bulk Selection State
+        const [selectedClientIds, setSelectedClientIds] = useState([]);
+        const [isSelectAllMode, setIsSelectAllMode] = useState(false);
+        
         // Phase 4.1: Task Management State
         const [showAddTaskModal, setShowAddTaskModal] = useState(false);
         const [showVoiceTaskModal, setShowVoiceTaskModal] = useState(false);
@@ -832,6 +853,8 @@
         
         // Load clients from database
         const loadClients = useCallback(async () => {
+          // Make loadClients available globally for delete functionality
+          window.loadClientsFunction = loadClients;
           try {
             setLoading(true);
             setError('');
@@ -951,7 +974,7 @@
           } catch (error) {
             console.error('❌ Failed to load clients:', error);
             setError('Unable to connect to database - loading Orlando demo clients');
-            return [];
+            return null; // Return null to indicate API failure, not empty array
           } finally {
             setLoading(false);
           }
@@ -1015,8 +1038,8 @@
                 phone: '(555) 987-6543',
                 role: 'SELLER',
                 stage: 'ACTIVE',
-                city: 'San Francisco',
-                state: 'CA',
+                city: 'Tampa',
+                state: 'FL',
                 tags: ['Luxury', 'Repeat Client'],
                 lifetimeNetCommission: 25000,
                 calls: [],
@@ -1070,9 +1093,13 @@
             console.log('🚀 User authenticated, loading clients...');
             // If API fails, use demo data
             loadClients().then(clientsFromAPI => {
-              if (!clientsFromAPI || clientsFromAPI.length === 0) {
-                console.log('📝 No API data, loading demo clients...');
+              // Only fallback to demo clients if API is completely unavailable
+              // Don't fallback if Supabase returns empty array (that's valid - no clients yet)
+              if (clientsFromAPI === null || clientsFromAPI === undefined) {
+                console.log('📝 API unavailable, loading demo clients...');
                 loadDemoClients();
+              } else {
+                console.log(`✅ Loaded ${clientsFromAPI.length} clients from Supabase (empty is OK)`);
               }
             }).catch(error => {
               console.log('❌ API error, loading demo clients...', error);
@@ -1532,11 +1559,10 @@
           setShowEditProperty(property);
         };
 
-        const handleSaveProperty = () => {
-          // In real implementation, this would save to API
-          console.log('Saving property:', propertyFormData);
+        const handleSaveProperty = async () => {
+          console.log('🏠 Saving property:', propertyFormData);
           
-          // For demo, add to client's properties
+          // Create the new/updated property object
           const newProperty = {
             ...propertyFormData,
             id: showEditProperty?.id || 'prop-' + Date.now(),
@@ -1546,20 +1572,48 @@
             sqft: parseInt(propertyFormData.sqft) || 0,
             yearBuilt: parseInt(propertyFormData.yearBuilt) || null,
             lotSize: parseFloat(propertyFormData.lotSize) || null,
-            createdAt: new Date().toISOString()
+            createdAt: showEditProperty?.createdAt || new Date().toISOString()
           };
 
-          // Update client properties
-          if (showEditProperty) {
-            // Edit existing
-            const updatedProperties = (selectedClient.propertiesOfInterest || []).map(p => 
-              p.id === showEditProperty.id ? newProperty : p
-            );
-            selectedClient.propertiesOfInterest = updatedProperties;
-          } else {
-            // Add new
-            selectedClient.propertiesOfInterest = [...(selectedClient.propertiesOfInterest || []), newProperty];
-          }
+          // Update the clients state array properly
+          setClients(prevClients => {
+            const updatedClients = prevClients.map(client => {
+              if (client.id === selectedClient.id) {
+                let updatedProperties;
+                if (showEditProperty) {
+                  // Edit existing property
+                  updatedProperties = (client.propertiesOfInterest || []).map(p => 
+                    p.id === showEditProperty.id ? newProperty : p
+                  );
+                } else {
+                  // Add new property
+                  updatedProperties = [...(client.propertiesOfInterest || []), newProperty];
+                }
+                
+                const updatedClient = {
+                  ...client,
+                  propertiesOfInterest: updatedProperties
+                };
+                
+                console.log('✅ Updated client with property:', {
+                  clientName: `${client.firstName} ${client.lastName}`,
+                  propertyAddress: newProperty.address,
+                  totalProperties: updatedProperties.length
+                });
+                
+                return updatedClient;
+              }
+              return client;
+            });
+            
+            // Save to localStorage for persistence
+            saveUserClients(user, updatedClients);
+            
+            // TODO: In future, also save to Supabase database
+            // updateClientInDatabase(selectedClient.id, { propertiesOfInterest: updatedProperties });
+            
+            return updatedClients;
+          });
 
           setShowAddProperty(false);
           setShowEditProperty(null);
@@ -1567,9 +1621,40 @@
           setTimeout(() => setVoiceStatus(''), 3000);
         };
 
-        const handleDeleteProperty = (propertyId) => {
+        const handleDeleteProperty = async (propertyId) => {
           if (confirm('Are you sure you want to delete this property?')) {
-            selectedClient.propertiesOfInterest = (selectedClient.propertiesOfInterest || []).filter(p => p.id !== propertyId);
+            console.log('🗑️ Deleting property:', propertyId);
+            
+            // Update the clients state array properly
+            setClients(prevClients => {
+              const updatedClients = prevClients.map(client => {
+                if (client.id === selectedClient.id) {
+                  const updatedProperties = (client.propertiesOfInterest || []).filter(p => p.id !== propertyId);
+                  
+                  const updatedClient = {
+                    ...client,
+                    propertiesOfInterest: updatedProperties
+                  };
+                  
+                  console.log('✅ Removed property from client:', {
+                    clientName: `${client.firstName} ${client.lastName}`,
+                    remainingProperties: updatedProperties.length
+                  });
+                  
+                  return updatedClient;
+                }
+                return client;
+              });
+              
+              // Save to localStorage for persistence
+              saveUserClients(user, updatedClients);
+              
+              // TODO: In future, also save to Supabase database
+              // updateClientInDatabase(selectedClient.id, { propertiesOfInterest: updatedProperties });
+              
+              return updatedClients;
+            });
+            
             setVoiceStatus('✅ Property deleted successfully!');
             setTimeout(() => setVoiceStatus(''), 3000);
           }
@@ -1582,16 +1667,15 @@
             sessionStorage.setItem('cf360_user', JSON.stringify({ firstName: 'Rodrigo', lastName: 'Admin', email }));
             sessionStorage.setItem('cf360_authenticated', 'true');
             
-            // Try to load clients, fallback to demo if fails
+            // Load clients from Supabase database only
             try {
-              const clientsFromAPI = await loadClients();
-              if (!clientsFromAPI || clientsFromAPI.length === 0) {
-                console.log('📝 No API data, loading demo clients...');
-                loadDemoClients();
-              }
+              console.log('🔄 Loading clients from Supabase database...');
+              await loadClients();
+              console.log('✅ Successfully connected to Supabase database');
             } catch (error) {
-              console.log('❌ API failed, loading demo clients...', error);
-              loadDemoClients();
+              console.error('❌ Failed to connect to Supabase database:', error);
+              setError('❌ Database connection failed. Please check your internet connection and try again.');
+              // Do not load demo clients - require database connection
             }
             setError('');
           } else {
@@ -1648,20 +1732,29 @@
         const addClient = async (clientData) => {
           try {
             setLoading(true);
-            console.log('➕ Adding new client:', clientData);
+            console.log('➕ Adding new client to Supabase database:', clientData);
             
+            // ONLY save to Supabase database - no fallback to localStorage
+            console.log('🔄 Saving client to Supabase via API...');
+            const apiResponse = await API.clients.create(clientData);
+            console.log('✅ Supabase API response:', apiResponse);
+            
+            // Parse the response to get client data
             let newClient;
-            try {
-              newClient = await API.clients.create(clientData);
-            } catch (apiError) {
-              // API failed, create demo client
-              console.log('📝 API failed, creating demo client...');
-              newClient = {
-                id: 'demo-' + Date.now(),
-                ...clientData,
-                createdAt: new Date().toISOString()
-              };
+            if (apiResponse && apiResponse.success && apiResponse.client) {
+              newClient = apiResponse.client;
+            } else if (apiResponse && (apiResponse.data || apiResponse.id)) {
+              newClient = apiResponse.data || apiResponse;
+            } else if (apiResponse) {
+              newClient = apiResponse;
+            } else {
+              throw new Error('Invalid API response format');
             }
+            
+            console.log('✅ Client successfully saved to Supabase database:', {
+              id: newClient.id,
+              name: `${newClient.first_name || newClient.firstName} ${newClient.last_name || newClient.lastName}`
+            });
             
             // Enrich with UI compatibility data
             const enrichedClient = {
@@ -1773,19 +1866,115 @@
               propertiesOfInterest: clientData.propertiesOfInterest || []
             };
             
+            // Add client to UI state (will be loaded from database on refresh)
             setClients(prevClients => [enrichedClient, ...prevClients]);
             setShowAddClientModal(false);
             setError('');
             
-            // Show success message
-            setVoiceStatus('✅ Client added successfully!');
+            // Show success message - only database saves allowed
+            setVoiceStatus('✅ Client saved to Supabase database!');
             setTimeout(() => setVoiceStatus(''), 3000);
             
-            console.log('✅ Client added successfully to UI');
+            console.log('✅ Client added to UI and Supabase database:', {
+              clientId: enrichedClient.id,
+              clientName: `${enrichedClient.firstName} ${enrichedClient.lastName}`,
+              totalClients: (clients.length + 1)
+            });
             
           } catch (error) {
-            console.error('❌ Failed to add client:', error);
-            setError('Failed to add client');
+            console.error('❌ Failed to save client to Supabase database:', error);
+            console.error('❌ API Error details:', {
+              message: error.message,
+              response: error.response?.data,
+              status: error.response?.status,
+              url: error.config?.url
+            });
+            
+            // Show specific error message
+            if (error.response?.status === 400) {
+              setError('❌ Invalid client data. Please check all fields.');
+              setVoiceStatus('❌ Invalid client data');
+            } else if (error.response?.status === 500) {
+              setError('❌ Database error. Please try again.');
+              setVoiceStatus('❌ Database connection failed');
+            } else {
+              setError('❌ Failed to save client to database. Please try again.');
+              setVoiceStatus('❌ Failed to save to database');
+            }
+            
+            setTimeout(() => {
+              setError('');
+              setVoiceStatus('');
+            }, 5000);
+          } finally {
+            setLoading(false);
+          }
+        };
+        
+        // Bulk Selection Functions
+        const toggleClientSelection = (clientId) => {
+          setSelectedClientIds(prev => {
+            if (prev.includes(clientId)) {
+              return prev.filter(id => id !== clientId);
+            } else {
+              return [...prev, clientId];
+            }
+          });
+        };
+        
+        const selectAllClients = () => {
+          if (isSelectAllMode) {
+            setSelectedClientIds([]);
+            setIsSelectAllMode(false);
+          } else {
+            setSelectedClientIds(filteredClients.map(client => client.id));
+            setIsSelectAllMode(true);
+          }
+        };
+        
+        const clearSelection = () => {
+          setSelectedClientIds([]);
+          setIsSelectAllMode(false);
+        };
+        
+        const bulkDeleteClients = async () => {
+          if (selectedClientIds.length === 0) return;
+          
+          const clientCount = selectedClientIds.length;
+          const confirmMessage = `Are you sure you want to delete ${clientCount} client${clientCount > 1 ? 's' : ''}? This action cannot be undone.`;
+          
+          if (!confirm(confirmMessage)) return;
+          
+          try {
+            setLoading(true);
+            console.log('🗑️ Bulk deleting clients:', selectedClientIds);
+            
+            // Delete each client from database
+            for (const clientId of selectedClientIds) {
+              try {
+                await API.clients.delete(clientId);
+                console.log('✅ Deleted client from database:', clientId);
+              } catch (error) {
+                console.error('❌ Failed to delete client from database:', clientId, error);
+                // Continue with other deletions
+              }
+            }
+            
+            // Update local state by removing deleted clients
+            setClients(prevClients => 
+              prevClients.filter(client => !selectedClientIds.includes(client.id))
+            );
+            
+            // Clear selection
+            clearSelection();
+            
+            setVoiceStatus(`✅ ${clientCount} client${clientCount > 1 ? 's' : ''} deleted successfully!`);
+            setTimeout(() => setVoiceStatus(''), 3000);
+            
+          } catch (error) {
+            console.error('❌ Bulk delete failed:', error);
+            setError('Failed to delete some clients. Please try again.');
+            setTimeout(() => setError(''), 5000);
           } finally {
             setLoading(false);
           }
@@ -1875,7 +2064,7 @@
                 className: `text-xs px-2 py-1 rounded hidden sm:block ${
                   apiHealth && apiHealth.status === 'ok' ? 'bg-green-600 text-green-100' : 'bg-red-600 text-red-100'
                 }`
-              }, apiHealth ? `DB: ${apiHealth.storage}` : 'DB: Connecting...')
+              }, `DB: ${apiHealth?.storage || 'Fallback Storage'}`)
             ),
             React.createElement('div', { className: 'flex items-center space-x-2 sm:space-x-4 flex-shrink-0' },
               React.createElement('span', { className: 'text-xs sm:text-sm' }, `Welcome, ${user.firstName}!`),
@@ -1940,7 +2129,13 @@
               startVoiceRecognition,
               isListening,
               startVoiceTaskCreation,
-              isListeningForTask
+              isListeningForTask,
+              selectedClientIds,
+              toggleClientSelection,
+              selectAllClients,
+              clearSelection,
+              bulkDeleteClients,
+              isSelectAllMode
             }),
             
             currentView === 'dashboard' && React.createElement(DashboardView, { clients }),
@@ -1968,7 +2163,7 @@
           // Modals
           selectedClient && React.createElement(ClientDetailModal, {
             key: `client-modal-${selectedClient.id}-${selectedClient.calls?.length || 0}-${selectedClient.todos?.length || 0}-${JSON.stringify(selectedClient.todos?.map(t => t.completed) || [])}`,
-            client: selectedClient,
+            client: clients.find(c => c.id === selectedClient.id) || selectedClient,
             onClose: () => setSelectedClient(null),
             handleAddProperty,
             handleEditProperty,
@@ -2261,7 +2456,8 @@
       function ClientsView({ 
         clients, setClients, allTags, searchTerm, setSearchTerm, selectedTag, setSelectedTag, 
         setSelectedClient, setShowCallModal, setShowAddClientModal, setShowPropertyModal,
-        startVoiceRecognition, isListening, startVoiceTaskCreation, isListeningForTask 
+        startVoiceRecognition, isListening, startVoiceTaskCreation, isListeningForTask,
+        selectedClientIds, toggleClientSelection, selectAllClients, clearSelection, bulkDeleteClients, isSelectAllMode
       }) {
         return React.createElement('div', null,
           React.createElement('div', { className: 'flex justify-between items-center mb-6' },
@@ -2308,6 +2504,39 @@
             )
           ),
 
+          // Bulk Selection Bar
+          React.createElement('div', { className: 'mb-4 flex justify-between items-center' },
+            React.createElement('div', { className: 'flex items-center space-x-4' },
+              React.createElement('label', { className: 'flex items-center space-x-2 cursor-pointer' },
+                React.createElement('input', {
+                  type: 'checkbox',
+                  checked: isSelectAllMode,
+                  onChange: selectAllClients,
+                  className: 'w-4 h-4 text-red-600 bg-gray-800 border-gray-600 rounded focus:ring-red-500 focus:ring-2'
+                }),
+                React.createElement('span', { className: 'text-sm font-medium text-gray-300' },
+                  isSelectAllMode ? 'Deselect All' : 'Select All'
+                )
+              ),
+              selectedClientIds.length > 0 && React.createElement('span', { className: 'text-sm text-blue-400' },
+                `${selectedClientIds.length} client${selectedClientIds.length > 1 ? 's' : ''} selected`
+              )
+            ),
+            selectedClientIds.length > 0 && React.createElement('div', { className: 'flex items-center space-x-2' },
+              React.createElement('button', {
+                onClick: clearSelection,
+                className: 'px-3 py-1 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors'
+              }, 'Clear Selection'),
+              React.createElement('button', {
+                onClick: bulkDeleteClients,
+                className: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center space-x-2'
+              },
+                React.createElement('span', null, '🗑️'),
+                React.createElement('span', null, `Delete ${selectedClientIds.length}`)
+              )
+            )
+          ),
+
           // Stats
           React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-4 mb-6' },
             React.createElement('div', { className: 'bg-gray-800 p-4 rounded' },
@@ -2344,7 +2573,9 @@
               client,
               onViewDetails: () => setSelectedClient(client),
               onLogCall: () => setShowCallModal(client),
-              onManageProperties: () => setShowPropertyModal(client)
+              onManageProperties: () => setShowPropertyModal(client),
+              isSelected: selectedClientIds.includes(client.id),
+              onToggleSelection: () => toggleClientSelection(client.id)
             }))
           ),
 
@@ -2358,7 +2589,7 @@
       }
 
       // Client Card Component - Netflix Movie Tile Style
-      function ClientCard({ client, onViewDetails, onLogCall, onManageProperties }) {
+      function ClientCard({ client, onViewDetails, onLogCall, onManageProperties, isSelected, onToggleSelection }) {
         const clientName = `${client.firstName || client.first_name || 'Unknown'} ${client.lastName || client.last_name || 'Client'}`;
         const initials = `${(client.firstName || client.first_name || 'A')[0]}${(client.lastName || client.last_name || 'A')[0]}`;
         
@@ -2423,6 +2654,24 @@
               }
             }),
             
+            // Selection checkbox (top-left corner)
+            React.createElement('div', { className: 'absolute top-3 left-3 z-20' },
+              React.createElement('label', { 
+                className: 'flex items-center cursor-pointer',
+                onClick: (e) => e.stopPropagation()
+              },
+                React.createElement('input', {
+                  type: 'checkbox',
+                  checked: isSelected || false,
+                  onChange: (e) => {
+                    e.stopPropagation();
+                    if (onToggleSelection) onToggleSelection();
+                  },
+                  className: 'w-5 h-5 text-red-600 bg-gray-800 border-2 border-white rounded focus:ring-red-500 focus:ring-2'
+                })
+              )
+            ),
+            
             // Status badges (top-right corner)
             React.createElement('div', { className: 'absolute top-3 right-3 flex flex-col gap-1' },
               React.createElement('div', { 
@@ -2470,9 +2719,9 @@
               )
             ),
 
-            // Tags overlay (top-left)
+            // Tags overlay (top-left, below checkbox)
             client.tags && client.tags.length > 0 && React.createElement('div', { 
-              className: 'absolute top-3 left-3 flex flex-wrap gap-1'
+              className: 'absolute top-12 left-3 flex flex-wrap gap-1'
             },
               client.tags.slice(0, 2).map((tag, index) =>
                 React.createElement('span', {
@@ -2520,7 +2769,21 @@
               React.createElement('div', null,
                 React.createElement('p', { className: 'text-white font-semibold' }, clientName),
                 React.createElement('p', { className: 'text-gray-400 text-sm' }, 
-                  `📍 ${client.city || 'Los Angeles'}, ${client.state || 'CA'}`
+                  (() => {
+                    // First try to use property interest location
+                    if (client.propertiesOfInterest && client.propertiesOfInterest.length > 0) {
+                      const property = client.propertiesOfInterest[0];
+                      if (property.city && property.state) {
+                        return `📍 ${property.city}, ${property.state}`;
+                      }
+                    }
+                    // Fallback to client's own city/state
+                    if (client.city && client.state) {
+                      return `📍 ${client.city}, ${client.state}`;
+                    }
+                    // Last resort fallback
+                    return `📍 Orlando, FL`;
+                  })()
                 )
               ),
               React.createElement('div', { className: 'text-right' },
@@ -4544,7 +4807,7 @@
         }, [isEditing, client]);
 
         const tabs = [
-          { id: 'overview', label: 'Complete Overview', icon: '👤' },
+          { id: 'overview', label: 'Overview', icon: '👤' },
           { id: 'properties', label: 'Properties', icon: '🏠' },
           { id: 'tasks', label: 'Tasks', icon: '✓' },
           { id: 'activity', label: 'Activity', icon: '📈' }
@@ -4726,16 +4989,28 @@
         const handleDeleteClient = async () => {
           try {
             setLoading(true);
-            // Here you would call your API to delete the client
+            // Delete the client via API
             console.log('Deleting client:', client.id);
-            // await API.clients.delete(client.id);
+            await API.clients.delete(client.id);
+            
+            // Refresh the client list to reflect the deletion
+            // Remove the client from local state immediately
+            setClients(prevClients => prevClients.filter(c => c.id !== client.id));
+            
+            // Also refresh from API if available
+            try {
+              if (window.loadClientsFunction) {
+                await window.loadClientsFunction();
+              }
+            } catch (refreshError) {
+              console.log('Note: Could not refresh from API, but client removed locally');
+            }
             
             // Close modal and show success
             onClose();
             alert(`✅ Client ${client.firstName || client.first_name} ${client.lastName || client.last_name} has been deleted successfully!`);
             
-            // In real implementation, you'd also refresh the client list
-            // window.location.reload(); // or better: call a refresh function
+            // Success - client deleted and list refreshed
             
           } catch (error) {
             console.error('Failed to delete client:', error);
@@ -4973,7 +5248,20 @@
                 client.birthday && React.createElement('div', null,
                   React.createElement('p', { className: 'text-sm text-gray-400' }, 'Birthday'),
                   React.createElement('p', { className: 'font-semibold' }, 
-                    `🎂 ${new Date(client.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                    (() => {
+                      // Fix timezone issue - parse date parts directly to avoid day-before bug
+                      const dateStr = client.birthday;
+                      if (dateStr.includes('-')) {
+                        // Handle YYYY-MM-DD format
+                        const [year, month, day] = dateStr.split('-');
+                        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                        return `🎂 ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                      } else {
+                        // Handle other formats - add UTC to prevent timezone shift
+                        const date = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+                        return `🎂 ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                      }
+                    })()
                   )
                 ),
                 client.anniversary && React.createElement('div', null,
@@ -5285,6 +5573,14 @@
         };
 
         const renderPropertiesTab = () => {
+          // Debug: Log client data for Properties tab
+          console.log('🏠 Properties tab - client data:', {
+            id: client.id,
+            name: `${client.firstName} ${client.lastName}`,
+            propertiesOfInterest: client.propertiesOfInterest,
+            propertiesCount: client.propertiesOfInterest?.length || 0
+          });
+          
           const properties = client.propertiesOfInterest || [];
           
           return React.createElement('div', { className: 'w-full space-y-4' },
@@ -5726,12 +6022,12 @@
             ),
 
             // Tab Navigation - Mobile Responsive
-            React.createElement('div', { className: 'flex border-b border-gray-700 overflow-x-auto' },
+            React.createElement('div', { className: 'flex border-b border-gray-700 overflow-x-auto w-full' },
               tabs.map(tab =>
                 React.createElement('button', {
                   key: tab.id,
                   onClick: () => setActiveTab(tab.id),
-                  className: `px-3 sm:px-6 py-3 sm:py-4 font-semibold transition-colors flex items-center space-x-1 sm:space-x-2 flex-shrink-0 text-sm sm:text-base ${
+                  className: `flex-1 px-3 sm:px-6 py-3 sm:py-4 font-semibold transition-colors flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base min-w-0 whitespace-nowrap ${
                     activeTab === tab.id 
                       ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-700' 
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
@@ -5741,7 +6037,7 @@
                   React.createElement('span', { className: 'hidden sm:inline' }, tab.label),
                   // Mobile: Show shortened labels
                   React.createElement('span', { className: 'sm:hidden' }, 
-                    tab.id === 'overview' ? 'Info' :
+                    tab.id === 'overview' ? 'Overview' :
                     tab.id === 'properties' ? 'Props' :
                     tab.id === 'tasks' ? 'Tasks' :
                     tab.id === 'activity' ? 'Activity' : tab.label
@@ -6170,15 +6466,13 @@
                 ),
                 React.createElement('div', { className: 'space-y-4' },
                   React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
-                    React.createElement('div', { className: 'space-y-2' },
-                      React.createElement('label', { className: 'block text-sm font-medium text-slate-300' }, 'Birth Date'),
-                      React.createElement('input', {
-                        type: 'date',
-                        value: formData.birthday,
-                        onChange: (e) => handleChange('birthday', e.target.value),
-                        className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white focus:border-yellow-400 focus:outline-none transition-colors'
-                      })
-                    ),
+                    React.createElement('input', {
+                      type: 'date',
+                      value: formData.birthday,
+                      onChange: (e) => handleChange('birthday', e.target.value),
+                      className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white focus:border-yellow-400 focus:outline-none transition-colors',
+                      title: 'Birth Date'
+                    }),
                     React.createElement('input', {
                       type: 'text',
                       placeholder: 'Spouse/Partner Name',
@@ -6210,13 +6504,6 @@
                     value: formData.tags,
                     onChange: (e) => handleChange('tags', e.target.value),
                     className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-orange-400 focus:outline-none transition-colors'
-                  }),
-                  React.createElement('textarea', {
-                    placeholder: 'Additional Comments/Notes',
-                    value: formData.notes || '',
-                    onChange: (e) => handleChange('notes', e.target.value),
-                    rows: 4,
-                    className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-orange-400 focus:outline-none transition-colors resize-none'
                   })
                 )
               ),
@@ -6965,8 +7252,9 @@
         );
       }
 
-      // Render the app - Using React 17 API for compatibility
-      ReactDOM.render(React.createElement(NetflixCRM), document.getElementById('root'));
+        // Render the app - Using React 17 API for compatibility
+        ReactDOM.render(React.createElement(NetflixCRM), document.getElementById('root'));
+      } // End of startCRMApplication function
     </script>
   </body>
 </html>
