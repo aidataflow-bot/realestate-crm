@@ -847,6 +847,8 @@
         
         // Load clients from database
         const loadClients = useCallback(async () => {
+          // Make loadClients available globally for delete functionality
+          window.loadClientsFunction = loadClients;
           try {
             setLoading(true);
             setError('');
@@ -4760,10 +4762,16 @@
             await API.clients.delete(client.id);
             
             // Refresh the client list to reflect the deletion
-            if (typeof loadClients === 'function') {
-              await loadClients();
-            } else {
-              window.location.reload();
+            // Remove the client from local state immediately
+            setClients(prevClients => prevClients.filter(c => c.id !== client.id));
+            
+            // Also refresh from API if available
+            try {
+              if (window.loadClientsFunction) {
+                await window.loadClientsFunction();
+              }
+            } catch (refreshError) {
+              console.log('Note: Could not refresh from API, but client removed locally');
             }
             
             // Close modal and show success
@@ -5320,6 +5328,14 @@
         };
 
         const renderPropertiesTab = () => {
+          // Debug: Log client data for Properties tab
+          console.log('🏠 Properties tab - client data:', {
+            id: client.id,
+            name: `${client.firstName} ${client.lastName}`,
+            propertiesOfInterest: client.propertiesOfInterest,
+            propertiesCount: client.propertiesOfInterest?.length || 0
+          });
+          
           const properties = client.propertiesOfInterest || [];
           
           return React.createElement('div', { className: 'w-full space-y-4' },
