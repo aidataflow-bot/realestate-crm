@@ -1735,16 +1735,38 @@
             console.log('➕ Adding new client:', clientData);
             
             let newClient;
+            let savedToDatabase = false;
+            
             try {
-              newClient = await API.clients.create(clientData);
+              console.log('🔄 Attempting to save client to Supabase via API...');
+              const apiResponse = await API.clients.create(clientData);
+              console.log('✅ API response received:', apiResponse);
+              
+              // Check if the response contains client data
+              if (apiResponse && (apiResponse.client || apiResponse.data || apiResponse.id)) {
+                newClient = apiResponse.client || apiResponse.data || apiResponse;
+                savedToDatabase = true;
+                console.log('✅ Client saved successfully to Supabase database');
+              } else {
+                throw new Error('API response missing client data');
+              }
             } catch (apiError) {
-              // API failed, create demo client
-              console.log('📝 API failed, creating demo client...');
+              console.error('❌ API failed to save client:', apiError);
+              console.error('❌ API Error details:', {
+                message: apiError.message,
+                response: apiError.response?.data,
+                status: apiError.response?.status
+              });
+              
+              // Create local client with unique ID for demo mode
+              console.log('📝 Falling back to local client creation...');
               newClient = {
-                id: 'demo-' + Date.now(),
+                id: 'local-' + Date.now(),
                 ...clientData,
+                created_at: new Date().toISOString(),
                 createdAt: new Date().toISOString()
               };
+              savedToDatabase = false;
             }
             
             // Enrich with UI compatibility data
@@ -1857,15 +1879,30 @@
               propertiesOfInterest: clientData.propertiesOfInterest || []
             };
             
-            setClients(prevClients => [enrichedClient, ...prevClients]);
+            setClients(prevClients => {
+              const updatedClients = [enrichedClient, ...prevClients];
+              // Always save to localStorage for persistence
+              saveUserClients(user, updatedClients);
+              return updatedClients;
+            });
+            
             setShowAddClientModal(false);
             setError('');
             
-            // Show success message
-            setVoiceStatus('✅ Client added successfully!');
-            setTimeout(() => setVoiceStatus(''), 3000);
+            // Show success message with database status
+            if (savedToDatabase) {
+              setVoiceStatus('✅ Client saved to database successfully!');
+            } else {
+              setVoiceStatus('⚠️ Client saved locally (database unavailable)');
+            }
+            setTimeout(() => setVoiceStatus(''), 4000);
             
-            console.log('✅ Client added successfully to UI');
+            console.log('✅ Client added successfully to UI:', {
+              clientId: enrichedClient.id,
+              clientName: `${enrichedClient.firstName} ${enrichedClient.lastName}`,
+              savedToDatabase,
+              totalClients: (clients.length + 1)
+            });
             
           } catch (error) {
             console.error('❌ Failed to add client:', error);
@@ -5857,12 +5894,12 @@
             ),
 
             // Tab Navigation - Mobile Responsive
-            React.createElement('div', { className: 'flex border-b border-gray-700 overflow-x-auto' },
+            React.createElement('div', { className: 'flex border-b border-gray-700 overflow-x-auto w-full' },
               tabs.map(tab =>
                 React.createElement('button', {
                   key: tab.id,
                   onClick: () => setActiveTab(tab.id),
-                  className: `flex-1 px-3 sm:px-6 py-3 sm:py-4 font-semibold transition-colors flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base min-w-0 ${
+                  className: `flex-1 px-3 sm:px-6 py-3 sm:py-4 font-semibold transition-colors flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base min-w-0 whitespace-nowrap ${
                     activeTab === tab.id 
                       ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-700' 
                       : 'text-gray-400 hover:text-white hover:bg-gray-700'
