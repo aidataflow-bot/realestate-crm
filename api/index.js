@@ -238,11 +238,12 @@ export default async function handler(req, res) {
       return res.json(updatedClient);
     }
 
-    // Delete client
+    // Delete client - handled by /api/clients.js
     if (pathname.startsWith('/api/clients/') && method === 'DELETE') {
-      const id = pathname.split('/')[3];
-      await DB.deleteClient(id);
-      return res.json({ success: true });
+      return res.status(410).json({ 
+        error: 'DELETE endpoint moved to /api/clients.js',
+        redirect: 'Use dedicated clients endpoint'
+      });
     }
 
     // Placeholder routes for other resources
