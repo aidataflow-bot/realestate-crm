@@ -970,6 +970,11 @@
             
             console.log('✅ Enriched clients for UI:', enrichedClients);
             setClients(enrichedClients);
+            
+            // Update localStorage to match database state
+            saveUserClients(user, enrichedClients);
+            console.log('🔄 Updated localStorage to match database state');
+            
             return enrichedClients;
           } catch (error) {
             console.error('❌ Failed to load clients:', error);
@@ -1961,9 +1966,15 @@
             }
             
             // Update local state by removing deleted clients
-            setClients(prevClients => 
-              prevClients.filter(client => !selectedClientIds.includes(client.id))
-            );
+            setClients(prevClients => {
+              const updatedClients = prevClients.filter(client => !selectedClientIds.includes(client.id));
+              
+              // Also update localStorage to keep it in sync
+              saveUserClients(user, updatedClients);
+              console.log('✅ Updated localStorage after bulk deletion');
+              
+              return updatedClients;
+            });
             
             // Clear selection
             clearSelection();
