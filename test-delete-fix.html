@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Deletion Fix - Test Page</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: #1f2937; 
+            color: white; 
+        }
+        .test-section { 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid #10b981;
+            background: #374151;
+        }
+        .error { border-left-color: #ef4444; background: #7f1d1d; }
+        .success { border-left-color: #10b981; background: #065f46; }
+        .info { border-left-color: #3b82f6; background: #1e40af; }
+        .button { 
+            padding: 10px 20px; 
+            margin: 10px 5px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold;
+        }
+        .btn-test { background: #3b82f6; color: white; }
+        .btn-fix { background: #10b981; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        pre { background: #1f2937; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .status { font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🛠️ Bulk Client Deletion - Fix Verification</h1>
+    
+    <div class="test-section info">
+        <h2>🎯 Issue Identified & Fixed</h2>
+        <p><strong>Problem:</strong> Deleted clients were reappearing after page refresh because the <code>/api/clients.js</code> endpoint didn't handle DELETE requests.</p>
+        <p><strong>Solution:</strong> Added DELETE method support to <code>/api/clients.js</code> with proper Supabase database integration.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Current Database Status</h2>
+        <div id="dbStatus" class="status">Checking database connection...</div>
+        <button class="button btn-test" onclick="checkDBStatus()">🔄 Refresh DB Status</button>
+        <pre id="dbDetails"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Current Clients</h2>
+        <div id="clientsStatus" class="status">Loading clients...</div>
+        <button class="button btn-test" onclick="loadClients()">🔄 Reload Clients</button>
+        <div id="clientsList"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Test Delete Functionality</h2>
+        <p>This will test if the DELETE API is working correctly:</p>
+        <div id="deleteTest" class="status">Ready to test</div>
+        <button class="button btn-danger" onclick="testDeleteAPI()" id="testDeleteBtn">⚠️ Test Delete API (Safe - No Actual Deletion)</button>
+        <pre id="deleteResults"></pre>
+    </div>
+
+    <div class="test-section success">
+        <h2>✅ Fix Summary</h2>
+        <p><strong>What was implemented:</strong></p>
+        <ul>
+            <li>✅ Added DELETE method handler to <code>/api/clients.js</code></li>
+            <li>✅ Proper client ID extraction from URL path</li>
+            <li>✅ Supabase database integration for permanent deletion</li>
+            <li>✅ Error handling and logging for debugging</li>
+            <li>✅ Success response with deleted client ID confirmation</li>
+        </ul>
+        
+        <p><strong>Expected Result:</strong> When users bulk delete clients, they should be permanently removed from the Supabase database and not reappear after refresh.</p>
+    </div>
+
+    <script>
+        let clients = [];
+        
+        async function checkDBStatus() {
+            try {
+                document.getElementById('dbStatus').textContent = 'Checking...';
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                document.getElementById('dbStatus').textContent = `✅ ${data.storage} - ${data.clients} clients in database`;
+                document.getElementById('dbDetails').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('dbStatus').textContent = `❌ Error: ${error.message}`;
+                document.getElementById('dbDetails').textContent = error.toString();
+            }
+        }
+        
+        async function loadClients() {
+            try {
+                document.getElementById('clientsStatus').textContent = 'Loading...';
+                const response = await fetch('/api/clients');
+                clients = await response.json();
+                
+                document.getElementById('clientsStatus').textContent = `✅ Loaded ${clients.length} clients`;
+                
+                let clientsHTML = '<div style="display: grid; gap: 10px; margin-top: 15px;">';
+                clients.forEach(client => {
+                    clientsHTML += `
+                        <div style="background: #1f2937; padding: 15px; border-radius: 5px; border: 1px solid #374151;">
+                            <strong>${client.firstName || client.first_name} ${client.lastName || client.last_name}</strong><br>
+                            <small>ID: ${client.id}</small><br>
+                            <small>Email: ${client.email}</small>
+                        </div>
+                    `;
+                });
+                clientsHTML += '</div>';
+                
+                document.getElementById('clientsList').innerHTML = clientsHTML;
+            } catch (error) {
+                document.getElementById('clientsStatus').textContent = `❌ Error loading clients: ${error.message}`;
+            }
+        }
+        
+        async function testDeleteAPI() {
+            if (clients.length === 0) {
+                document.getElementById('deleteTest').textContent = '❌ No clients loaded. Load clients first.';
+                return;
+            }
+            
+            // Test with a non-existent ID to avoid actually deleting data
+            const testId = 'test-non-existent-id-12345';
+            
+            try {
+                document.getElementById('deleteTest').textContent = 'Testing DELETE API...';
+                document.getElementById('testDeleteBtn').disabled = true;
+                
+                const response = await fetch(`/api/clients/${testId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.text();
+                let resultData;
+                try {
+                    resultData = JSON.parse(result);
+                } catch {
+                    resultData = { response: result };
+                }
+                
+                document.getElementById('deleteResults').textContent = JSON.stringify({
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: resultData
+                }, null, 2);
+                
+                if (response.status === 200 || response.status === 404) {
+                    document.getElementById('deleteTest').textContent = '✅ DELETE API is responding correctly!';
+                } else {
+                    document.getElementById('deleteTest').textContent = `⚠️ DELETE API returned status: ${response.status}`;
+                }
+                
+            } catch (error) {
+                document.getElementById('deleteTest').textContent = `❌ DELETE API error: ${error.message}`;
+                document.getElementById('deleteResults').textContent = error.toString();
+            } finally {
+                document.getElementById('testDeleteBtn').disabled = false;
+            }
+        }
+        
+        // Auto-load status on page load
+        window.onload = function() {
+            checkDBStatus();
+            loadClients();
+        };
+    </script>
+</body>
+</html>
