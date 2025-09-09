@@ -6185,15 +6185,13 @@
                 ),
                 React.createElement('div', { className: 'space-y-4' },
                   React.createElement('div', { className: 'grid grid-cols-3 gap-4' },
-                    React.createElement('div', { className: 'space-y-2' },
-                      React.createElement('label', { className: 'block text-sm font-medium text-slate-300' }, 'Birth Date'),
-                      React.createElement('input', {
-                        type: 'date',
-                        value: formData.birthday,
-                        onChange: (e) => handleChange('birthday', e.target.value),
-                        className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white focus:border-yellow-400 focus:outline-none transition-colors'
-                      })
-                    ),
+                    React.createElement('input', {
+                      type: 'date',
+                      value: formData.birthday,
+                      onChange: (e) => handleChange('birthday', e.target.value),
+                      className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white focus:border-yellow-400 focus:outline-none transition-colors',
+                      title: 'Birth Date'
+                    }),
                     React.createElement('input', {
                       type: 'text',
                       placeholder: 'Spouse/Partner Name',
@@ -6225,13 +6223,6 @@
                     value: formData.tags,
                     onChange: (e) => handleChange('tags', e.target.value),
                     className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-orange-400 focus:outline-none transition-colors'
-                  }),
-                  React.createElement('textarea', {
-                    placeholder: 'Additional Comments/Notes',
-                    value: formData.notes || '',
-                    onChange: (e) => handleChange('notes', e.target.value),
-                    rows: 4,
-                    className: 'w-full p-4 bg-slate-600 rounded-lg border border-slate-500 text-white placeholder-slate-300 focus:border-orange-400 focus:outline-none transition-colors resize-none'
                   })
                 )
               ),
