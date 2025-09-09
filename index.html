@@ -1663,19 +1663,15 @@
             sessionStorage.setItem('cf360_user', JSON.stringify({ firstName: 'Rodrigo', lastName: 'Admin', email }));
             sessionStorage.setItem('cf360_authenticated', 'true');
             
-            // Try to load clients, fallback to demo if fails
+            // Load clients from Supabase database only
             try {
-              const clientsFromAPI = await loadClients();
-              // Only fallback if API is completely unavailable, not if just empty
-              if (clientsFromAPI === null || clientsFromAPI === undefined) {
-                console.log('📝 API unavailable, loading demo clients...');
-                loadDemoClients();
-              } else {
-                console.log(`✅ Supabase connected with ${clientsFromAPI.length} clients`);
-              }
+              console.log('🔄 Loading clients from Supabase database...');
+              await loadClients();
+              console.log('✅ Successfully connected to Supabase database');
             } catch (error) {
-              console.log('❌ API failed, loading demo clients...', error);
-              loadDemoClients();
+              console.error('❌ Failed to connect to Supabase database:', error);
+              setError('❌ Database connection failed. Please check your internet connection and try again.');
+              // Do not load demo clients - require database connection
             }
             setError('');
           } else {
@@ -1732,42 +1728,29 @@
         const addClient = async (clientData) => {
           try {
             setLoading(true);
-            console.log('➕ Adding new client:', clientData);
+            console.log('➕ Adding new client to Supabase database:', clientData);
             
+            // ONLY save to Supabase database - no fallback to localStorage
+            console.log('🔄 Saving client to Supabase via API...');
+            const apiResponse = await API.clients.create(clientData);
+            console.log('✅ Supabase API response:', apiResponse);
+            
+            // Parse the response to get client data
             let newClient;
-            let savedToDatabase = false;
-            
-            try {
-              console.log('🔄 Attempting to save client to Supabase via API...');
-              const apiResponse = await API.clients.create(clientData);
-              console.log('✅ API response received:', apiResponse);
-              
-              // Check if the response contains client data
-              if (apiResponse && (apiResponse.client || apiResponse.data || apiResponse.id)) {
-                newClient = apiResponse.client || apiResponse.data || apiResponse;
-                savedToDatabase = true;
-                console.log('✅ Client saved successfully to Supabase database');
-              } else {
-                throw new Error('API response missing client data');
-              }
-            } catch (apiError) {
-              console.error('❌ API failed to save client:', apiError);
-              console.error('❌ API Error details:', {
-                message: apiError.message,
-                response: apiError.response?.data,
-                status: apiError.response?.status
-              });
-              
-              // Create local client with unique ID for demo mode
-              console.log('📝 Falling back to local client creation...');
-              newClient = {
-                id: 'local-' + Date.now(),
-                ...clientData,
-                created_at: new Date().toISOString(),
-                createdAt: new Date().toISOString()
-              };
-              savedToDatabase = false;
+            if (apiResponse && apiResponse.success && apiResponse.client) {
+              newClient = apiResponse.client;
+            } else if (apiResponse && (apiResponse.data || apiResponse.id)) {
+              newClient = apiResponse.data || apiResponse;
+            } else if (apiResponse) {
+              newClient = apiResponse;
+            } else {
+              throw new Error('Invalid API response format');
             }
+            
+            console.log('✅ Client successfully saved to Supabase database:', {
+              id: newClient.id,
+              name: `${newClient.first_name || newClient.firstName} ${newClient.last_name || newClient.lastName}`
+            });
             
             // Enrich with UI compatibility data
             const enrichedClient = {
@@ -1879,34 +1862,46 @@
               propertiesOfInterest: clientData.propertiesOfInterest || []
             };
             
-            setClients(prevClients => {
-              const updatedClients = [enrichedClient, ...prevClients];
-              // Always save to localStorage for persistence
-              saveUserClients(user, updatedClients);
-              return updatedClients;
-            });
-            
+            // Add client to UI state (will be loaded from database on refresh)
+            setClients(prevClients => [enrichedClient, ...prevClients]);
             setShowAddClientModal(false);
             setError('');
             
-            // Show success message with database status
-            if (savedToDatabase) {
-              setVoiceStatus('✅ Client saved to database successfully!');
-            } else {
-              setVoiceStatus('⚠️ Client saved locally (database unavailable)');
-            }
-            setTimeout(() => setVoiceStatus(''), 4000);
+            // Show success message - only database saves allowed
+            setVoiceStatus('✅ Client saved to Supabase database!');
+            setTimeout(() => setVoiceStatus(''), 3000);
             
-            console.log('✅ Client added successfully to UI:', {
+            console.log('✅ Client added to UI and Supabase database:', {
               clientId: enrichedClient.id,
               clientName: `${enrichedClient.firstName} ${enrichedClient.lastName}`,
-              savedToDatabase,
               totalClients: (clients.length + 1)
             });
             
           } catch (error) {
-            console.error('❌ Failed to add client:', error);
-            setError('Failed to add client');
+            console.error('❌ Failed to save client to Supabase database:', error);
+            console.error('❌ API Error details:', {
+              message: error.message,
+              response: error.response?.data,
+              status: error.response?.status,
+              url: error.config?.url
+            });
+            
+            // Show specific error message
+            if (error.response?.status === 400) {
+              setError('❌ Invalid client data. Please check all fields.');
+              setVoiceStatus('❌ Invalid client data');
+            } else if (error.response?.status === 500) {
+              setError('❌ Database error. Please try again.');
+              setVoiceStatus('❌ Database connection failed');
+            } else {
+              setError('❌ Failed to save client to database. Please try again.');
+              setVoiceStatus('❌ Failed to save to database');
+            }
+            
+            setTimeout(() => {
+              setError('');
+              setVoiceStatus('');
+            }, 5000);
           } finally {
             setLoading(false);
           }
