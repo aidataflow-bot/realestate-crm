@@ -2535,7 +2535,7 @@
               React.createElement('div', null,
                 React.createElement('p', { className: 'text-white font-semibold' }, clientName),
                 React.createElement('p', { className: 'text-gray-400 text-sm' }, 
-                  `📍 ${client.city || 'Los Angeles'}, ${client.state || 'CA'}`
+                  `📍 ${client.city || 'Orlando'}, ${client.state || 'FL'}`
                 )
               ),
               React.createElement('div', { className: 'text-right' },
@@ -4741,16 +4741,22 @@
         const handleDeleteClient = async () => {
           try {
             setLoading(true);
-            // Here you would call your API to delete the client
+            // Delete the client via API
             console.log('Deleting client:', client.id);
-            // await API.clients.delete(client.id);
+            await API.clients.delete(client.id);
+            
+            // Refresh the client list to reflect the deletion
+            if (typeof loadClients === 'function') {
+              await loadClients();
+            } else {
+              window.location.reload();
+            }
             
             // Close modal and show success
             onClose();
             alert(`✅ Client ${client.firstName || client.first_name} ${client.lastName || client.last_name} has been deleted successfully!`);
             
-            // In real implementation, you'd also refresh the client list
-            // window.location.reload(); // or better: call a refresh function
+            // Success - client deleted and list refreshed
             
           } catch (error) {
             console.error('Failed to delete client:', error);
