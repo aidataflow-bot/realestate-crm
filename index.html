@@ -970,7 +970,7 @@
           } catch (error) {
             console.error('❌ Failed to load clients:', error);
             setError('Unable to connect to database - loading Orlando demo clients');
-            return [];
+            return null; // Return null to indicate API failure, not empty array
           } finally {
             setLoading(false);
           }
@@ -1089,9 +1089,13 @@
             console.log('🚀 User authenticated, loading clients...');
             // If API fails, use demo data
             loadClients().then(clientsFromAPI => {
-              if (!clientsFromAPI || clientsFromAPI.length === 0) {
-                console.log('📝 No API data, loading demo clients...');
+              // Only fallback to demo clients if API is completely unavailable
+              // Don't fallback if Supabase returns empty array (that's valid - no clients yet)
+              if (clientsFromAPI === null || clientsFromAPI === undefined) {
+                console.log('📝 API unavailable, loading demo clients...');
                 loadDemoClients();
+              } else {
+                console.log(`✅ Loaded ${clientsFromAPI.length} clients from Supabase (empty is OK)`);
               }
             }).catch(error => {
               console.log('❌ API error, loading demo clients...', error);
@@ -1604,9 +1608,12 @@
             // Try to load clients, fallback to demo if fails
             try {
               const clientsFromAPI = await loadClients();
-              if (!clientsFromAPI || clientsFromAPI.length === 0) {
-                console.log('📝 No API data, loading demo clients...');
+              // Only fallback if API is completely unavailable, not if just empty
+              if (clientsFromAPI === null || clientsFromAPI === undefined) {
+                console.log('📝 API unavailable, loading demo clients...');
                 loadDemoClients();
+              } else {
+                console.log(`✅ Supabase connected with ${clientsFromAPI.length} clients`);
               }
             } catch (error) {
               console.log('❌ API failed, loading demo clients...', error);
