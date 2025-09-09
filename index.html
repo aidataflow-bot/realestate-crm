@@ -2535,7 +2535,21 @@
               React.createElement('div', null,
                 React.createElement('p', { className: 'text-white font-semibold' }, clientName),
                 React.createElement('p', { className: 'text-gray-400 text-sm' }, 
-                  `📍 ${client.city || 'Orlando'}, ${client.state || 'FL'}`
+                  (() => {
+                    // First try to use property interest location
+                    if (client.propertiesOfInterest && client.propertiesOfInterest.length > 0) {
+                      const property = client.propertiesOfInterest[0];
+                      if (property.city && property.state) {
+                        return `📍 ${property.city}, ${property.state}`;
+                      }
+                    }
+                    // Fallback to client's own city/state
+                    if (client.city && client.state) {
+                      return `📍 ${client.city}, ${client.state}`;
+                    }
+                    // Last resort fallback
+                    return `📍 Orlando, FL`;
+                  })()
                 )
               ),
               React.createElement('div', { className: 'text-right' },
