@@ -117,6 +117,42 @@ export default async function handler(req, res) {
       }
     }
     
+    if (req.method === 'DELETE') {
+      // Delete client - extract ID from URL path
+      console.log('🗑️ DELETE request received for client deletion');
+      console.log('🗑️ Request URL:', req.url);
+      
+      // Parse client ID from URL: /api/clients/some-id
+      const urlParts = req.url.split('/');
+      const clientId = urlParts[urlParts.length - 1];
+      
+      console.log('🗑️ Extracted client ID:', clientId);
+      
+      if (!clientId || clientId === 'clients') {
+        return res.status(400).json({ error: 'Client ID is required for deletion' });
+      }
+
+      if (isConnected && supabase) {
+        console.log('🗑️ Attempting to delete client from Supabase:', clientId);
+        
+        const { error } = await supabase
+          .from('clients')
+          .delete()
+          .eq('id', clientId);
+        
+        if (error) {
+          console.error('❌ Supabase delete error:', error);
+          return res.status(500).json({ error: 'Failed to delete client from database' });
+        }
+        
+        console.log('✅ Client deleted successfully from Supabase:', clientId);
+        return res.status(200).json({ success: true, deletedId: clientId });
+      } else {
+        console.log('❌ Supabase not connected - cannot delete from database');
+        return res.status(500).json({ error: 'Database not available' });
+      }
+    }
+    
     return res.status(405).json({ error: 'Method not allowed' });
     
   } catch (error) {
