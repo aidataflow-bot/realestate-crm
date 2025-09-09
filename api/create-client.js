@@ -63,7 +63,8 @@ export default async function handler(req, res) {
     console.log('📝 Prepared client data:', clientData);
 
     if (isConnected && supabase) {
-      console.log('💾 Saving to Supabase...');
+      console.log('💾 Saving to Supabase database...');
+      console.log('📝 Client data to insert:', clientData);
       
       const { data, error } = await supabase
         .from('clients')
@@ -73,23 +74,40 @@ export default async function handler(req, res) {
       
       if (error) {
         console.error('❌ Supabase insert error:', error);
+        console.error('❌ Error code:', error.code);
+        console.error('❌ Error details:', error.details);
+        console.error('❌ Error hint:', error.hint);
+        
         return res.status(500).json({ 
-          error: 'Failed to save client to database',
-          details: error.message 
+          success: false,
+          error: 'Failed to save client to Supabase database',
+          message: error.message,
+          code: error.code,
+          details: error.details || 'Database insert failed'
         });
       }
       
-      console.log('✅ Client saved to Supabase:', data);
+      console.log('✅ Client successfully saved to Supabase:', data);
       return res.status(201).json({
         success: true,
         client: data,
-        message: 'Client created successfully'
+        message: 'Client created successfully in Supabase database'
       });
       
     } else {
-      console.log('⚠️ Supabase not connected, would save to fallback');
+      console.error('❌ Supabase not connected');
+      console.error('❌ Connection status:', {
+        hasUrl: !!SUPABASE_URL,
+        hasKey: !!SUPABASE_ANON_KEY,
+        isConnected,
+        urlLength: SUPABASE_URL?.length,
+        keyLength: SUPABASE_ANON_KEY?.length
+      });
+      
       return res.status(500).json({ 
-        error: 'Database not available',
+        success: false,
+        error: 'Supabase database not available',
+        message: 'Database connection failed - check environment variables',
         debug: {
           hasUrl: !!SUPABASE_URL,
           hasKey: !!SUPABASE_ANON_KEY,
