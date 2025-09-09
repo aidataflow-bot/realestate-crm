@@ -1555,11 +1555,10 @@
           setShowEditProperty(property);
         };
 
-        const handleSaveProperty = () => {
-          // In real implementation, this would save to API
-          console.log('Saving property:', propertyFormData);
+        const handleSaveProperty = async () => {
+          console.log('🏠 Saving property:', propertyFormData);
           
-          // For demo, add to client's properties
+          // Create the new/updated property object
           const newProperty = {
             ...propertyFormData,
             id: showEditProperty?.id || 'prop-' + Date.now(),
@@ -1569,20 +1568,48 @@
             sqft: parseInt(propertyFormData.sqft) || 0,
             yearBuilt: parseInt(propertyFormData.yearBuilt) || null,
             lotSize: parseFloat(propertyFormData.lotSize) || null,
-            createdAt: new Date().toISOString()
+            createdAt: showEditProperty?.createdAt || new Date().toISOString()
           };
 
-          // Update client properties
-          if (showEditProperty) {
-            // Edit existing
-            const updatedProperties = (selectedClient.propertiesOfInterest || []).map(p => 
-              p.id === showEditProperty.id ? newProperty : p
-            );
-            selectedClient.propertiesOfInterest = updatedProperties;
-          } else {
-            // Add new
-            selectedClient.propertiesOfInterest = [...(selectedClient.propertiesOfInterest || []), newProperty];
-          }
+          // Update the clients state array properly
+          setClients(prevClients => {
+            const updatedClients = prevClients.map(client => {
+              if (client.id === selectedClient.id) {
+                let updatedProperties;
+                if (showEditProperty) {
+                  // Edit existing property
+                  updatedProperties = (client.propertiesOfInterest || []).map(p => 
+                    p.id === showEditProperty.id ? newProperty : p
+                  );
+                } else {
+                  // Add new property
+                  updatedProperties = [...(client.propertiesOfInterest || []), newProperty];
+                }
+                
+                const updatedClient = {
+                  ...client,
+                  propertiesOfInterest: updatedProperties
+                };
+                
+                console.log('✅ Updated client with property:', {
+                  clientName: `${client.firstName} ${client.lastName}`,
+                  propertyAddress: newProperty.address,
+                  totalProperties: updatedProperties.length
+                });
+                
+                return updatedClient;
+              }
+              return client;
+            });
+            
+            // Save to localStorage for persistence
+            saveUserClients(user, updatedClients);
+            
+            // TODO: In future, also save to Supabase database
+            // updateClientInDatabase(selectedClient.id, { propertiesOfInterest: updatedProperties });
+            
+            return updatedClients;
+          });
 
           setShowAddProperty(false);
           setShowEditProperty(null);
@@ -1590,9 +1617,40 @@
           setTimeout(() => setVoiceStatus(''), 3000);
         };
 
-        const handleDeleteProperty = (propertyId) => {
+        const handleDeleteProperty = async (propertyId) => {
           if (confirm('Are you sure you want to delete this property?')) {
-            selectedClient.propertiesOfInterest = (selectedClient.propertiesOfInterest || []).filter(p => p.id !== propertyId);
+            console.log('🗑️ Deleting property:', propertyId);
+            
+            // Update the clients state array properly
+            setClients(prevClients => {
+              const updatedClients = prevClients.map(client => {
+                if (client.id === selectedClient.id) {
+                  const updatedProperties = (client.propertiesOfInterest || []).filter(p => p.id !== propertyId);
+                  
+                  const updatedClient = {
+                    ...client,
+                    propertiesOfInterest: updatedProperties
+                  };
+                  
+                  console.log('✅ Removed property from client:', {
+                    clientName: `${client.firstName} ${client.lastName}`,
+                    remainingProperties: updatedProperties.length
+                  });
+                  
+                  return updatedClient;
+                }
+                return client;
+              });
+              
+              // Save to localStorage for persistence
+              saveUserClients(user, updatedClients);
+              
+              // TODO: In future, also save to Supabase database
+              // updateClientInDatabase(selectedClient.id, { propertiesOfInterest: updatedProperties });
+              
+              return updatedClients;
+            });
+            
             setVoiceStatus('✅ Property deleted successfully!');
             setTimeout(() => setVoiceStatus(''), 3000);
           }
@@ -1994,7 +2052,7 @@
           // Modals
           selectedClient && React.createElement(ClientDetailModal, {
             key: `client-modal-${selectedClient.id}-${selectedClient.calls?.length || 0}-${selectedClient.todos?.length || 0}-${JSON.stringify(selectedClient.todos?.map(t => t.completed) || [])}`,
-            client: selectedClient,
+            client: clients.find(c => c.id === selectedClient.id) || selectedClient,
             onClose: () => setSelectedClient(null),
             handleAddProperty,
             handleEditProperty,
