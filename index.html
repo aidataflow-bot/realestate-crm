@@ -4642,7 +4642,7 @@
         }, [isEditing, client]);
 
         const tabs = [
-          { id: 'overview', label: 'Complete Overview', icon: '👤' },
+          { id: 'overview', label: 'Overview', icon: '👤' },
           { id: 'properties', label: 'Properties', icon: '🏠' },
           { id: 'tasks', label: 'Tasks', icon: '✓' },
           { id: 'activity', label: 'Activity', icon: '📈' }
@@ -5083,7 +5083,20 @@
                 client.birthday && React.createElement('div', null,
                   React.createElement('p', { className: 'text-sm text-gray-400' }, 'Birthday'),
                   React.createElement('p', { className: 'font-semibold' }, 
-                    `🎂 ${new Date(client.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                    (() => {
+                      // Fix timezone issue - parse date parts directly to avoid day-before bug
+                      const dateStr = client.birthday;
+                      if (dateStr.includes('-')) {
+                        // Handle YYYY-MM-DD format
+                        const [year, month, day] = dateStr.split('-');
+                        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                        return `🎂 ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                      } else {
+                        // Handle other formats - add UTC to prevent timezone shift
+                        const date = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+                        return `🎂 ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                      }
+                    })()
                   )
                 ),
                 client.anniversary && React.createElement('div', null,
@@ -5859,7 +5872,7 @@
                   React.createElement('span', { className: 'hidden sm:inline' }, tab.label),
                   // Mobile: Show shortened labels
                   React.createElement('span', { className: 'sm:hidden' }, 
-                    tab.id === 'overview' ? 'Info' :
+                    tab.id === 'overview' ? 'Overview' :
                     tab.id === 'properties' ? 'Props' :
                     tab.id === 'tasks' ? 'Tasks' :
                     tab.id === 'activity' ? 'Activity' : tab.label
