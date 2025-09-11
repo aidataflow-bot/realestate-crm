@@ -6040,8 +6040,8 @@
                   onClick: () => setActiveTab(tab.id),
                   className: `flex-1 px-3 sm:px-6 py-3 sm:py-4 font-semibold transition-colors flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base min-w-0 whitespace-nowrap ${
                     activeTab === tab.id 
-                      ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-700' 
-                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                      ? 'text-white bg-blue-600 border-b-2 border-blue-400 shadow-lg' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700 border-b-2 border-transparent'
                   }`
                 }, 
                   React.createElement('span', null, tab.icon),
