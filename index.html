@@ -965,7 +965,8 @@
               calls: [], // Will load separately if needed
               transactions: [], // Default for now
               todos: [], // Will load separately if needed
-              propertiesOfInterest: [] // Will load separately if needed
+              // Map properties_of_interest from database to propertiesOfInterest for frontend compatibility
+              propertiesOfInterest: client.properties_of_interest || client.propertiesOfInterest || []
             }));
             
             console.log('✅ Enriched clients for UI:', enrichedClients);
@@ -6058,9 +6059,9 @@
             ),
 
             // Tab Content with Fallback Protection - Mobile Responsive
-            React.createElement('div', { className: 'flex-1 overflow-y-auto p-3 sm:p-6 bg-gray-800' },
-              // Always render something to prevent black screen
-              React.createElement('div', { className: 'min-h-full' },
+            React.createElement('div', { className: 'flex-1 overflow-y-auto p-6 bg-gray-800' },
+              // Always render something to prevent black screen - consistent height for all tabs
+              React.createElement('div', { className: 'min-h-full w-full' },
                 (function() {
                   console.log('🔄 Rendering tab content for:', activeTab);
                   try {
