@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 // Supabase configuration
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -21,7 +21,7 @@ try {
 // Note: For now, we'll store transactions as a JSON field in the clients table
 // In the future, this could be expanded to a separate transactions table
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

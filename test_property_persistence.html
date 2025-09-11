@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Property Persistence Test</title>
+    <script>
+        async function testPropertyPersistence() {
+            console.log('🧪 Starting property persistence test...');
+            
+            try {
+                // Test 1: Login
+                console.log('📋 Step 1: Simulating login...');
+                sessionStorage.setItem('cf360_authenticated', 'true');
+                sessionStorage.setItem('cf360_user', JSON.stringify({ 
+                    firstName: 'Rodrigo', 
+                    lastName: 'Admin', 
+                    email: 'rodrigo@clientflow360.com' 
+                }));
+                
+                // Test 2: Test API connection
+                console.log('📋 Step 2: Testing API connection...');
+                try {
+                    const response = await fetch('/api/health');
+                    const health = await response.json();
+                    console.log('✅ API Health:', health);
+                } catch (error) {
+                    console.log('⚠️ API not available:', error.message);
+                }
+                
+                // Test 3: Test client fetching
+                console.log('📋 Step 3: Testing client fetch...');
+                try {
+                    const clientsResponse = await fetch('/api/clients');
+                    const clientsData = await clientsResponse.json();
+                    console.log('✅ Clients data:', clientsData);
+                    
+                    if (clientsData.length > 0) {
+                        const testClient = clientsData[0];
+                        console.log('📋 Using test client:', testClient);
+                        
+                        // Test 4: Test property update
+                        console.log('📋 Step 4: Testing property update...');
+                        const testProperty = {
+                            id: 'test-prop-' + Date.now(),
+                            address: '123 Test Street, Orlando, FL 32801',
+                            bedrooms: 3,
+                            bathrooms: 2,
+                            sqft: 1500,
+                            price: 300000
+                        };
+                        
+                        const currentProperties = testClient.properties_of_interest || [];
+                        const updatedProperties = [...currentProperties, testProperty];
+                        
+                        const updateResponse = await fetch(`/api/clients/${testClient.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                propertiesOfInterest: updatedProperties
+                            })
+                        });
+                        
+                        if (updateResponse.ok) {
+                            const updatedClient = await updateResponse.json();
+                            console.log('✅ Property update successful:', updatedClient);
+                            
+                            // Test 5: Verify persistence
+                            console.log('📋 Step 5: Verifying persistence...');
+                            const verifyResponse = await fetch(`/api/clients/${testClient.id}`);
+                            const verifiedClient = await verifyResponse.json();
+                            console.log('✅ Verified client data:', verifiedClient);
+                            
+                            if (verifiedClient.properties_of_interest && 
+                                verifiedClient.properties_of_interest.length > currentProperties.length) {
+                                console.log('🎉 SUCCESS: Property persistence test PASSED!');
+                                console.log('🎉 Properties are properly saved to the database');
+                            } else {
+                                console.log('❌ FAILED: Properties not persisted to database');
+                            }
+                        } else {
+                            console.log('❌ Property update failed:', await updateResponse.text());
+                        }
+                    } else {
+                        console.log('⚠️ No clients found for testing');
+                    }
+                } catch (error) {
+                    console.log('❌ Client operations failed:', error);
+                }
+                
+                console.log('🧪 Property persistence test completed');
+                
+            } catch (error) {
+                console.error('❌ Test failed:', error);
+            }
+        }
+        
+        // Run test when page loads
+        window.addEventListener('load', testPropertyPersistence);
+    </script>
+</head>
+<body>
+    <h1>Property Persistence Test</h1>
+    <p>Check the browser console for test results...</p>
+    <button onclick="testPropertyPersistence()">Run Test Again</button>
+</body>
+</html>
