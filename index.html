@@ -1572,6 +1572,7 @@
           };
 
           // Update the clients state array properly
+          let updatedPropertiesForClient;
           setClients(prevClients => {
             const updatedClients = prevClients.map(client => {
               if (client.id === selectedClient.id) {
@@ -1585,6 +1586,8 @@
                   // Add new property
                   updatedProperties = [...(client.propertiesOfInterest || []), newProperty];
                 }
+                
+                updatedPropertiesForClient = updatedProperties;
                 
                 const updatedClient = {
                   ...client,
@@ -1605,11 +1608,23 @@
             // Save to localStorage for persistence
             saveUserClients(user, updatedClients);
             
-            // TODO: In future, also save to Supabase database
-            // updateClientInDatabase(selectedClient.id, { propertiesOfInterest: updatedProperties });
-            
             return updatedClients;
           });
+
+          // FIXED: Save properties to Supabase database to ensure persistence after page refresh
+          if (updatedPropertiesForClient) {
+            try {
+              console.log('💾 Saving property changes to database...');
+              await API.clients.update(selectedClient.id, { 
+                propertiesOfInterest: updatedPropertiesForClient 
+              });
+              console.log('✅ Property changes saved to database successfully');
+            } catch (error) {
+              console.error('❌ Failed to save property changes to database:', error);
+              setVoiceStatus('⚠️ Property saved locally but database sync failed');
+              setTimeout(() => setVoiceStatus(''), 5000);
+            }
+          }
 
           setShowAddProperty(false);
           setShowEditProperty(null);
@@ -1622,10 +1637,12 @@
             console.log('🗑️ Deleting property:', propertyId);
             
             // Update the clients state array properly
+            let updatedPropertiesForClient;
             setClients(prevClients => {
               const updatedClients = prevClients.map(client => {
                 if (client.id === selectedClient.id) {
                   const updatedProperties = (client.propertiesOfInterest || []).filter(p => p.id !== propertyId);
+                  updatedPropertiesForClient = updatedProperties;
                   
                   const updatedClient = {
                     ...client,
@@ -1645,11 +1662,23 @@
               // Save to localStorage for persistence
               saveUserClients(user, updatedClients);
               
-              // TODO: In future, also save to Supabase database
-              // updateClientInDatabase(selectedClient.id, { propertiesOfInterest: updatedProperties });
-              
               return updatedClients;
             });
+
+            // FIXED: Save property deletion to Supabase database to ensure persistence after page refresh
+            if (updatedPropertiesForClient !== undefined) {
+              try {
+                console.log('💾 Saving property deletion to database...');
+                await API.clients.update(selectedClient.id, { 
+                  propertiesOfInterest: updatedPropertiesForClient 
+                });
+                console.log('✅ Property deletion saved to database successfully');
+              } catch (error) {
+                console.error('❌ Failed to save property deletion to database:', error);
+                setVoiceStatus('⚠️ Property deleted locally but database sync failed');
+                setTimeout(() => setVoiceStatus(''), 5000);
+              }
+            }
             
             setVoiceStatus('✅ Property deleted successfully!');
             setTimeout(() => setVoiceStatus(''), 3000);
